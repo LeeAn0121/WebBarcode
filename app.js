@@ -2,8 +2,8 @@
 // 1. Go to Supabase Dashboard (https://supabase.com/dashboard)
 // 2. Create a project
 // 3. Get Project URL and anon public key from Settings -> API
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const SUPABASE_URL = 'https://otxmccqqpfirmytlrchl.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_FQSwU29MDK6oO26su_UQeA_5SFVnSjQ';
 
 // Initialize Supabase
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
