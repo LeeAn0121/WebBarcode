@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebBarcode - 실시간 스캐너</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html5-qrcode -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <!-- Supabase JS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    
+    <link rel="stylesheet" href="style.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4f46e5',
+                        secondary: '#10b981'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans">
+    
+    <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <div class="bg-primary text-white p-2 rounded-lg">
+                    <i class="fa-solid fa-barcode text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold text-slate-900 leading-tight">WebBarcode</h1>
+                    <p class="text-xs text-slate-500 font-medium">Global 실시간 동기화 스캐너 (Supabase)</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <span class="flex h-3 w-3 relative">
+                  <span id="live-indicator-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+                  <span id="live-indicator" class="relative inline-flex rounded-full h-3 w-3 bg-secondary"></span>
+                </span>
+                <span id="connection-status" class="text-sm text-slate-600 font-medium hidden sm:inline-block">Connecting...</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 overflow-hidden flex flex-col lg:flex-row gap-6">
+        
+        <section class="w-full lg:w-1/2 xl:w-5/12 flex flex-col">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col">
+                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-camera text-slate-400"></i> 카메라 스캔
+                    </h2>
+                </div>
+                
+                <div class="p-6 flex-1 flex flex-col items-center justify-center relative bg-slate-100/50">
+                    <div id="camera-controls" class="w-full text-center z-10 mb-4">
+                        <button id="request-camera-btn" class="bg-primary hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 w-full max-w-xs mx-auto">
+                            <i class="fa-solid fa-video"></i> 스캐너 시작하기
+                        </button>
+                        <div class="relative w-full max-w-sm mx-auto mt-2">
+                            <select id="camera-select" class="hidden w-full appearance-none bg-white border border-slate-300 text-slate-700 py-3 px-4 pr-10 rounded-xl leading-tight focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary shadow-sm transition-all text-sm font-medium">
+                            </select>
+                            <div id="camera-select-icon" class="hidden pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                                <i class="fa-solid fa-chevron-down text-sm"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="w-full relative rounded-xl overflow-hidden shadow-inner bg-black">
+                        <div id="reader" class="w-full" style="min-height: 250px;"></div>
+                        <div id="reader-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-800">
+                            <i class="fa-solid fa-qrcode text-5xl mb-3 opacity-50"></i>
+                            <p class="text-sm font-medium">카메라를 켜서 바코드를 스캔하세요</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="w-full lg:w-1/2 xl:w-7/12 flex flex-col h-[500px] lg:h-auto">
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col">
+                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                    <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
+                        <i class="fa-solid fa-list-ul text-slate-400"></i> 스캔 기록
+                    </h2>
+                    <span id="scan-count" class="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1 rounded-full">0건</span>
+                </div>
+                
+                <div class="flex-1 overflow-y-auto p-4 bg-slate-50/30" id="barcode-list-container">
+                    <ul id="barcode-list" class="space-y-3">
+                        <div id="empty-state" class="flex flex-col items-center justify-center h-40 text-slate-400">
+                            <i class="fa-regular fa-folder-open text-4xl mb-3 opacity-50"></i>
+                            <p class="text-sm font-medium">아직 스캔된 기록이 없습니다</p>
+                        </div>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
