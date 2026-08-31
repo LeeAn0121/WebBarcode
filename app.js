@@ -69,13 +69,18 @@ const channel = supabaseClient
     .channel('public:barcodes')
     .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'barcodes' },
+        { event: '*', schema: 'public', table: 'barcodes' },
         (payload) => {
-            console.log('New barcode received!', payload.new);
-            emptyState.style.display = 'none';
-            totalScans++;
-            updateScanCount();
-            addBarcodeToList(payload.new, true);
+            if (payload.eventType === 'INSERT') {
+                emptyState.style.display = 'none';
+                totalScans++;
+                updateScanCount();
+                addBarcodeToList(payload.new, true);
+            } else if (payload.eventType === 'UPDATE') {
+                updateBarcodeInList(payload.new);
+            } else if (payload.eventType === 'DELETE') {
+                removeBarcodeFromList(payload.old.id);
+            }
         }
     )
     .subscribe((status) => {
@@ -92,28 +97,91 @@ function updateScanCount() {
     scanCount.textContent = `${totalScans}건`;
 }
 
+function removeBarcodeFromList(id) {
+    const li = document.getElementById(`barcode-${id}`);
+    if (li) {
+        li.remove();
+        totalScans = Math.max(0, totalScans - 1);
+        updateScanCount();
+        if (totalScans === 0 && emptyState) emptyState.style.display = 'flex';
+    }
+}
+
+function updateBarcodeInList(data) {
+    const codeElement = document.getElementById(`barcode-text-${data.id}`);
+    if (codeElement) {
+        codeElement.textContent = data.code;
+        
+        // Highlight briefly to show it was updated
+        const li = document.getElementById(`barcode-${data.id}`);
+        li.classList.add('bg-yellow-50');
+        setTimeout(() => li.classList.remove('bg-yellow-50'), 1500);
+    }
+}
+
+window.deleteBarcode = async (id) => {
+    if(confirm('이 스캔 기록을 삭제하시겠습니까?')) {
+        const { error } = await supabaseClient.from('barcodes').delete().eq('id', id);
+        if(error) alert('삭제 실패: ' + error.message);
+    }
+};
+
+window.editBarcode = async (id, currentCode) => {
+    const newCode = prompt('바코드 내용을 수정하세요:', currentCode);
+    if(newCode !== null && newCode.trim() !== '' && newCode !== currentCode) {
+        const { error } = await supabaseClient.from('barcodes').update({ code: newCode.trim() }).eq('id', id);
+        if(error) alert('수정 실패: ' + error.message);
+    }
+};
+
+window.shareBarcode = async (code) => {
+    if (navigator.share) {
+        try {
+            await navigator.share({
+                title: '스캔된 바코드',
+                text: code
+            });
+        } catch (err) {
+            console.error('공유 취소 또는 실패', err);
+        }
+    } else {
+        // Fallback to clipboard
+        navigator.clipboard.writeText(code).then(() => {
+            alert('바코드 텍스트가 클립보드에 복사되었습니다.');
+        });
+    }
+};
+
 function addBarcodeToList(data, isNew = false) {
     const li = document.createElement('li');
-    li.className = `bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${isNew ? 'item-enter' : ''}`;
+    li.id = `barcode-${data.id}`;
+    li.className = `bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors duration-300 ${isNew ? 'item-enter' : ''}`;
     
     // Fallback to Date.now() if created_at is missing
     const timeValue = data.created_at ? new Date(data.created_at) : new Date();
     const timeString = timeValue.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    const userShort = data.user_id || 'Unknown';
     
     li.innerHTML = `
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 overflow-hidden">
             <div class="h-10 w-10 rounded-full bg-indigo-50 flex items-center justify-center text-primary flex-shrink-0">
                 <i class="fa-solid fa-barcode"></i>
             </div>
-            <div>
-                <p class="font-bold text-slate-800 text-lg tracking-wide">${data.code}</p>
+            <div class="overflow-hidden">
+                <p id="barcode-text-${data.id}" class="font-bold text-slate-800 text-lg tracking-wide truncate">${data.code}</p>
                 <p class="text-xs text-slate-400 mt-0.5 sm:hidden">${timeString}</p>
             </div>
         </div>
-        <div class="flex items-center gap-2 self-start sm:self-auto">
-            <span class="hidden sm:inline-block text-xs text-slate-400">${timeString}</span>
-            <span class="bg-slate-100 text-slate-500 text-[10px] uppercase font-bold px-2 py-1 rounded-md">User: ${userShort}</span>
+        <div class="flex items-center gap-2 self-start sm:self-auto flex-shrink-0">
+            <span class="hidden sm:inline-block text-xs text-slate-400 mr-2">${timeString}</span>
+            <button onclick="shareBarcode('${data.code.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-primary transition-colors p-2" title="공유하기">
+                <i class="fa-solid fa-share-nodes"></i>
+            </button>
+            <button onclick="editBarcode('${data.id}', document.getElementById('barcode-text-${data.id}').textContent)" class="text-slate-400 hover:text-emerald-500 transition-colors p-2" title="수정하기">
+                <i class="fa-solid fa-pen-to-square"></i>
+            </button>
+            <button onclick="deleteBarcode('${data.id}')" class="text-slate-400 hover:text-red-500 transition-colors p-2" title="삭제하기">
+                <i class="fa-solid fa-trash-can"></i>
+            </button>
         </div>
     `;
     
