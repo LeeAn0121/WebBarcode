@@ -8,8 +8,6 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Initialize Supabase
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// const userId = Math.random().toString(36).substring(2, 8);
-
 // State variables
 let allBarcodes = [];
 let isSoundEnabled = true;
@@ -102,8 +100,7 @@ exportExcelBtn.addEventListener('click', () => {
     const exportData = allBarcodes.map(item => ({
         '바코드': item.code,
         '메모': item.memo || '',
-        '스캔시간': new Date(item.created_at || Date.now()).toLocaleString(),
-        '사용자ID': item.user_id || 'Unknown'
+        '스캔시간': new Date(item.created_at || Date.now()).toLocaleString()
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(exportData);
@@ -111,7 +108,7 @@ exportExcelBtn.addEventListener('click', () => {
     XLSX.utils.book_append_sheet(workbook, worksheet, "바코드 스캔 기록");
     
     // Auto-size columns roughly
-    const wscols = [ {wch:20}, {wch:30}, {wch:25}, {wch:15} ];
+    const wscols = [ {wch:25}, {wch:30}, {wch:25} ];
     worksheet['!cols'] = wscols;
 
     const filename = `WebBarcode_Export_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.xlsx`;
@@ -428,7 +425,7 @@ async function onScanSuccess(decodedText, decodedResult) {
     const { error } = await supabaseClient
         .from('barcodes')
         .insert([
-            { code: decodedText, user_id: userId }
+            { code: decodedText }
         ]);
         
     if (error) {
