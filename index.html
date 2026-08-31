@@ -65,11 +65,19 @@
                         <button id="request-camera-btn" class="bg-primary hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 w-full max-w-xs mx-auto">
                             <i class="fa-solid fa-video"></i> 스캐너 시작하기
                         </button>
-                        <div class="relative w-full max-w-sm mx-auto mt-2">
-                            <select id="camera-select" class="hidden w-full appearance-none bg-white border border-slate-300 text-slate-700 py-3 px-4 pr-10 rounded-xl leading-tight focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary shadow-sm transition-all text-sm font-medium">
-                            </select>
-                            <div id="camera-select-icon" class="hidden pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
-                                <i class="fa-solid fa-chevron-down text-sm"></i>
+                        <div class="relative w-full max-w-sm mx-auto mt-2 flex flex-col gap-3">
+                            <div class="relative">
+                                <select id="camera-select" class="hidden w-full appearance-none bg-white border border-slate-300 text-slate-700 py-3 px-4 pr-10 rounded-xl leading-tight focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary shadow-sm transition-all text-sm font-medium">
+                                </select>
+                                <div id="camera-select-icon" class="hidden pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                                    <i class="fa-solid fa-chevron-down text-sm"></i>
+                                </div>
+                            </div>
+                            <!-- Zoom Control -->
+                            <div id="zoom-control-container" class="hidden w-full bg-white border border-slate-300 rounded-xl p-3 shadow-sm flex items-center gap-3">
+                                <i class="fa-solid fa-magnifying-glass-minus text-slate-400 text-sm"></i>
+                                <input type="range" id="zoom-slider" min="1" max="1" step="0.1" value="1" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                                <i class="fa-solid fa-magnifying-glass-plus text-slate-400 text-sm"></i>
                             </div>
                         </div>
                     </div>

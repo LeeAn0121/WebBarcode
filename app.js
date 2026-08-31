@@ -192,6 +192,34 @@ function addBarcodeToList(data, isNew = false) {
     }
 }
 
+const zoomContainer = document.getElementById('zoom-control-container');
+const zoomSlider = document.getElementById('zoom-slider');
+let videoTrack = null;
+
+// Sound effect for successful scan
+function playBeepSound() {
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); // 800Hz
+        
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.01);
+        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.1);
+    } catch(e) {
+        console.warn("Web Audio API not supported", e);
+    }
+}
+
 // Handle Barcode Scan
 let lastScannedCode = null;
 let scanTimeout = null;
@@ -201,6 +229,9 @@ async function onScanSuccess(decodedText, decodedResult) {
     lastScannedCode = decodedText;
     clearTimeout(scanTimeout);
     scanTimeout = setTimeout(() => { lastScannedCode = null; }, 2000);
+
+    // Play beep sound
+    playBeepSound();
 
     // Save to Supabase
     const { error } = await supabaseClient
@@ -217,6 +248,55 @@ async function onScanSuccess(decodedText, decodedResult) {
 
 function onScanFailure(error) {
     // Ignore routine scan failures
+}
+
+function setupZoomControl() {
+    // Reset zoom slider
+    zoomContainer.classList.add('hidden');
+    
+    // Try to get the video track from the reader's video element
+    const videoElem = document.querySelector('#reader video');
+    if (!videoElem) return;
+
+    const stream = videoElem.srcObject;
+    if (!stream) return;
+
+    const tracks = stream.getVideoTracks();
+    if (tracks.length > 0) {
+        videoTrack = tracks[0];
+        
+        // Wait briefly for capabilities to be populated (sometimes takes a moment on mobile)
+        setTimeout(() => {
+            const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : null;
+            if (capabilities && capabilities.zoom) {
+                const minZoom = capabilities.zoom.min || 1;
+                const maxZoom = capabilities.zoom.max || 5;
+                const step = capabilities.zoom.step || 0.1;
+                
+                zoomSlider.min = minZoom;
+                zoomSlider.max = maxZoom;
+                zoomSlider.step = step;
+                
+                // Get current zoom setting
+                const settings = videoTrack.getSettings();
+                zoomSlider.value = settings.zoom || minZoom;
+                
+                zoomContainer.classList.remove('hidden');
+                zoomContainer.classList.add('flex');
+                
+                // Remove old listeners to prevent duplicates
+                zoomSlider.oninput = async (e) => {
+                    try {
+                        await videoTrack.applyConstraints({
+                            advanced: [{ zoom: parseFloat(e.target.value) }]
+                        });
+                    } catch (err) {
+                        console.error("Zoom constraint failed", err);
+                    }
+                };
+            }
+        }, 500);
+    }
 }
 
 // Camera Setup
@@ -249,6 +329,7 @@ requestCameraBtn.addEventListener('click', () => {
             
             cameraSelect.addEventListener('change', (e) => {
                 html5QrCode.stop().then(() => {
+                    zoomContainer.classList.add('hidden'); // Hide zoom while switching
                     startScanner(e.target.value);
                 }).catch(err => console.error("Camera switch error", err));
             });
@@ -268,7 +349,10 @@ function startScanner(cameraId) {
         { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
         onScanSuccess,
         onScanFailure
-    ).catch(err => {
+    ).then(() => {
+        // Scanner started successfully, setup zoom
+        setupZoomControl();
+    }).catch(err => {
         console.error(`Error starting scanner: ${err}`);
         alert("카메라를 시작할 수 없습니다.");
     });
