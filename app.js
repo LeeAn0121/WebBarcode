@@ -134,20 +134,25 @@ window.editBarcode = async (id, currentCode) => {
     }
 };
 
-window.shareBarcode = async (code) => {
+window.shareBarcode = async (code, timeString) => {
+    const shareText = `📦 [WebBarcode] 스캔 결과 도착!\n\n🔖 바코드: ${code}\n⏰ 스캔시간: ${timeString}\n\n👇 아래 링크에서 실시간으로 확인하세요!`;
+    const shareUrl = window.location.href; // 현재 사이트 주소
+
     if (navigator.share) {
         try {
             await navigator.share({
-                title: '스캔된 바코드',
-                text: code
+                title: 'WebBarcode 스캔 결과',
+                text: shareText,
+                url: shareUrl
             });
         } catch (err) {
             console.error('공유 취소 또는 실패', err);
         }
     } else {
         // Fallback to clipboard
-        navigator.clipboard.writeText(code).then(() => {
-            alert('바코드 텍스트가 클립보드에 복사되었습니다.');
+        const fullText = `${shareText}\n${shareUrl}`;
+        navigator.clipboard.writeText(fullText).then(() => {
+            alert('바코드 내용이 클립보드에 예쁘게 복사되었습니다! 원하는 곳에 붙여넣기 하세요.');
         });
     }
 };
@@ -173,7 +178,7 @@ function addBarcodeToList(data, isNew = false) {
         </div>
         <div class="flex items-center gap-2 self-start sm:self-auto flex-shrink-0">
             <span class="hidden sm:inline-block text-xs text-slate-400 mr-2">${timeString}</span>
-            <button onclick="shareBarcode('${data.code.replace(/'/g, "\\'")}')" class="text-slate-400 hover:text-primary transition-colors p-2" title="공유하기">
+            <button onclick="shareBarcode('${data.code.replace(/'/g, "\\'")}', '${timeString}')" class="text-slate-400 hover:text-primary transition-colors p-2" title="공유하기">
                 <i class="fa-solid fa-share-nodes"></i>
             </button>
             <button onclick="editBarcode('${data.id}', document.getElementById('barcode-text-${data.id}').textContent)" class="text-slate-400 hover:text-emerald-500 transition-colors p-2" title="수정하기">
