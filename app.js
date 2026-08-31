@@ -311,21 +311,38 @@ requestCameraBtn.addEventListener('click', () => {
             
             cameraSelect.innerHTML = '';
             
-            let backCameraId = devices[0].id;
-            devices.forEach(device => {
+            // Filter for rear cameras
+            const rearCameras = devices.filter(d => 
+                d.label.toLowerCase().includes('back') || 
+                d.label.toLowerCase().includes('rear') ||
+                d.label.toLowerCase().includes('environment')
+            );
+            
+            // If there are rear cameras, only use them. Otherwise, use all available cameras (e.g. PC)
+            const displayCameras = rearCameras.length > 0 ? rearCameras : devices;
+            
+            let defaultCameraId = displayCameras[0].id;
+            
+            displayCameras.forEach((device, index) => {
                 const option = document.createElement('option');
                 option.value = device.id;
-                option.text = device.label || `Camera ${cameraSelect.length + 1}`;
-                cameraSelect.appendChild(option);
                 
-                if (device.label.toLowerCase().includes('back') || device.label.toLowerCase().includes('rear')) {
-                    backCameraId = device.id;
-                    option.selected = true;
+                // 장치 이름 한글화 처리
+                let cameraName = device.label || `카메라 ${index + 1}`;
+                let namePrefix = "";
+                
+                if (cameraName.toLowerCase().includes('back') || cameraName.toLowerCase().includes('rear') || cameraName.toLowerCase().includes('environment')) {
+                    namePrefix = "[후면] ";
+                } else if (cameraName.toLowerCase().includes('front') || cameraName.toLowerCase().includes('user')) {
+                    namePrefix = "[전면] ";
                 }
+                
+                option.text = `${namePrefix}${cameraName}`;
+                cameraSelect.appendChild(option);
             });
             
             html5QrCode = new Html5Qrcode("reader");
-            startScanner(backCameraId);
+            startScanner(defaultCameraId);
             
             cameraSelect.addEventListener('change', (e) => {
                 html5QrCode.stop().then(() => {
