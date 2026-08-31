@@ -58,6 +58,18 @@ async function loadInitialData() {
             data.reverse().forEach(item => {
                 addBarcodeToList(item, false);
             });
+            
+            // 공유된 링크로 접속 시 해당 바코드로 스크롤 및 포커싱
+            if (window.location.hash) {
+                setTimeout(() => {
+                    const targetEl = document.querySelector(window.location.hash);
+                    if (targetEl) {
+                        targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        targetEl.classList.add('bg-indigo-100'); // 포커스 하이라이트
+                        setTimeout(() => targetEl.classList.remove('bg-indigo-100'), 2000);
+                    }
+                }, 500);
+            }
         }
     } catch (err) {
         console.error("Error loading initial data:", err);
@@ -112,16 +124,7 @@ function updateBarcodeInList(data) {
     const li = document.getElementById(`barcode-${data.id}`);
     
     if (li && codeElement) {
-        // We can completely replace the li with new render by removing it and adding it back, 
-        // but it's simpler to just replace the innerHTML (or just re-render the whole list item)
-        // Since we have multiple fields now (code and memo), let's re-render the item content.
-        
-        // Remove old element
         li.remove();
-        
-        // Add new one (this will put it at the top, which might be okay since it was just updated, 
-        // but if we want to keep order, we should just update the innerHTML).
-        // Let's just update the innerHTML to keep order.
         
         const timeValue = data.created_at ? new Date(data.created_at) : new Date();
         const timeString = timeValue.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -144,7 +147,7 @@ function updateBarcodeInList(data) {
             </div>
             <div class="flex items-center gap-1 self-start sm:self-auto flex-shrink-0">
                 <span class="hidden sm:inline-block text-xs text-slate-400 mr-2">${timeString}</span>
-                <button onclick="shareBarcode('${escapedCode}', '${timeString}', '${escapedMemo}')" class="text-slate-400 hover:text-primary transition-colors p-2" title="공유하기">
+                <button onclick="shareBarcode('${data.id}', '${escapedCode}', '${timeString}', '${escapedMemo}')" class="text-slate-400 hover:text-primary transition-colors p-2" title="공유하기">
                     <i class="fa-solid fa-share-nodes"></i>
                 </button>
                 <button onclick="editMemo('${data.id}', '${escapedMemo}')" class="text-slate-400 hover:text-blue-500 transition-colors p-2" title="메모 추가/수정">
@@ -159,8 +162,7 @@ function updateBarcodeInList(data) {
             </div>
         `;
         
-        // Re-insert at same position (since we used innerHTML, it's already there)
-        barcodeList.insertBefore(li, li.nextSibling); // this does nothing but ensures it's attached
+        barcodeList.insertBefore(li, li.nextSibling);
         li.classList.add('bg-yellow-50');
         setTimeout(() => li.classList.remove('bg-yellow-50'), 1500);
     }
@@ -189,7 +191,7 @@ window.editMemo = async (id, currentMemo) => {
     }
 };
 
-window.shareBarcode = async (code, timeString, memo) => {
+window.shareBarcode = async (id, code, timeString, memo) => {
     let shareText = `📦 [WebBarcode] 스캔 결과 도착!\n\n🔖 바코드: ${code}\n⏰ 스캔시간: ${timeString}`;
     
     if (memo && memo.trim() !== '' && memo !== 'null') {
@@ -197,7 +199,7 @@ window.shareBarcode = async (code, timeString, memo) => {
     }
     
     shareText += `\n\n👇 아래 링크에서 실시간으로 확인하세요!`;
-    const shareUrl = window.location.href; // 현재 사이트 주소
+    const shareUrl = window.location.origin + window.location.pathname + '#barcode-' + id;
 
     if (navigator.share) {
         try {
