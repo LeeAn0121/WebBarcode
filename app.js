@@ -109,11 +109,58 @@ function removeBarcodeFromList(id) {
 
 function updateBarcodeInList(data) {
     const codeElement = document.getElementById(`barcode-text-${data.id}`);
-    if (codeElement) {
-        codeElement.textContent = data.code;
+    const li = document.getElementById(`barcode-${data.id}`);
+    
+    if (li && codeElement) {
+        // We can completely replace the li with new render by removing it and adding it back, 
+        // but it's simpler to just replace the innerHTML (or just re-render the whole list item)
+        // Since we have multiple fields now (code and memo), let's re-render the item content.
         
-        // Highlight briefly to show it was updated
-        const li = document.getElementById(`barcode-${data.id}`);
+        // Remove old element
+        li.remove();
+        
+        // Add new one (this will put it at the top, which might be okay since it was just updated, 
+        // but if we want to keep order, we should just update the innerHTML).
+        // Let's just update the innerHTML to keep order.
+        
+        const timeValue = data.created_at ? new Date(data.created_at) : new Date();
+        const timeString = timeValue.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        
+        const memoText = (data.memo && data.memo.trim() !== '') ? data.memo : null;
+        const memoHtml = memoText ? `<p class="text-sm text-indigo-600 mt-1.5 font-medium bg-indigo-50 inline-block px-2.5 py-1 rounded-md break-all"><i class="fa-regular fa-comment-dots mr-1"></i>${memoText}</p>` : '';
+        const escapedCode = data.code.replace(/'/g, "\\'");
+        const escapedMemo = memoText ? memoText.replace(/'/g, "\\'") : '';
+
+        li.innerHTML = `
+            <div class="flex items-center gap-3 overflow-hidden w-full">
+                <div class="h-10 w-10 rounded-full bg-indigo-50 flex items-center justify-center text-primary flex-shrink-0">
+                    <i class="fa-solid fa-barcode"></i>
+                </div>
+                <div class="overflow-hidden w-full">
+                    <p id="barcode-text-${data.id}" class="font-bold text-slate-800 text-lg tracking-wide truncate">${data.code}</p>
+                    ${memoHtml}
+                    <p class="text-xs text-slate-400 mt-1 sm:hidden">${timeString}</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-1 self-start sm:self-auto flex-shrink-0">
+                <span class="hidden sm:inline-block text-xs text-slate-400 mr-2">${timeString}</span>
+                <button onclick="shareBarcode('${escapedCode}', '${timeString}', '${escapedMemo}')" class="text-slate-400 hover:text-primary transition-colors p-2" title="공유하기">
+                    <i class="fa-solid fa-share-nodes"></i>
+                </button>
+                <button onclick="editMemo('${data.id}', '${escapedMemo}')" class="text-slate-400 hover:text-blue-500 transition-colors p-2" title="메모 추가/수정">
+                    <i class="fa-solid fa-comment-medical"></i>
+                </button>
+                <button onclick="editBarcode('${data.id}', document.getElementById('barcode-text-${data.id}').textContent)" class="text-slate-400 hover:text-emerald-500 transition-colors p-2" title="수정하기">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button onclick="deleteBarcode('${data.id}')" class="text-slate-400 hover:text-red-500 transition-colors p-2" title="삭제하기">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+        `;
+        
+        // Re-insert at same position (since we used innerHTML, it's already there)
+        barcodeList.insertBefore(li, li.nextSibling); // this does nothing but ensures it's attached
         li.classList.add('bg-yellow-50');
         setTimeout(() => li.classList.remove('bg-yellow-50'), 1500);
     }
@@ -134,8 +181,22 @@ window.editBarcode = async (id, currentCode) => {
     }
 };
 
-window.shareBarcode = async (code, timeString) => {
-    const shareText = `📦 [WebBarcode] 스캔 결과 도착!\n\n🔖 바코드: ${code}\n⏰ 스캔시간: ${timeString}\n\n👇 아래 링크에서 실시간으로 확인하세요!`;
+window.editMemo = async (id, currentMemo) => {
+    const newMemo = prompt('메모를 입력하세요 (비워두면 메모가 삭제됩니다):', currentMemo);
+    if(newMemo !== null && newMemo !== currentMemo) {
+        const { error } = await supabaseClient.from('barcodes').update({ memo: newMemo.trim() }).eq('id', id);
+        if(error) alert('메모 저장 실패: ' + error.message);
+    }
+};
+
+window.shareBarcode = async (code, timeString, memo) => {
+    let shareText = `📦 [WebBarcode] 스캔 결과 도착!\n\n🔖 바코드: ${code}\n⏰ 스캔시간: ${timeString}`;
+    
+    if (memo && memo.trim() !== '' && memo !== 'null') {
+        shareText += `\n📝 메모: ${memo}`;
+    }
+    
+    shareText += `\n\n👇 아래 링크에서 실시간으로 확인하세요!`;
     const shareUrl = window.location.href; // 현재 사이트 주소
 
     if (navigator.share) {
@@ -166,20 +227,29 @@ function addBarcodeToList(data, isNew = false) {
     const timeValue = data.created_at ? new Date(data.created_at) : new Date();
     const timeString = timeValue.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
+    const memoText = (data.memo && data.memo.trim() !== '') ? data.memo : null;
+    const memoHtml = memoText ? `<p class="text-sm text-indigo-600 mt-1.5 font-medium bg-indigo-50 inline-block px-2.5 py-1 rounded-md break-all"><i class="fa-regular fa-comment-dots mr-1"></i>${memoText}</p>` : '';
+    const escapedCode = data.code.replace(/'/g, "\\'");
+    const escapedMemo = memoText ? memoText.replace(/'/g, "\\'") : '';
+
     li.innerHTML = `
-        <div class="flex items-center gap-3 overflow-hidden">
+        <div class="flex items-center gap-3 overflow-hidden w-full">
             <div class="h-10 w-10 rounded-full bg-indigo-50 flex items-center justify-center text-primary flex-shrink-0">
                 <i class="fa-solid fa-barcode"></i>
             </div>
-            <div class="overflow-hidden">
+            <div class="overflow-hidden w-full">
                 <p id="barcode-text-${data.id}" class="font-bold text-slate-800 text-lg tracking-wide truncate">${data.code}</p>
-                <p class="text-xs text-slate-400 mt-0.5 sm:hidden">${timeString}</p>
+                ${memoHtml}
+                <p class="text-xs text-slate-400 mt-1 sm:hidden">${timeString}</p>
             </div>
         </div>
-        <div class="flex items-center gap-2 self-start sm:self-auto flex-shrink-0">
+        <div class="flex items-center gap-1 self-start sm:self-auto flex-shrink-0">
             <span class="hidden sm:inline-block text-xs text-slate-400 mr-2">${timeString}</span>
-            <button onclick="shareBarcode('${data.code.replace(/'/g, "\\'")}', '${timeString}')" class="text-slate-400 hover:text-primary transition-colors p-2" title="공유하기">
+            <button onclick="shareBarcode('${escapedCode}', '${timeString}', '${escapedMemo}')" class="text-slate-400 hover:text-primary transition-colors p-2" title="공유하기">
                 <i class="fa-solid fa-share-nodes"></i>
+            </button>
+            <button onclick="editMemo('${data.id}', '${escapedMemo}')" class="text-slate-400 hover:text-blue-500 transition-colors p-2" title="메모 추가/수정">
+                <i class="fa-solid fa-comment-medical"></i>
             </button>
             <button onclick="editBarcode('${data.id}', document.getElementById('barcode-text-${data.id}').textContent)" class="text-slate-400 hover:text-emerald-500 transition-colors p-2" title="수정하기">
                 <i class="fa-solid fa-pen-to-square"></i>
