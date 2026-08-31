@@ -6,7 +6,7 @@ const SUPABASE_URL = 'https://otxmccqqpfirmytlrchl.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90eG1jY3FxcGZpcm15dGxyY2hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxOTIxNDUsImV4cCI6MjEwMzc2ODE0NX0.ZklBr-UroChsHlT9MggagEny_lRKE6yyWFb3RKVVKqY';
 
 // Initialize Supabase
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // Generate a random user ID for this session
 const userId = Math.random().toString(36).substring(2, 8);
@@ -41,7 +41,7 @@ function setConnectionStatus(status) {
 // Fetch initial data
 async function loadInitialData() {
     try {
-        const { data, error } = await supabase
+        const { data, error } = await supabaseClient
             .from('barcodes')
             .select('*')
             .order('created_at', { ascending: false })
@@ -65,7 +65,7 @@ async function loadInitialData() {
 }
 
 // Subscribe to real-time changes
-const channel = supabase
+const channel = supabaseClient
     .channel('public:barcodes')
     .on(
         'postgres_changes',
@@ -135,7 +135,7 @@ async function onScanSuccess(decodedText, decodedResult) {
     scanTimeout = setTimeout(() => { lastScannedCode = null; }, 2000);
 
     // Save to Supabase
-    const { error } = await supabase
+    const { error } = await supabaseClient
         .from('barcodes')
         .insert([
             { code: decodedText, user_id: userId }
