@@ -192,19 +192,18 @@ window.editMemo = async (id, currentMemo) => {
 };
 
 window.shareBarcode = async (id, code, timeString, memo) => {
-    let shareText = `📦 [WebBarcode] 스캔 결과 도착!\n\n🔖 바코드: ${code}\n⏰ 스캔시간: ${timeString}`;
+    let shareText = `[WebBarcode]\n\n바코드: ${code}\n스캔시간: ${timeString}`;
     
     if (memo && memo.trim() !== '' && memo !== 'null') {
-        shareText += `\n📝 메모: ${memo}`;
+        shareText += `\n메모: ${memo}`;
     }
     
-    shareText += `\n\n👇 아래 링크에서 실시간으로 확인하세요!`;
+    shareText += `\n\n아래 링크에서 확인하세요:`;
     const shareUrl = window.location.origin + window.location.pathname + '#barcode-' + id;
 
     if (navigator.share) {
         try {
             await navigator.share({
-                title: 'WebBarcode 스캔 결과',
                 text: shareText,
                 url: shareUrl
             });
@@ -215,7 +214,7 @@ window.shareBarcode = async (id, code, timeString, memo) => {
         // Fallback to clipboard
         const fullText = `${shareText}\n${shareUrl}`;
         navigator.clipboard.writeText(fullText).then(() => {
-            alert('바코드 내용이 클립보드에 예쁘게 복사되었습니다! 원하는 곳에 붙여넣기 하세요.');
+            alert('바코드 내용이 클립보드에 복사되었습니다.');
         });
     }
 };
