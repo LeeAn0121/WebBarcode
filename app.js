@@ -8,22 +8,140 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 // Initialize Supabase
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Generate a random user ID for this session
-const userId = Math.random().toString(36).substring(2, 8);
+// const userId = Math.random().toString(36).substring(2, 8);
 
+// State variables
+let allBarcodes = [];
+let isSoundEnabled = true;
+
+// DOM Elements
 const barcodeList = document.getElementById('barcode-list');
 const requestCameraBtn = document.getElementById('request-camera-btn');
 const cameraSelect = document.getElementById('camera-select');
 const cameraSelectIcon = document.getElementById('camera-select-icon');
 const readerPlaceholder = document.getElementById('reader-placeholder');
 const emptyState = document.getElementById('empty-state');
+const noResultsState = document.getElementById('no-results-state');
 const scanCount = document.getElementById('scan-count');
 const connectionStatus = document.getElementById('connection-status');
 const liveIndicator = document.getElementById('live-indicator');
 const liveIndicatorPing = document.getElementById('live-indicator-ping');
+const searchInput = document.getElementById('search-input');
+const exportExcelBtn = document.getElementById('export-excel-btn');
+const soundToggleBtn = document.getElementById('sound-toggle-btn');
+const themeToggleBtn = document.getElementById('theme-toggle');
 
 let html5QrCode;
 let totalScans = 0;
+
+// Theme Toggle Logic
+const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
+if (currentTheme) {
+    document.documentElement.classList.add(currentTheme);
+} else if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+    document.documentElement.classList.add('dark');
+}
+
+themeToggleBtn.addEventListener('click', () => {
+    if (document.documentElement.classList.contains('dark')) {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('theme', 'light');
+    } else {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('theme', 'dark');
+    }
+});
+
+// Sound Toggle Logic
+soundToggleBtn.addEventListener('click', () => {
+    isSoundEnabled = !isSoundEnabled;
+    const icon = soundToggleBtn.querySelector('i');
+    if (isSoundEnabled) {
+        icon.className = 'fa-solid fa-volume-high text-lg';
+        soundToggleBtn.classList.remove('text-slate-400');
+        soundToggleBtn.classList.add('text-primary', 'dark:text-indigo-400');
+    } else {
+        icon.className = 'fa-solid fa-volume-xmark text-lg';
+        soundToggleBtn.classList.remove('text-primary', 'dark:text-indigo-400');
+        soundToggleBtn.classList.add('text-slate-400');
+    }
+});
+
+// Sound effect for successful scan
+function playBeepSound() {
+    if (!isSoundEnabled) return;
+    try {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); 
+        
+        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+        gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.01);
+        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        
+        oscillator.start(audioCtx.currentTime);
+        oscillator.stop(audioCtx.currentTime + 0.1);
+    } catch(e) {
+        console.warn("Web Audio API not supported", e);
+    }
+}
+
+// Excel Export Logic
+exportExcelBtn.addEventListener('click', () => {
+    if (allBarcodes.length === 0) {
+        alert("내보낼 데이터가 없습니다.");
+        return;
+    }
+    
+    const exportData = allBarcodes.map(item => ({
+        '바코드': item.code,
+        '메모': item.memo || '',
+        '스캔시간': new Date(item.created_at || Date.now()).toLocaleString(),
+        '사용자ID': item.user_id || 'Unknown'
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(exportData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "바코드 스캔 기록");
+    
+    // Auto-size columns roughly
+    const wscols = [ {wch:20}, {wch:30}, {wch:25}, {wch:15} ];
+    worksheet['!cols'] = wscols;
+
+    const filename = `WebBarcode_Export_${new Date().toISOString().slice(0,10).replace(/-/g,'')}.xlsx`;
+    XLSX.writeFile(workbook, filename);
+});
+
+// Search Logic
+searchInput.addEventListener('input', (e) => {
+    const searchTerm = e.target.value.toLowerCase();
+    let matchCount = 0;
+    
+    const listItems = barcodeList.querySelectorAll('li.barcode-item');
+    listItems.forEach(li => {
+        const textContent = li.textContent.toLowerCase();
+        if (textContent.includes(searchTerm)) {
+            li.style.display = 'flex';
+            matchCount++;
+        } else {
+            li.style.display = 'none';
+        }
+    });
+
+    if (matchCount === 0 && listItems.length > 0) {
+        noResultsState.style.display = 'flex';
+        emptyState.style.display = 'none';
+    } else {
+        noResultsState.style.display = 'none';
+        if (listItems.length === 0) emptyState.style.display = 'flex';
+    }
+});
 
 function setConnectionStatus(status) {
     if (status === 'connected') {
@@ -51,22 +169,21 @@ async function loadInitialData() {
 
         if (data && data.length > 0) {
             emptyState.style.display = 'none';
+            allBarcodes = data;
             totalScans = data.length;
             updateScanCount();
             
-            // Reverse so oldest of the 100 is at the bottom
             data.reverse().forEach(item => {
                 addBarcodeToList(item, false);
             });
             
-            // 공유된 링크로 접속 시 해당 바코드로 스크롤 및 포커싱
             if (window.location.hash) {
                 setTimeout(() => {
                     const targetEl = document.querySelector(window.location.hash);
                     if (targetEl) {
                         targetEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        targetEl.classList.add('bg-indigo-100'); // 포커스 하이라이트
-                        setTimeout(() => targetEl.classList.remove('bg-indigo-100'), 2000);
+                        targetEl.classList.add('bg-indigo-100', 'dark:bg-indigo-900'); 
+                        setTimeout(() => targetEl.classList.remove('bg-indigo-100', 'dark:bg-indigo-900'), 2000);
                     }
                 }, 500);
             }
@@ -85,12 +202,24 @@ const channel = supabaseClient
         (payload) => {
             if (payload.eventType === 'INSERT') {
                 emptyState.style.display = 'none';
+                noResultsState.style.display = 'none';
+                allBarcodes.unshift(payload.new);
                 totalScans++;
                 updateScanCount();
                 addBarcodeToList(payload.new, true);
+                
+                // Re-apply search filter to new item if search is active
+                if(searchInput.value) {
+                    searchInput.dispatchEvent(new Event('input'));
+                }
             } else if (payload.eventType === 'UPDATE') {
+                const index = allBarcodes.findIndex(b => b.id === payload.new.id);
+                if(index !== -1) allBarcodes[index] = payload.new;
                 updateBarcodeInList(payload.new);
+                
+                if(searchInput.value) searchInput.dispatchEvent(new Event('input'));
             } else if (payload.eventType === 'DELETE') {
+                allBarcodes = allBarcodes.filter(b => b.id !== payload.old.id);
                 removeBarcodeFromList(payload.old.id);
             }
         }
@@ -115,7 +244,10 @@ function removeBarcodeFromList(id) {
         li.remove();
         totalScans = Math.max(0, totalScans - 1);
         updateScanCount();
-        if (totalScans === 0 && emptyState) emptyState.style.display = 'flex';
+        if (totalScans === 0 && emptyState) {
+            emptyState.style.display = 'flex';
+            noResultsState.style.display = 'none';
+        }
     }
 }
 
@@ -130,41 +262,44 @@ function updateBarcodeInList(data) {
         const timeString = timeValue.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         
         const memoText = (data.memo && data.memo.trim() !== '') ? data.memo : null;
-        const memoHtml = memoText ? `<p class="text-sm text-indigo-600 mt-1.5 font-medium bg-indigo-50 inline-block px-2.5 py-1 rounded-md break-all"><i class="fa-regular fa-comment-dots mr-1"></i>${memoText}</p>` : '';
+        const memoHtml = memoText ? `<p class="text-sm text-indigo-600 dark:text-indigo-300 mt-1.5 font-medium bg-indigo-50 dark:bg-indigo-900/50 inline-block px-2.5 py-1 rounded-md break-all"><i class="fa-regular fa-comment-dots mr-1"></i>${memoText}</p>` : '';
         const escapedCode = data.code.replace(/'/g, "\\'");
         const escapedMemo = memoText ? memoText.replace(/'/g, "\\'") : '';
 
         li.innerHTML = `
             <div class="flex items-center gap-3 overflow-hidden w-full">
-                <div class="h-10 w-10 rounded-full bg-indigo-50 flex items-center justify-center text-primary flex-shrink-0">
+                <div class="h-10 w-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-primary dark:text-indigo-400 flex-shrink-0">
                     <i class="fa-solid fa-barcode"></i>
                 </div>
                 <div class="overflow-hidden w-full">
-                    <p id="barcode-text-${data.id}" class="font-bold text-slate-800 text-lg tracking-wide truncate">${data.code}</p>
+                    <p id="barcode-text-${data.id}" class="font-bold text-slate-800 dark:text-slate-200 text-lg tracking-wide truncate">${data.code}</p>
                     ${memoHtml}
-                    <p class="text-xs text-slate-400 mt-1 sm:hidden">${timeString}</p>
+                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 sm:hidden">${timeString}</p>
                 </div>
             </div>
             <div class="flex items-center gap-1 self-start sm:self-auto flex-shrink-0">
-                <span class="hidden sm:inline-block text-xs text-slate-400 mr-2">${timeString}</span>
-                <button onclick="shareBarcode('${data.id}', '${escapedCode}', '${timeString}', '${escapedMemo}')" class="text-slate-400 hover:text-primary transition-colors p-2" title="공유하기">
+                <span class="hidden sm:inline-block text-xs text-slate-400 dark:text-slate-500 mr-2">${timeString}</span>
+                <button onclick="copyBarcode('${escapedCode}')" class="text-slate-400 hover:text-primary dark:hover:text-indigo-400 transition-colors p-2" title="복사하기">
+                    <i class="fa-regular fa-copy"></i>
+                </button>
+                <button onclick="shareBarcode('${data.id}', '${escapedCode}', '${timeString}', '${escapedMemo}')" class="text-slate-400 hover:text-primary dark:hover:text-indigo-400 transition-colors p-2" title="공유하기">
                     <i class="fa-solid fa-share-nodes"></i>
                 </button>
-                <button onclick="editMemo('${data.id}', '${escapedMemo}')" class="text-slate-400 hover:text-blue-500 transition-colors p-2" title="메모 추가/수정">
+                <button onclick="editMemo('${data.id}', '${escapedMemo}')" class="text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors p-2" title="메모 추가/수정">
                     <i class="fa-solid fa-comment-medical"></i>
                 </button>
-                <button onclick="editBarcode('${data.id}', document.getElementById('barcode-text-${data.id}').textContent)" class="text-slate-400 hover:text-emerald-500 transition-colors p-2" title="수정하기">
+                <button onclick="editBarcode('${data.id}', document.getElementById('barcode-text-${data.id}').textContent)" class="text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors p-2" title="수정하기">
                     <i class="fa-solid fa-pen-to-square"></i>
                 </button>
-                <button onclick="deleteBarcode('${data.id}')" class="text-slate-400 hover:text-red-500 transition-colors p-2" title="삭제하기">
+                <button onclick="deleteBarcode('${data.id}')" class="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors p-2" title="삭제하기">
                     <i class="fa-solid fa-trash-can"></i>
                 </button>
             </div>
         `;
         
         barcodeList.insertBefore(li, li.nextSibling);
-        li.classList.add('bg-yellow-50');
-        setTimeout(() => li.classList.remove('bg-yellow-50'), 1500);
+        li.classList.add('bg-yellow-50', 'dark:bg-yellow-900/30');
+        setTimeout(() => li.classList.remove('bg-yellow-50', 'dark:bg-yellow-900/30'), 1500);
     }
 }
 
@@ -189,6 +324,12 @@ window.editMemo = async (id, currentMemo) => {
         const { error } = await supabaseClient.from('barcodes').update({ memo: newMemo.trim() }).eq('id', id);
         if(error) alert('메모 저장 실패: ' + error.message);
     }
+};
+
+window.copyBarcode = (code) => {
+    navigator.clipboard.writeText(code).then(() => {
+        // Optional visual feedback could go here
+    });
 };
 
 window.shareBarcode = async (id, code, timeString, memo) => {
@@ -222,40 +363,42 @@ window.shareBarcode = async (id, code, timeString, memo) => {
 function addBarcodeToList(data, isNew = false) {
     const li = document.createElement('li');
     li.id = `barcode-${data.id}`;
-    li.className = `bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors duration-300 ${isNew ? 'item-enter' : ''}`;
+    li.className = `barcode-item bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors duration-300 ${isNew ? 'item-enter' : ''}`;
     
-    // Fallback to Date.now() if created_at is missing
     const timeValue = data.created_at ? new Date(data.created_at) : new Date();
     const timeString = timeValue.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
     const memoText = (data.memo && data.memo.trim() !== '') ? data.memo : null;
-    const memoHtml = memoText ? `<p class="text-sm text-indigo-600 mt-1.5 font-medium bg-indigo-50 inline-block px-2.5 py-1 rounded-md break-all"><i class="fa-regular fa-comment-dots mr-1"></i>${memoText}</p>` : '';
+    const memoHtml = memoText ? `<p class="text-sm text-indigo-600 dark:text-indigo-300 mt-1.5 font-medium bg-indigo-50 dark:bg-indigo-900/50 inline-block px-2.5 py-1 rounded-md break-all"><i class="fa-regular fa-comment-dots mr-1"></i>${memoText}</p>` : '';
     const escapedCode = data.code.replace(/'/g, "\\'");
     const escapedMemo = memoText ? memoText.replace(/'/g, "\\'") : '';
 
     li.innerHTML = `
         <div class="flex items-center gap-3 overflow-hidden w-full">
-            <div class="h-10 w-10 rounded-full bg-indigo-50 flex items-center justify-center text-primary flex-shrink-0">
+            <div class="h-10 w-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-primary dark:text-indigo-400 flex-shrink-0">
                 <i class="fa-solid fa-barcode"></i>
             </div>
             <div class="overflow-hidden w-full">
-                <p id="barcode-text-${data.id}" class="font-bold text-slate-800 text-lg tracking-wide truncate">${data.code}</p>
+                <p id="barcode-text-${data.id}" class="font-bold text-slate-800 dark:text-slate-200 text-lg tracking-wide truncate">${data.code}</p>
                 ${memoHtml}
-                <p class="text-xs text-slate-400 mt-1 sm:hidden">${timeString}</p>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 sm:hidden">${timeString}</p>
             </div>
         </div>
         <div class="flex items-center gap-1 self-start sm:self-auto flex-shrink-0">
-            <span class="hidden sm:inline-block text-xs text-slate-400 mr-2">${timeString}</span>
-            <button onclick="shareBarcode('${escapedCode}', '${timeString}', '${escapedMemo}')" class="text-slate-400 hover:text-primary transition-colors p-2" title="공유하기">
+            <span class="hidden sm:inline-block text-xs text-slate-400 dark:text-slate-500 mr-2">${timeString}</span>
+            <button onclick="copyBarcode('${escapedCode}')" class="text-slate-400 hover:text-primary dark:hover:text-indigo-400 transition-colors p-2" title="복사하기">
+                <i class="fa-regular fa-copy"></i>
+            </button>
+            <button onclick="shareBarcode('${data.id}', '${escapedCode}', '${timeString}', '${escapedMemo}')" class="text-slate-400 hover:text-primary dark:hover:text-indigo-400 transition-colors p-2" title="공유하기">
                 <i class="fa-solid fa-share-nodes"></i>
             </button>
-            <button onclick="editMemo('${data.id}', '${escapedMemo}')" class="text-slate-400 hover:text-blue-500 transition-colors p-2" title="메모 추가/수정">
+            <button onclick="editMemo('${data.id}', '${escapedMemo}')" class="text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors p-2" title="메모 추가/수정">
                 <i class="fa-solid fa-comment-medical"></i>
             </button>
-            <button onclick="editBarcode('${data.id}', document.getElementById('barcode-text-${data.id}').textContent)" class="text-slate-400 hover:text-emerald-500 transition-colors p-2" title="수정하기">
+            <button onclick="editBarcode('${data.id}', document.getElementById('barcode-text-${data.id}').textContent)" class="text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors p-2" title="수정하기">
                 <i class="fa-solid fa-pen-to-square"></i>
             </button>
-            <button onclick="deleteBarcode('${data.id}')" class="text-slate-400 hover:text-red-500 transition-colors p-2" title="삭제하기">
+            <button onclick="deleteBarcode('${data.id}')" class="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors p-2" title="삭제하기">
                 <i class="fa-solid fa-trash-can"></i>
             </button>
         </div>
@@ -265,34 +408,6 @@ function addBarcodeToList(data, isNew = false) {
     
     if (isNew && navigator.vibrate) {
         navigator.vibrate(50);
-    }
-}
-
-const zoomContainer = document.getElementById('zoom-control-container');
-const zoomSlider = document.getElementById('zoom-slider');
-let videoTrack = null;
-
-// Sound effect for successful scan
-function playBeepSound() {
-    try {
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); // 800Hz
-        
-        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-        gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.01);
-        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        
-        oscillator.start(audioCtx.currentTime);
-        oscillator.stop(audioCtx.currentTime + 0.1);
-    } catch(e) {
-        console.warn("Web Audio API not supported", e);
     }
 }
 
@@ -326,11 +441,13 @@ function onScanFailure(error) {
     // Ignore routine scan failures
 }
 
+const zoomContainer = document.getElementById('zoom-control-container');
+const zoomSlider = document.getElementById('zoom-slider');
+let videoTrack = null;
+
 function setupZoomControl() {
-    // Reset zoom slider
     zoomContainer.classList.add('hidden');
     
-    // Try to get the video track from the reader's video element
     const videoElem = document.querySelector('#reader video');
     if (!videoElem) return;
 
@@ -341,7 +458,6 @@ function setupZoomControl() {
     if (tracks.length > 0) {
         videoTrack = tracks[0];
         
-        // Wait briefly for capabilities to be populated (sometimes takes a moment on mobile)
         setTimeout(() => {
             const capabilities = videoTrack.getCapabilities ? videoTrack.getCapabilities() : null;
             if (capabilities && capabilities.zoom) {
@@ -353,14 +469,12 @@ function setupZoomControl() {
                 zoomSlider.max = maxZoom;
                 zoomSlider.step = step;
                 
-                // Get current zoom setting
                 const settings = videoTrack.getSettings();
                 zoomSlider.value = settings.zoom || minZoom;
                 
                 zoomContainer.classList.remove('hidden');
                 zoomContainer.classList.add('flex');
                 
-                // Remove old listeners to prevent duplicates
                 zoomSlider.oninput = async (e) => {
                     try {
                         await videoTrack.applyConstraints({
@@ -387,23 +501,19 @@ requestCameraBtn.addEventListener('click', () => {
             
             cameraSelect.innerHTML = '';
             
-            // Filter for rear cameras
             const rearCameras = devices.filter(d => 
                 d.label.toLowerCase().includes('back') || 
                 d.label.toLowerCase().includes('rear') ||
                 d.label.toLowerCase().includes('environment')
             );
             
-            // If there are rear cameras, only use them. Otherwise, use all available cameras (e.g. PC)
             const displayCameras = rearCameras.length > 0 ? rearCameras : devices;
-            
             let defaultCameraId = displayCameras[0].id;
             
             displayCameras.forEach((device, index) => {
                 const option = document.createElement('option');
                 option.value = device.id;
                 
-                // 장치 이름 한글화 처리
                 let cameraName = device.label || `카메라 ${index + 1}`;
                 let namePrefix = "";
                 
@@ -422,7 +532,7 @@ requestCameraBtn.addEventListener('click', () => {
             
             cameraSelect.addEventListener('change', (e) => {
                 html5QrCode.stop().then(() => {
-                    zoomContainer.classList.add('hidden'); // Hide zoom while switching
+                    zoomContainer.classList.add('hidden'); 
                     startScanner(e.target.value);
                 }).catch(err => console.error("Camera switch error", err));
             });
@@ -443,7 +553,6 @@ function startScanner(cameraId) {
         onScanSuccess,
         onScanFailure
     ).then(() => {
-        // Scanner started successfully, setup zoom
         setupZoomControl();
     }).catch(err => {
         console.error(`Error starting scanner: ${err}`);

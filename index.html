@@ -15,6 +15,8 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <!-- Supabase JS CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- SheetJS (Excel) -->
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
     
     <!-- Dynamic cache busting for CSS -->
     <script>
@@ -22,6 +24,7 @@
     </script>
     <script>
         tailwind.config = {
+            darkMode: 'class',
             theme: {
                 extend: {
                     colors: {
@@ -33,25 +36,34 @@
         }
     </script>
 </head>
-<body class="bg-slate-50 text-slate-800 h-screen flex flex-col font-sans">
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 h-screen flex flex-col font-sans transition-colors duration-300">
     
-    <header class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-50">
+    <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50 transition-colors duration-300">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
             <div class="flex items-center gap-3">
                 <div class="bg-primary text-white p-2 rounded-lg">
                     <i class="fa-solid fa-barcode text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold text-slate-900 leading-tight">WebBarcode</h1>
-                    <p class="text-xs text-slate-500 font-medium">Global 실시간 동기화 스캐너 (Supabase)</p>
+                    <h1 class="text-xl font-bold text-slate-900 dark:text-white leading-tight">WebBarcode</h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block">Global 실시간 동기화 스캐너 (Supabase)</p>
                 </div>
             </div>
-            <div class="flex items-center gap-2">
-                <span class="flex h-3 w-3 relative">
-                  <span id="live-indicator-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
-                  <span id="live-indicator" class="relative inline-flex rounded-full h-3 w-3 bg-secondary"></span>
-                </span>
-                <span id="connection-status" class="text-sm text-slate-600 font-medium hidden sm:inline-block">Connecting...</span>
+            <div class="flex items-center gap-4">
+                <button id="theme-toggle" class="text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors text-xl p-1" title="다크 모드 전환">
+                    <i class="fa-solid fa-moon dark:hidden"></i>
+                    <i class="fa-solid fa-sun hidden dark:block"></i>
+                </button>
+                <button id="export-excel-btn" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-1.5 px-3 rounded-lg shadow-sm transition-colors flex items-center gap-1.5" title="엑셀로 다운로드">
+                    <i class="fa-solid fa-file-excel"></i> <span class="hidden sm:inline">다운로드</span>
+                </button>
+                <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-full">
+                    <span class="flex h-3 w-3 relative">
+                      <span id="live-indicator-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
+                      <span id="live-indicator" class="relative inline-flex rounded-full h-3 w-3 bg-secondary"></span>
+                    </span>
+                    <span id="connection-status" class="text-sm text-slate-600 dark:text-slate-300 font-medium hidden sm:inline-block">Connecting...</span>
+                </div>
             </div>
         </div>
     </header>
@@ -59,30 +71,33 @@
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 overflow-hidden flex flex-col lg:flex-row gap-6">
         
         <section class="w-full lg:w-1/2 xl:w-5/12 flex flex-col">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col">
-                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                        <i class="fa-solid fa-camera text-slate-400"></i> 카메라 스캔
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex-1 flex flex-col transition-colors duration-300">
+                <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+                    <h2 class="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-camera text-slate-400 dark:text-slate-500"></i> 카메라 스캔
                     </h2>
+                    <button id="sound-toggle-btn" class="text-primary hover:text-indigo-700 dark:text-indigo-400 transition-colors p-1" title="소리 켜기/끄기">
+                        <i class="fa-solid fa-volume-high text-lg"></i>
+                    </button>
                 </div>
                 
-                <div class="p-6 flex-1 flex flex-col items-center justify-center relative bg-slate-100/50">
+                <div class="p-6 flex-1 flex flex-col items-center justify-center relative bg-slate-100/50 dark:bg-slate-900/50">
                     <div id="camera-controls" class="w-full text-center z-10 mb-4">
                         <button id="request-camera-btn" class="bg-primary hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 w-full max-w-xs mx-auto">
                             <i class="fa-solid fa-video"></i> 스캐너 시작하기
                         </button>
                         <div class="relative w-full max-w-sm mx-auto mt-2 flex flex-col gap-3">
                             <div class="relative">
-                                <select id="camera-select" class="hidden w-full appearance-none bg-white border border-slate-300 text-slate-700 py-3 px-4 pr-10 rounded-xl leading-tight focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary shadow-sm transition-all text-sm font-medium">
+                                <select id="camera-select" class="hidden w-full appearance-none bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-200 py-3 px-4 pr-10 rounded-xl leading-tight focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary shadow-sm transition-all text-sm font-medium">
                                 </select>
-                                <div id="camera-select-icon" class="hidden pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500">
+                                <div id="camera-select-icon" class="hidden pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-500 dark:text-slate-400">
                                     <i class="fa-solid fa-chevron-down text-sm"></i>
                                 </div>
                             </div>
                             <!-- Zoom Control -->
-                            <div id="zoom-control-container" class="hidden w-full bg-white border border-slate-300 rounded-xl p-3 shadow-sm flex items-center gap-3">
+                            <div id="zoom-control-container" class="hidden w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 rounded-xl p-3 shadow-sm flex items-center gap-3">
                                 <i class="fa-solid fa-magnifying-glass-minus text-slate-400 text-sm"></i>
-                                <input type="range" id="zoom-slider" min="1" max="1" step="0.1" value="1" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary">
+                                <input type="range" id="zoom-slider" min="1" max="1" step="0.1" value="1" class="w-full h-2 bg-slate-200 dark:bg-slate-600 rounded-lg appearance-none cursor-pointer accent-primary">
                                 <i class="fa-solid fa-magnifying-glass-plus text-slate-400 text-sm"></i>
                             </div>
                         </div>
@@ -99,20 +114,34 @@
             </div>
         </section>
 
-        <section class="w-full lg:w-1/2 xl:w-7/12 flex flex-col h-[500px] lg:h-auto">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex-1 flex flex-col">
-                <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                    <h2 class="text-lg font-semibold text-slate-800 flex items-center gap-2">
-                        <i class="fa-solid fa-list-ul text-slate-400"></i> 스캔 기록
-                    </h2>
-                    <span id="scan-count" class="bg-slate-100 text-slate-600 text-xs font-bold px-3 py-1 rounded-full">0건</span>
+        <section class="w-full lg:w-1/2 xl:w-7/12 flex flex-col h-[600px] lg:h-auto">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex-1 flex flex-col transition-colors duration-300">
+                <div class="p-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex flex-col gap-3">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-list-ul text-slate-400 dark:text-slate-500"></i> 스캔 기록
+                        </h2>
+                        <span id="scan-count" class="bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold px-3 py-1 rounded-full">0건</span>
+                    </div>
+                    
+                    <!-- Search Bar -->
+                    <div class="relative w-full">
+                        <div class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </div>
+                        <input type="text" id="search-input" class="w-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white text-sm rounded-lg focus:ring-primary focus:border-primary block pl-10 p-2.5 transition-colors" placeholder="바코드 번호 또는 메모 검색...">
+                    </div>
                 </div>
                 
-                <div class="flex-1 overflow-y-auto p-4 bg-slate-50/30" id="barcode-list-container">
+                <div class="flex-1 overflow-y-auto p-4 bg-slate-50/30 dark:bg-slate-900/30" id="barcode-list-container">
                     <ul id="barcode-list" class="space-y-3">
-                        <div id="empty-state" class="flex flex-col items-center justify-center h-40 text-slate-400">
+                        <div id="empty-state" class="flex flex-col items-center justify-center h-40 text-slate-400 dark:text-slate-500">
                             <i class="fa-regular fa-folder-open text-4xl mb-3 opacity-50"></i>
                             <p class="text-sm font-medium">아직 스캔된 기록이 없습니다</p>
+                        </div>
+                        <div id="no-results-state" class="hidden flex-col items-center justify-center h-40 text-slate-400 dark:text-slate-500">
+                            <i class="fa-solid fa-magnifying-glass text-4xl mb-3 opacity-50"></i>
+                            <p class="text-sm font-medium">검색 결과가 없습니다</p>
                         </div>
                     </ul>
                 </div>
