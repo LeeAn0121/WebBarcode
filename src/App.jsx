@@ -61,6 +61,10 @@ export default function App() {
   const [maxZoom, setMaxZoom] = useState(1);
   const [currentFolder, setCurrentFolder] = useState('기본폴더');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [localFolders, setLocalFolders] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('folders')) || []; }
+    catch { return []; }
+  });
   
   const scannerRef = useRef(null);
   const pendingInsertsRef = useRef(new Set());
@@ -69,8 +73,8 @@ export default function App() {
   const fileInputRef = useRef(null);
   const currentFolderRef = useRef('기본폴더');
 
-  // Derived unique folders from barcodes
-  const folders = Array.from(new Set(['기본폴더', ...barcodes.map(b => b.folder).filter(Boolean)]));
+  // Derived unique folders from barcodes and local
+  const folders = Array.from(new Set(['기본폴더', ...localFolders, ...barcodes.map(b => b.folder).filter(Boolean)])).sort();
 
   // Sync state to ref for callbacks
   useEffect(() => {
@@ -291,10 +295,32 @@ export default function App() {
   };
 
   const handleAddFolder = () => {
-    const newFolder = prompt('새 폴더 이름을 입력하세요:');
+    const newFolder = prompt('새 폴더 이름을 입력하세요\n(팁: "창고/A구역" 처럼 슬래시(/)를 넣으면 트리 구조로 관리됩니다):');
     if (newFolder && newFolder.trim() !== '') {
-      setCurrentFolder(newFolder.trim());
-      toast.success(`'${newFolder.trim()}' 폴더가 생성되었습니다. 바코드를 스캔하면 이 폴더에 저장됩니다.`);
+      const folderName = newFolder.trim();
+      setCurrentFolder(folderName);
+      setLocalFolders(prev => {
+        const next = [...prev, folderName];
+        localStorage.setItem('folders', JSON.stringify(next));
+        return next;
+      });
+      toast.success(`'${folderName}' 폴더가 생성되었습니다.`);
+    }
+  };
+
+  const handleDeleteFolder = (folderName) => {
+    if (folderName === '기본폴더') return toast.error('기본 폴더는 삭제할 수 없습니다.');
+    const hasBarcodes = barcodes.some(b => (b.folder || '기본폴더') === folderName);
+    if (hasBarcodes) return toast.error('바코드가 들어있는 폴더는 삭제할 수 없습니다. 먼저 바코드를 지워주세요.');
+    
+    if (confirm(`'${folderName}' 폴더를 삭제하시겠습니까?`)) {
+      setLocalFolders(prev => {
+        const next = prev.filter(f => f !== folderName);
+        localStorage.setItem('folders', JSON.stringify(next));
+        return next;
+      });
+      if (currentFolder === folderName) setCurrentFolder('기본폴더');
+      toast.success('폴더가 삭제되었습니다.');
     }
   };
 
@@ -414,7 +440,42 @@ export default function App() {
               <button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-full p-1"><X size={20} /></button>
             </div>
             
-            <div className="p-5 flex flex-col gap-4">
+            <div className="p-5 flex flex-col gap-4 max-h-[80vh] overflow-y-auto custom-scrollbar">
+              
+              {/* 폴더 관리 섹션 (트리 구조) */}
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">폴더 트리 관리</h4>
+                  <button onClick={handleAddFolder} className="text-primary hover:text-primaryHover text-xs font-bold flex items-center gap-1 bg-primary/10 px-2 py-1 rounded-md">
+                    <FolderPlus size={14}/> 새 폴더
+                  </button>
+                </div>
+                <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-xl p-3 flex flex-col gap-2 max-h-48 overflow-y-auto custom-scrollbar">
+                  {folders.map(f => {
+                    const parts = f.split('/');
+                    const depth = parts.length - 1;
+                    const name = parts[parts.length - 1];
+                    const barcodeCount = barcodes.filter(b => (b.folder || '기본폴더') === f).length;
+                    return (
+                      <div key={f} className="flex justify-between items-center hover:bg-slate-200/50 dark:hover:bg-slate-800 p-1.5 rounded-lg transition-colors group" style={{ marginLeft: `${depth * 16}px` }}>
+                        <div className="flex items-center gap-2 overflow-hidden">
+                          <Folder size={14} className="text-slate-400 shrink-0" />
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate" title={f}>{name}</span>
+                          <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-500 px-1.5 py-0.5 rounded-full">{barcodeCount}</span>
+                        </div>
+                        {f !== '기본폴더' && (
+                          <button onClick={() => handleDeleteFolder(f)} className="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-1">
+                            <Trash2 size={14}/>
+                          </button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div className="h-px bg-slate-100 dark:bg-slate-800 my-1"></div>
+
               <div className="space-y-3">
                 <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">데이터 내보내기/가져오기</h4>
                 <div className="grid grid-cols-2 gap-2">
