@@ -546,8 +546,9 @@ export default function App() {
             <h1 className="font-bold text-lg tracking-tight">WebBarcode</h1>
           </div>
           <div className="flex items-center gap-4">
-            <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${packageJson.version}`} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-primary transition-colors shrink-0">
-              <svg className="shrink-0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.03c3.18-.3 6.5-1.5 6.5-7.1 0-1.5-.5-2.8-1.4-3.8.1-.3.6-1.8-.1-3.8 0 0-1.2-.4-3.9 1.4a13 13 0 0 0-7 0C6 2.3 4.8 2.7 4.8 2.7.1 4.7.6 6.2.7 6.5.1 7.5-.4 8.8-.4 10.3c0 5.6 3.3 6.8 6.5 7.1-.8.8-1 2-1 3.2V22" /><path d="M9 22v-4a4.8 4.8 0 0 1 1-3.03" /></svg>
+            <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${packageJson.version}`} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-primary transition-colors shrink-0 flex items-center gap-1.5 font-mono text-xs bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-md">
+              <svg className="shrink-0" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.03c3.18-.3 6.5-1.5 6.5-7.1 0-1.5-.5-2.8-1.4-3.8.1-.3.6-1.8-.1-3.8 0 0-1.2-.4-3.9 1.4a13 13 0 0 0-7 0C6 2.3 4.8 2.7 4.8 2.7.1 4.7.6 6.2.7 6.5.1 7.5-.4 8.8-.4 10.3c0 5.6 3.3 6.8 6.5 7.1-.8.8-1 2-1 3.2V22" /><path d="M9 22v-4a4.8 4.8 0 0 1 1-3.03" /></svg>
+              v{packageJson.version}
             </a>
             <button onClick={() => setDarkMode(!darkMode)} className="text-slate-500 hover:text-primary transition-colors">
               {darkMode ? <IconSun size={20}/> : <IconMoon size={20}/>}
@@ -557,7 +558,7 @@ export default function App() {
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-3 sm:p-6 md:p-8 custom-scrollbar">
-          <div className="max-w-5xl mx-auto w-full h-full pb-20 md:pb-0">
+          <div className="max-w-5xl mx-auto w-full h-full pb-32 md:pb-0">
             {/* Tab: Home (Scanner & List) */}
         {activeTab === 'home' && (
           <div className="flex flex-col lg:flex-row gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -610,7 +611,7 @@ export default function App() {
             </section>
 
             <section className="w-full lg:w-7/12 flex flex-col flex-1">
-              <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col h-full lg:min-h-[500px]">
+              <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col lg:h-full lg:min-h-[500px]">
                 <div className="p-4 border-b border-slate-50 dark:border-slate-700/50">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
                     <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
@@ -634,7 +635,7 @@ export default function App() {
                   </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/30 max-h-[380px] lg:max-h-full">
+                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/30 max-h-[400px] lg:max-h-full overscroll-contain touch-pan-y">
                   <div className="space-y-3">
                     {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).map(item => (
                       <div key={item.id} className="relative bg-white dark:bg-darkCard p-3 sm:p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700/50 transition-all hover:shadow-sm flex items-center justify-between gap-3 group">
