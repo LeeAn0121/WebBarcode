@@ -1,56 +1,60 @@
-/* Custom Styles on top of Tailwind */
-
-/* Scanner Customizations */
+/* Html5Qrcode Customization Overrides */
 #reader {
     border: none !important;
 }
-
 #reader video {
-    object-fit: cover !important;
-    border-radius: 0.75rem !important; /* matches Tailwind rounded-xl */
+    border-radius: 0.75rem;
+    object-fit: cover;
 }
-
-/* Hide default html5-qrcode UI elements if possible, or style them */
-#reader__dashboard_section_csr span {
-    color: white;
+#reader__scan_region {
+    background-color: transparent !important;
 }
-
-#reader button {
-    background-color: #4f46e5 !important;
-    color: white !important;
-    border-radius: 0.5rem !important;
-    padding: 0.5rem 1rem !important;
-    border: none !important;
-    margin-top: 10px !important;
+#reader__dashboard_section_csr button {
+    display: none !important; /* Hide built-in buttons as we use custom ones */
+}
+#reader__dashboard_section_swaplink {
+    display: none !important;
+}
+#reader a {
+    color: #4f46e5 !important;
+    text-decoration: underline;
+}
+#reader select {
     cursor: pointer !important;
 }
 
-/* Animation for new items */
-@keyframes highlight-pulse {
+/* Scrollbar Styling */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(156, 163, 175, 0.5);
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgba(107, 114, 128, 0.8);
+}
+
+/* Animations */
+@keyframes slideDownFading {
     0% {
-        background-color: #d1fae5; /* Tailwind emerald-100 */
-        transform: scale(1.02);
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
     }
     100% {
-        background-color: white;
-        transform: scale(1);
+        opacity: 1;
+        transform: translateY(0) scale(1);
     }
 }
 
 .item-enter {
-    animation: highlight-pulse 1.5s ease-out forwards;
+    animation: slideDownFading 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
 }
 
-/* Custom Scrollbar for the list container */
-#barcode-list-container::-webkit-scrollbar {
-    width: 6px;
-}
-
-#barcode-list-container::-webkit-scrollbar-track {
-    background: transparent;
-}
-
-#barcode-list-container::-webkit-scrollbar-thumb {
-    background-color: #cbd5e1; /* slate-300 */
-    border-radius: 20px;
+.shadow-glow {
+    box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
 }

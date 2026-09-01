@@ -248,6 +248,37 @@ function removeBarcodeFromList(id) {
     }
 }
 
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    
+    const toast = document.createElement('div');
+    toast.className = `flex items-center p-4 mb-2 text-sm rounded-xl shadow-lg transition-all duration-300 transform translate-y-10 opacity-0 ${
+        type === 'success' ? 'bg-slate-800 text-white dark:bg-slate-100 dark:text-slate-900' :
+        type === 'error' ? 'bg-red-500 text-white' : 'bg-slate-800 text-white'
+    }`;
+    
+    const icon = type === 'success' ? '<i class="fa-solid fa-check-circle mr-3 text-lg text-emerald-400 dark:text-emerald-500"></i>' 
+                 : '<i class="fa-solid fa-circle-exclamation mr-3 text-lg"></i>';
+                 
+    toast.innerHTML = `${icon} <span class="font-medium">${message}</span>`;
+    
+    container.appendChild(toast);
+    
+    // Animate in
+    setTimeout(() => {
+        toast.classList.remove('translate-y-10', 'opacity-0');
+        toast.classList.add('translate-y-0', 'opacity-100');
+    }, 10);
+    
+    // Animate out
+    setTimeout(() => {
+        toast.classList.remove('translate-y-0', 'opacity-100');
+        toast.classList.add('-translate-y-4', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
 function updateBarcodeInList(data) {
     const codeElement = document.getElementById(`barcode-text-${data.id}`);
     const li = document.getElementById(`barcode-${data.id}`);
@@ -257,53 +288,27 @@ function updateBarcodeInList(data) {
         
         const timeValue = data.created_at ? new Date(data.created_at) : new Date();
         const timeString = timeValue.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        const isNewItem = false;
         
-        const memoText = (data.memo && data.memo.trim() !== '') ? data.memo : null;
-        const memoHtml = memoText ? `<p class="text-sm text-indigo-600 dark:text-indigo-300 mt-1.5 font-medium bg-indigo-50 dark:bg-indigo-900/50 inline-block px-2.5 py-1 rounded-md break-all"><i class="fa-regular fa-comment-dots mr-1"></i>${memoText}</p>` : '';
-        const escapedCode = data.code.replace(/'/g, "\\'");
-        const escapedMemo = memoText ? memoText.replace(/'/g, "\\'") : '';
-
-        li.innerHTML = `
-            <div class="flex items-center gap-3 overflow-hidden w-full">
-                <div class="h-10 w-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-primary dark:text-indigo-400 flex-shrink-0">
-                    <i class="fa-solid fa-barcode"></i>
-                </div>
-                <div class="overflow-hidden w-full">
-                    <p id="barcode-text-${data.id}" class="font-bold text-slate-800 dark:text-slate-200 text-lg tracking-wide truncate">${data.code}</p>
-                    ${memoHtml}
-                    <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 sm:hidden">${timeString}</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-1 self-start sm:self-auto flex-shrink-0">
-                <span class="hidden sm:inline-block text-xs text-slate-400 dark:text-slate-500 mr-2">${timeString}</span>
-                <button onclick="copyBarcode('${escapedCode}')" class="text-slate-400 hover:text-primary dark:hover:text-indigo-400 transition-colors p-2" title="복사하기">
-                    <i class="fa-regular fa-copy"></i>
-                </button>
-                <button onclick="shareBarcode('${data.id}', '${escapedCode}', '${timeString}', '${escapedMemo}')" class="text-slate-400 hover:text-primary dark:hover:text-indigo-400 transition-colors p-2" title="공유하기">
-                    <i class="fa-solid fa-share-nodes"></i>
-                </button>
-                <button onclick="editMemo('${data.id}', '${escapedMemo}')" class="text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors p-2" title="메모 추가/수정">
-                    <i class="fa-solid fa-comment-medical"></i>
-                </button>
-                <button onclick="editBarcode('${data.id}', document.getElementById('barcode-text-${data.id}').textContent)" class="text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors p-2" title="수정하기">
-                    <i class="fa-solid fa-pen-to-square"></i>
-                </button>
-                <button onclick="deleteBarcode('${data.id}')" class="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors p-2" title="삭제하기">
-                    <i class="fa-solid fa-trash-can"></i>
-                </button>
-            </div>
-        `;
+        const newHtml = generateBarcodeCardHtml(data, timeString, isNewItem);
         
-        barcodeList.insertBefore(li, li.nextSibling);
-        li.classList.add('bg-yellow-50', 'dark:bg-yellow-900/30');
-        setTimeout(() => li.classList.remove('bg-yellow-50', 'dark:bg-yellow-900/30'), 1500);
+        // Re-create li
+        const newLi = document.createElement('li');
+        newLi.id = `barcode-${data.id}`;
+        newLi.className = `barcode-item bg-white dark:bg-darkCard p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700/50 flex flex-col gap-3 transition-all duration-300 hover:shadow-md hover:border-primary/30 dark:hover:border-primary/50 group`;
+        newLi.innerHTML = newHtml;
+        
+        barcodeList.insertBefore(newLi, newLi.nextSibling);
+        newLi.classList.add('bg-indigo-50/50', 'dark:bg-indigo-900/20');
+        setTimeout(() => newLi.classList.remove('bg-indigo-50/50', 'dark:bg-indigo-900/20'), 1500);
     }
 }
 
 window.deleteBarcode = async (id) => {
     if(confirm('이 스캔 기록을 삭제하시겠습니까?')) {
         const { error } = await supabaseClient.from('barcodes').delete().eq('id', id);
-        if(error) alert('삭제 실패: ' + error.message);
+        if(error) showToast('삭제 실패: ' + error.message, 'error');
+        else showToast('기록이 삭제되었습니다.');
     }
 };
 
@@ -311,7 +316,8 @@ window.editBarcode = async (id, currentCode) => {
     const newCode = prompt('바코드 내용을 수정하세요:', currentCode);
     if(newCode !== null && newCode.trim() !== '' && newCode !== currentCode) {
         const { error } = await supabaseClient.from('barcodes').update({ code: newCode.trim() }).eq('id', id);
-        if(error) alert('수정 실패: ' + error.message);
+        if(error) showToast('수정 실패: ' + error.message, 'error');
+        else showToast('바코드가 수정되었습니다.');
     }
 };
 
@@ -319,13 +325,14 @@ window.editMemo = async (id, currentMemo) => {
     const newMemo = prompt('메모를 입력하세요 (비워두면 메모가 삭제됩니다):', currentMemo);
     if(newMemo !== null && newMemo !== currentMemo) {
         const { error } = await supabaseClient.from('barcodes').update({ memo: newMemo.trim() }).eq('id', id);
-        if(error) alert('메모 저장 실패: ' + error.message);
+        if(error) showToast('메모 저장 실패: ' + error.message, 'error');
+        else showToast(newMemo.trim() === '' ? '메모가 삭제되었습니다.' : '메모가 저장되었습니다.');
     }
 };
 
 window.copyBarcode = (code) => {
     navigator.clipboard.writeText(code).then(() => {
-        // Optional visual feedback could go here
+        showToast('바코드 번호가 복사되었습니다.');
     });
 };
 
@@ -349,57 +356,76 @@ window.shareBarcode = async (id, code, timeString, memo) => {
             console.error('공유 취소 또는 실패', err);
         }
     } else {
-        // Fallback to clipboard
         const fullText = `${shareText}\n${shareUrl}`;
         navigator.clipboard.writeText(fullText).then(() => {
-            alert('바코드 내용이 클립보드에 복사되었습니다.');
+            showToast('공유 내용이 클립보드에 복사되었습니다.');
         });
     }
 };
 
+function generateBarcodeCardHtml(data, timeString, isNew) {
+    const memoText = (data.memo && data.memo.trim() !== '') ? data.memo : null;
+    let memoHtml = '';
+    if (memoText) {
+        memoHtml = `
+        <div class="mt-2 bg-slate-50 dark:bg-slate-900/50 rounded-xl p-2.5 flex items-start gap-2 border border-slate-100 dark:border-slate-800">
+            <i class="fa-solid fa-quote-left text-slate-300 dark:text-slate-600 text-xs mt-0.5"></i>
+            <p class="text-sm text-slate-600 dark:text-slate-300 font-medium break-all flex-1">${memoText}</p>
+        </div>`;
+    }
+    
+    const escapedCode = data.code.replace(/'/g, "\\'");
+    const escapedMemo = memoText ? memoText.replace(/'/g, "\\'") : '';
+    
+    const badgeHtml = isNew ? `<span class="bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded ml-2 uppercase tracking-wide">New</span>` : '';
+
+    return `
+        <div class="flex items-start justify-between gap-3 w-full">
+            <div class="flex items-center gap-3 overflow-hidden flex-1">
+                <div class="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-indigo-50/50 dark:bg-indigo-500/10 flex items-center justify-center text-primary dark:text-indigo-400 flex-shrink-0 border border-indigo-100/50 dark:border-indigo-500/20 group-hover:scale-105 transition-transform">
+                    <i class="fa-solid fa-barcode text-lg sm:text-xl"></i>
+                </div>
+                <div class="overflow-hidden flex-1 flex flex-col justify-center">
+                    <div class="flex items-center">
+                        <p id="barcode-text-${data.id}" class="font-mono font-semibold text-slate-800 dark:text-slate-100 text-base sm:text-lg tracking-tight truncate">${data.code}</p>
+                        ${badgeHtml}
+                    </div>
+                    <p class="text-xs font-medium text-slate-400 dark:text-slate-500 mt-0.5"><i class="fa-regular fa-clock mr-1 opacity-70"></i>${timeString}</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-1 bg-slate-50 dark:bg-slate-900/50 p-1 rounded-xl border border-slate-100 dark:border-slate-800 flex-shrink-0">
+                <button onclick="copyBarcode('${escapedCode}')" class="text-slate-400 hover:text-primary dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 p-1.5 sm:p-2 rounded-lg transition-all" title="복사하기">
+                    <i class="fa-regular fa-copy"></i>
+                </button>
+                <button onclick="shareBarcode('${data.id}', '${escapedCode}', '${timeString}', '${escapedMemo}')" class="text-slate-400 hover:text-primary dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 p-1.5 sm:p-2 rounded-lg transition-all" title="공유하기">
+                    <i class="fa-solid fa-share-nodes"></i>
+                </button>
+                <div class="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-1"></div>
+                <button onclick="editMemo('${data.id}', '${escapedMemo}')" class="text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-white dark:hover:bg-slate-800 p-1.5 sm:p-2 rounded-lg transition-all" title="메모 추가/수정">
+                    <i class="fa-solid fa-comment-medical"></i>
+                </button>
+                <button onclick="editBarcode('${data.id}', document.getElementById('barcode-text-${data.id}').textContent)" class="text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-white dark:hover:bg-slate-800 p-1.5 sm:p-2 rounded-lg transition-all" title="수정하기">
+                    <i class="fa-solid fa-pen-to-square"></i>
+                </button>
+                <button onclick="deleteBarcode('${data.id}')" class="text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-white dark:hover:bg-slate-800 p-1.5 sm:p-2 rounded-lg transition-all" title="삭제하기">
+                    <i class="fa-solid fa-trash-can"></i>
+                </button>
+            </div>
+        </div>
+        ${memoHtml}
+    `;
+}
+
 function addBarcodeToList(data, isNew = false) {
     const li = document.createElement('li');
     li.id = `barcode-${data.id}`;
-    li.className = `barcode-item bg-white dark:bg-slate-800 p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-colors duration-300 ${isNew ? 'item-enter' : ''}`;
+    li.className = `barcode-item bg-white dark:bg-darkCard p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700/50 flex flex-col gap-3 transition-all duration-300 hover:shadow-md hover:border-primary/30 dark:hover:border-primary/50 group ${isNew ? 'item-enter' : ''}`;
     
     const timeValue = data.created_at ? new Date(data.created_at) : new Date();
     const timeString = timeValue.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     
-    const memoText = (data.memo && data.memo.trim() !== '') ? data.memo : null;
-    const memoHtml = memoText ? `<p class="text-sm text-indigo-600 dark:text-indigo-300 mt-1.5 font-medium bg-indigo-50 dark:bg-indigo-900/50 inline-block px-2.5 py-1 rounded-md break-all"><i class="fa-regular fa-comment-dots mr-1"></i>${memoText}</p>` : '';
-    const escapedCode = data.code.replace(/'/g, "\\'");
-    const escapedMemo = memoText ? memoText.replace(/'/g, "\\'") : '';
-
-    li.innerHTML = `
-        <div class="flex items-center gap-3 overflow-hidden w-full">
-            <div class="h-10 w-10 rounded-full bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center text-primary dark:text-indigo-400 flex-shrink-0">
-                <i class="fa-solid fa-barcode"></i>
-            </div>
-            <div class="overflow-hidden w-full">
-                <p id="barcode-text-${data.id}" class="font-bold text-slate-800 dark:text-slate-200 text-lg tracking-wide truncate">${data.code}</p>
-                ${memoHtml}
-                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1 sm:hidden">${timeString}</p>
-            </div>
-        </div>
-        <div class="flex items-center gap-1 self-start sm:self-auto flex-shrink-0">
-            <span class="hidden sm:inline-block text-xs text-slate-400 dark:text-slate-500 mr-2">${timeString}</span>
-            <button onclick="copyBarcode('${escapedCode}')" class="text-slate-400 hover:text-primary dark:hover:text-indigo-400 transition-colors p-2" title="복사하기">
-                <i class="fa-regular fa-copy"></i>
-            </button>
-            <button onclick="shareBarcode('${data.id}', '${escapedCode}', '${timeString}', '${escapedMemo}')" class="text-slate-400 hover:text-primary dark:hover:text-indigo-400 transition-colors p-2" title="공유하기">
-                <i class="fa-solid fa-share-nodes"></i>
-            </button>
-            <button onclick="editMemo('${data.id}', '${escapedMemo}')" class="text-slate-400 hover:text-blue-500 dark:hover:text-blue-400 transition-colors p-2" title="메모 추가/수정">
-                <i class="fa-solid fa-comment-medical"></i>
-            </button>
-            <button onclick="editBarcode('${data.id}', document.getElementById('barcode-text-${data.id}').textContent)" class="text-slate-400 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors p-2" title="수정하기">
-                <i class="fa-solid fa-pen-to-square"></i>
-            </button>
-            <button onclick="deleteBarcode('${data.id}')" class="text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors p-2" title="삭제하기">
-                <i class="fa-solid fa-trash-can"></i>
-            </button>
-        </div>
-    `;
+    li.innerHTML = generateBarcodeCardHtml(data, timeString, isNew);
     
     barcodeList.prepend(li);
     
