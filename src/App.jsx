@@ -59,7 +59,7 @@ export default function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [maxZoom, setMaxZoom] = useState(1);
-  const [currentFolder, setCurrentFolder] = useState('기본폴더');
+  const [currentFolder, setCurrentFolder] = useState('전체');
   const [activeTab, setActiveTab] = useState('home');
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeActionMenu, setActiveActionMenu] = useState(null);
@@ -74,7 +74,7 @@ export default function App() {
   const videoTrackRef = useRef(null);
   const lastScanTimeRef = useRef(0);
   const fileInputRef = useRef(null);
-  const currentFolderRef = useRef('기본폴더');
+  const currentFolderRef = useRef('전체');
 
   // Derived unique folders from barcodes and local
   const folders = Array.from(new Set(['기본폴더', ...localFolders, ...barcodes.map(b => b.folder).filter(Boolean)])).sort();
@@ -138,7 +138,8 @@ export default function App() {
     const readerEl = document.getElementById('reader-overlay');
     
     // Check duplicates per folder using ref to avoid stale closure
-    const isDuplicate = barcodesRef.current.some(b => b.code === cleanText && (b.folder || '기본폴더') === currentFolderRef.current) || pendingInsertsRef.current.has(cleanText);
+    const targetFolder = currentFolderRef.current === '전체' ? '기본폴더' : currentFolderRef.current;
+    const isDuplicate = barcodesRef.current.some(b => b.code === cleanText && (b.folder || '기본폴더') === targetFolder) || pendingInsertsRef.current.has(cleanText);
     
     if (isDuplicate) {
       playSound('duplicate', isSoundEnabled);
@@ -173,7 +174,7 @@ export default function App() {
       }, 300);
     }
 
-    const { error } = await supabase.from('barcodes').insert([{ code: cleanText, folder: currentFolderRef.current }]);
+    const { error } = await supabase.from('barcodes').insert([{ code: cleanText, folder: targetFolder }]);
     
     if (error) {
       console.error(error);
@@ -343,8 +344,13 @@ export default function App() {
   };
 
   const handleBackup = () => {
-    if (barcodes.length === 0) return toast.warning('백업할 데이터가 없습니다.');
-    const dataStr = JSON.stringify(barcodes, null, 2);
+    if (barcodes.length === 0 && localFolders.length === 0) return toast.warning('백업할 데이터가 없습니다.');
+    const backupData = {
+      version: 2,
+      barcodes: barcodes,
+      localFolders: localFolders
+    };
+    const dataStr = JSON.stringify(backupData, null, 2);
     const blob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -362,22 +368,38 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
-        const importedData = JSON.parse(event.target.result);
-        if (!Array.isArray(importedData)) throw new Error('Invalid format');
+        const parsed = JSON.parse(event.target.result);
+        let importedBarcodes = [];
+        let importedFolders = [];
+
+        if (Array.isArray(parsed)) {
+          importedBarcodes = parsed;
+        } else if (parsed.version >= 2) {
+          importedBarcodes = parsed.barcodes || [];
+          importedFolders = parsed.localFolders || [];
+        } else {
+          throw new Error('Invalid format');
+        }
         
-        // Remove id and created_at if necessary to avoid conflicts, or just let Supabase handle it if we are restoring to an empty DB.
-        // For safety, we'll strip 'id' so it generates new ones, and insert.
-        const cleanData = importedData.map(item => ({
+        const cleanData = importedBarcodes.map(item => ({
           code: item.code,
           memo: item.memo,
           folder: item.folder || '기본폴더',
           created_at: item.created_at || new Date().toISOString()
         }));
 
-        const { error } = await supabase.from('barcodes').insert(cleanData);
-        if (error) throw error;
+        if (cleanData.length > 0) {
+          const { error } = await supabase.from('barcodes').insert(cleanData);
+          if (error) throw error;
+        }
         
-        toast.success(`${cleanData.length}개의 데이터가 성공적으로 복원되었습니다.`);
+        if (importedFolders.length > 0) {
+          const mergedFolders = Array.from(new Set([...localFolders, ...importedFolders]));
+          setLocalFolders(mergedFolders);
+          localStorage.setItem('folders', JSON.stringify(mergedFolders));
+        }
+
+        toast.success(`${cleanData.length}개의 바코드 및 ${importedFolders.length}개의 폴더가 성공적으로 복원되었습니다.`);
         fetchBarcodes();
       } catch (err) {
         console.error(err);
@@ -385,7 +407,7 @@ export default function App() {
       }
     };
     reader.readAsText(file);
-    e.target.value = null; // reset input
+    e.target.value = null;
   };
 
   const handleShare = async (item) => {
@@ -529,11 +551,12 @@ export default function App() {
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
                     <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
                       <h2 className="font-bold flex items-center gap-2"><Barcode size={18}/> 스캔 기록</h2>
-                      <span className="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">{barcodes.filter(b => (b.folder || '기본폴더') === currentFolder).length}건</span>
+                      <span className="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">{barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length}건</span>
                     </div>
                     
                     <div className="relative w-full sm:w-auto">
                       <select value={currentFolder} onChange={(e) => setCurrentFolder(e.target.value)} className="w-full sm:w-[160px] appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold px-4 py-2.5 pr-10 rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer shadow-sm">
+                        <option value="전체">전체 (All)</option>
                         {folders.map(f => <option key={f} value={f}>{f}</option>)}
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
@@ -549,7 +572,7 @@ export default function App() {
                 
                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/30">
                   <div className="space-y-3">
-                    {filteredBarcodes.filter(b => (b.folder || '기본폴더') === currentFolder).map(item => (
+                    {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).map(item => (
                       <div key={item.id} className="relative bg-white dark:bg-darkCard p-3 sm:p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700/50 transition-all hover:shadow-sm flex items-center justify-between gap-3 group">
                         <div className="flex items-center gap-3 overflow-hidden flex-1">
                           <div className="h-10 w-10 shrink-0 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-primary flex items-center justify-center transition-transform group-hover:scale-105">
@@ -598,7 +621,7 @@ export default function App() {
                       </div>
                     ))}
                     
-                    {filteredBarcodes.filter(b => (b.folder || '기본폴더') === currentFolder).length === 0 && (
+                    {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length === 0 && (
                       <div className="h-40 flex flex-col items-center justify-center text-slate-400">
                         <p className="text-sm">기록이 없습니다.</p>
                       </div>
