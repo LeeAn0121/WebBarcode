@@ -8,7 +8,7 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'sans-serif'],
+        sans: ['Pretendard', 'sans-serif'],
         mono: ['"Fira Code"', 'monospace'],
       },
       colors: {
