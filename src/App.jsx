@@ -430,71 +430,69 @@ export default function App() {
   );
 
   return (
-    <>
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden text-slate-800 dark:text-slate-100">
       <Toaster position="bottom-center" theme={darkMode ? 'dark' : 'light'} />
-
-      {/* Header */}
-      <header className="bg-white/90 dark:bg-darkCard/90 backdrop-blur-lg shadow-sm border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4">
-          
-          {/* Top Row: Logo & Dark Mode */}
-          <div className="flex justify-between items-center py-3">
-            <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-primary to-purple-500 text-white p-2 rounded-xl shadow-glow">
-                <Barcode size={20} />
-              </div>
-              <h1 className="text-xl font-bold flex items-center gap-2">
-                WebBarcode 
-                <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${packageJson.version}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-primary hover:border-primary/50 text-[10px] px-1.5 py-0.5 rounded font-mono border border-slate-200 dark:border-slate-600 transition-colors" title="릴리즈 노트 보기">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.03c3.18-.3 6.5-1.5 6.5-7.1 0-1.5-.5-2.8-1.4-3.8.1-.3.6-1.8-.1-3.8 0 0-1.2-.4-3.9 1.4a13 13 0 0 0-7 0C6 2.3 4.8 2.7 4.8 2.7.1 4.7.6 6.2.7 6.5.1 7.5-.4 8.8-.4 10.3c0 5.6 3.3 6.8 6.5 7.1-.8.8-1 2-1 3.2V22" /><path d="M9 22v-4a4.8 4.8 0 0 1 1-3.03" /></svg> v{packageJson.version}
-                </a>
-              </h1>
-            </div>
-            
-            {/* More Menu Dropdown */}
-            <div className="relative">
-              <button onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)} className="p-2 text-slate-500 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors" title="메뉴">
-                <MoreVertical size={20}/>
-              </button>
-              
-              {isMoreMenuOpen && (
-                <>
-                  <div className="fixed inset-0 z-40" onClick={() => setIsMoreMenuOpen(false)}></div>
-                  <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-darkCard rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="p-2">
-                      <button onClick={() => { setDarkMode(!darkMode); setIsMoreMenuOpen(false); }} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200 font-medium text-sm">
-                        <div className="flex items-center gap-3">
-                          {darkMode ? <Sun size={16}/> : <Moon size={16}/>}
-                          {darkMode ? '라이트 모드' : '다크 모드'}
-                        </div>
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
+      
+      {/* Desktop Sidebar (Left) */}
+      <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-darkCard border-r border-slate-200 dark:border-slate-800 z-50">
+        <div className="p-6 flex items-center gap-3">
+          <div className="bg-gradient-to-br from-primary to-purple-500 text-white p-2.5 rounded-xl shadow-glow">
+            <Barcode size={24} />
           </div>
-          
-          {/* Bottom Row: Tab Navigation */}
-          <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-3 pt-1 md:pt-0 sm:gap-4 hide-scrollbar">
-            <button onClick={() => setActiveTab('home')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'home' ? 'bg-primary text-white shadow-md shadow-primary/20 scale-100' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 scale-95 hover:scale-100'}`}>
-              <Home size={18}/> <span className="text-sm">스캐너 홈</span>
-            </button>
-            <button onClick={() => setActiveTab('folders')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'folders' ? 'bg-primary text-white shadow-md shadow-primary/20 scale-100' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 scale-95 hover:scale-100'}`}>
-              <Folder size={18}/> <span className="text-sm">폴더 관리</span>
-            </button>
-            <button onClick={() => setActiveTab('settings')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-primary text-white shadow-md shadow-primary/20 scale-100' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 scale-95 hover:scale-100'}`}>
-              <Database size={18}/> <span className="text-sm">데이터 설정</span>
-            </button>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">WebBarcode</h1>
+            <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${packageJson.version}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-slate-500 hover:text-primary flex items-center gap-1 mt-0.5 transition-colors" title="릴리즈 노트 보기">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.03c3.18-.3 6.5-1.5 6.5-7.1 0-1.5-.5-2.8-1.4-3.8.1-.3.6-1.8-.1-3.8 0 0-1.2-.4-3.9 1.4a13 13 0 0 0-7 0C6 2.3 4.8 2.7 4.8 2.7.1 4.7.6 6.2.7 6.5.1 7.5-.4 8.8-.4 10.3c0 5.6 3.3 6.8 6.5 7.1-.8.8-1 2-1 3.2V22" /><path d="M9 22v-4a4.8 4.8 0 0 1 1-3.03" /></svg>
+              v{packageJson.version}
+            </a>
           </div>
-          
         </div>
-      </header>
-
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 flex flex-col gap-6">
         
-        {/* Tab: Home (Scanner & List) */}
+        <nav className="flex-1 px-4 flex flex-col gap-2 mt-2">
+          <button onClick={() => setActiveTab('home')} className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all ${activeTab === 'home' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+            <Home size={20} className={activeTab === 'home' ? 'animate-pulse' : ''} /> 스캐너 홈
+          </button>
+          <button onClick={() => setActiveTab('folders')} className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all ${activeTab === 'folders' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+            <Folder size={20} className={activeTab === 'folders' ? 'animate-pulse' : ''} /> 폴더 관리
+          </button>
+          <button onClick={() => setActiveTab('settings')} className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-medium transition-all ${activeTab === 'settings' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
+            <Database size={20} className={activeTab === 'settings' ? 'animate-pulse' : ''} /> 데이터 설정
+          </button>
+        </nav>
+
+        <div className="p-5 border-t border-slate-200 dark:border-slate-800">
+          <button onClick={() => setDarkMode(!darkMode)} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
+            {darkMode ? <Sun size={20}/> : <Moon size={20}/>}
+            <span className="font-medium text-sm">{darkMode ? '라이트 모드' : '다크 모드'}</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile Layout Wrapper */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        
+        {/* Mobile Header (Top) */}
+        <header className="md:hidden bg-white/90 dark:bg-darkCard/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 sticky top-0 px-4 py-3 flex justify-between items-center shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="bg-gradient-to-br from-primary to-purple-500 text-white p-1.5 rounded-lg shadow-glow">
+              <Barcode size={18} />
+            </div>
+            <h1 className="font-bold text-lg tracking-tight">WebBarcode</h1>
+          </div>
+          <div className="flex items-center gap-4">
+            <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${packageJson.version}`} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-primary transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.03c3.18-.3 6.5-1.5 6.5-7.1 0-1.5-.5-2.8-1.4-3.8.1-.3.6-1.8-.1-3.8 0 0-1.2-.4-3.9 1.4a13 13 0 0 0-7 0C6 2.3 4.8 2.7 4.8 2.7.1 4.7.6 6.2.7 6.5.1 7.5-.4 8.8-.4 10.3c0 5.6 3.3 6.8 6.5 7.1-.8.8-1 2-1 3.2V22" /><path d="M9 22v-4a4.8 4.8 0 0 1 1-3.03" /></svg>
+            </a>
+            <button onClick={() => setDarkMode(!darkMode)} className="text-slate-500 hover:text-primary transition-colors">
+              {darkMode ? <Sun size={20}/> : <Moon size={20}/>}
+            </button>
+          </div>
+        </header>
+
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-y-auto p-3 sm:p-6 md:p-8 custom-scrollbar">
+          <div className="max-w-5xl mx-auto w-full h-full pb-20 md:pb-0">
+            {/* Tab: Home (Scanner & List) */}
         {activeTab === 'home' && (
           <div className="flex flex-col lg:flex-row gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             <section className="w-full lg:w-5/12 flex flex-col gap-4">
@@ -632,8 +630,8 @@ export default function App() {
             </section>
           </div>
         )}
-
-        {/* Tab: Folders */}
+            
+            {/* Tab: Folders */}
         {activeTab === 'folders' && (
           <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50 dark:bg-slate-900/30">
@@ -671,8 +669,8 @@ export default function App() {
             </div>
           </div>
         )}
-
-        {/* Tab: Settings */}
+            
+            {/* Tab: Settings */}
         {activeTab === 'settings' && (
           <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-900/30">
@@ -746,8 +744,28 @@ export default function App() {
             </div>
           </div>
         )}
+          </div>
+        </main>
 
-      </main>
-    </>
+        {/* Mobile Bottom Tab Bar */}
+        <nav className="md:hidden bg-white/95 dark:bg-darkCard/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 fixed bottom-0 left-0 right-0 z-50 pb-safe">
+          <div className="flex justify-around items-center px-2 py-1.5">
+            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === 'home' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
+              <div className={`p-1 rounded-full ${activeTab === 'home' ? 'bg-primary/10' : ''}`}><Home size={22} /></div>
+              <span className="text-[10px] font-medium">홈</span>
+            </button>
+            <button onClick={() => setActiveTab('folders')} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === 'folders' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
+              <div className={`p-1 rounded-full ${activeTab === 'folders' ? 'bg-primary/10' : ''}`}><Folder size={22} /></div>
+              <span className="text-[10px] font-medium">폴더</span>
+            </button>
+            <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === 'settings' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
+              <div className={`p-1 rounded-full ${activeTab === 'settings' ? 'bg-primary/10' : ''}`}><Database size={22} /></div>
+              <span className="text-[10px] font-medium">설정</span>
+            </button>
+          </div>
+        </nav>
+        
+      </div>
+    </div>
   );
 }
