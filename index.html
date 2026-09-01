@@ -36,44 +36,44 @@
         }
     </script>
 </head>
-<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 h-screen flex flex-col font-sans transition-colors duration-300">
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-200 h-[100dvh] flex flex-col font-sans transition-colors duration-300">
     
     <header class="bg-white dark:bg-slate-800 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50 transition-colors duration-300">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-primary text-white p-2 rounded-lg">
-                    <i class="fa-solid fa-barcode text-xl"></i>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex justify-between items-center">
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div class="bg-primary text-white p-1.5 sm:p-2 rounded-lg">
+                    <i class="fa-solid fa-barcode text-lg sm:text-xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-xl font-bold text-slate-900 dark:text-white leading-tight">WebBarcode</h1>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block">Global 실시간 동기화 스캐너 (Supabase)</p>
+                    <h1 class="text-lg sm:text-xl font-bold text-slate-900 dark:text-white leading-tight">WebBarcode</h1>
+                    <p class="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:block">Global 실시간 동기화 스캐너</p>
                 </div>
             </div>
-            <div class="flex items-center gap-4">
-                <button id="theme-toggle" class="text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors text-xl p-1" title="다크 모드 전환">
+            <div class="flex items-center gap-3 sm:gap-4">
+                <button id="theme-toggle" class="text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary transition-colors text-lg sm:text-xl p-1" title="다크 모드 전환">
                     <i class="fa-solid fa-moon dark:hidden"></i>
                     <i class="fa-solid fa-sun hidden dark:block"></i>
                 </button>
-                <button id="export-excel-btn" class="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-1.5 px-3 rounded-lg shadow-sm transition-colors flex items-center gap-1.5" title="엑셀로 다운로드">
+                <button id="export-excel-btn" class="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm font-medium py-1.5 px-2.5 sm:px-3 rounded-lg shadow-sm transition-colors flex items-center gap-1.5" title="엑셀로 다운로드">
                     <i class="fa-solid fa-file-excel"></i> <span class="hidden sm:inline">다운로드</span>
                 </button>
-                <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 px-3 py-1.5 rounded-full">
-                    <span class="flex h-3 w-3 relative">
+                <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-700 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full">
+                    <span class="flex h-2.5 w-2.5 relative">
                       <span id="live-indicator-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-secondary opacity-75"></span>
-                      <span id="live-indicator" class="relative inline-flex rounded-full h-3 w-3 bg-secondary"></span>
+                      <span id="live-indicator" class="relative inline-flex rounded-full h-2.5 w-2.5 bg-secondary"></span>
                     </span>
-                    <span id="connection-status" class="text-sm text-slate-600 dark:text-slate-300 font-medium hidden sm:inline-block">Connecting...</span>
+                    <span id="connection-status" class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium hidden sm:inline-block">Connecting...</span>
                 </div>
             </div>
         </div>
     </header>
 
-    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8 overflow-hidden flex flex-col lg:flex-row gap-6">
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 overflow-y-auto lg:overflow-hidden flex flex-col lg:flex-row gap-4 sm:gap-6">
         
-        <section class="w-full lg:w-1/2 xl:w-5/12 flex flex-col">
-            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex-1 flex flex-col transition-colors duration-300">
-                <div class="p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
-                    <h2 class="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
+        <section class="w-full lg:w-1/2 xl:w-5/12 flex flex-col shrink-0 lg:shrink">
+            <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col transition-colors duration-300">
+                <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/50">
+                    <h2 class="text-base sm:text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
                         <i class="fa-solid fa-camera text-slate-400 dark:text-slate-500"></i> 카메라 스캔
                     </h2>
                     <button id="sound-toggle-btn" class="text-primary hover:text-indigo-700 dark:text-indigo-400 transition-colors p-1" title="소리 켜기/끄기">
@@ -81,7 +81,7 @@
                     </button>
                 </div>
                 
-                <div class="p-6 flex-1 flex flex-col items-center justify-center relative bg-slate-100/50 dark:bg-slate-900/50">
+                <div class="p-4 sm:p-6 flex flex-col items-center justify-center relative bg-slate-100/50 dark:bg-slate-900/50">
                     <div id="camera-controls" class="w-full text-center z-10 mb-4">
                         <button id="request-camera-btn" class="bg-primary hover:bg-indigo-700 text-white font-medium py-3 px-6 rounded-xl shadow-md transition-all duration-200 flex items-center justify-center gap-2 w-full max-w-xs mx-auto">
                             <i class="fa-solid fa-video"></i> 스캐너 시작하기
@@ -114,9 +114,9 @@
             </div>
         </section>
 
-        <section class="w-full lg:w-1/2 xl:w-7/12 flex flex-col h-[600px] lg:h-auto">
+        <section class="w-full lg:w-1/2 xl:w-7/12 flex flex-col min-h-[400px] lg:min-h-0 lg:h-auto pb-6">
             <div class="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex-1 flex flex-col transition-colors duration-300">
-                <div class="p-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex flex-col gap-3">
+                <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 flex flex-col gap-3">
                     <div class="flex justify-between items-center">
                         <h2 class="text-lg font-semibold text-slate-800 dark:text-white flex items-center gap-2">
                             <i class="fa-solid fa-list-ul text-slate-400 dark:text-slate-500"></i> 스캔 기록
