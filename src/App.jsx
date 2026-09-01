@@ -108,11 +108,19 @@ export default function App() {
         
         // If a new version exists and is different from current
         if (data.tag_name && data.tag_name !== currentTag) {
-          setUpdateInfo({
-            version: data.tag_name,
-            notes: data.body,
-            url: data.html_url
-          });
+          // GitHub Actions deploy takes ~1-2 minutes.
+          // Wait until 2 minutes have passed since the release was published to ensure the site is actually updated before prompting.
+          const publishedTime = new Date(data.published_at).getTime();
+          const now = new Date().getTime();
+          const isReady = (now - publishedTime) > 90000; // 1.5 minutes
+          
+          if (isReady) {
+            setUpdateInfo({
+              version: data.tag_name,
+              notes: data.body,
+              url: data.html_url
+            });
+          }
         }
       } catch (err) {
         console.error("Update check failed", err);
@@ -484,7 +492,7 @@ export default function App() {
               </div>
 
               <div className="flex flex-col w-full gap-2 mt-2">
-                <button onClick={() => window.location.reload()} className="w-full bg-primary hover:bg-primaryHover text-white font-bold py-3 rounded-lg text-sm transition-all shadow-md shadow-primary/20 flex items-center justify-center gap-2">
+                <button onClick={() => { window.location.href = window.location.pathname + '?v=' + updateInfo.version; }} className="w-full bg-primary hover:bg-primaryHover text-white font-bold py-3 rounded-lg text-sm transition-all shadow-md shadow-primary/20 flex items-center justify-center gap-2">
                   <IconRefresh size={18} /> 지금 새로고침
                 </button>
                 <a href={updateInfo.url} target="_blank" rel="noopener noreferrer" className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2">
