@@ -452,7 +452,7 @@ export default function App() {
             <div>
               <h1 className="text-xl font-bold flex items-center gap-2">
                 WebBarcode 
-                <a href={`https://github.com/LeeAn0121/WebBarcode/releases`} target="_blank" rel="noopener noreferrer" className="bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-primary hover:border-primary/50 text-[10px] px-1.5 py-0.5 rounded font-mono border border-slate-200 dark:border-slate-600 transition-colors" title="릴리즈 노트 보기">
+                <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${packageJson.version}`} target="_blank" rel="noopener noreferrer" className="bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-primary hover:border-primary/50 text-[10px] px-1.5 py-0.5 rounded font-mono border border-slate-200 dark:border-slate-600 transition-colors" title="릴리즈 노트 보기">
                   v{packageJson.version}
                 </a>
               </h1>
