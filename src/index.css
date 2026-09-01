@@ -1,0 +1,58 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 dark:bg-darkBg text-slate-800 dark:text-slate-200 min-h-[100dvh] font-sans antialiased selection:bg-primary/30;
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.5);
+  border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(107, 114, 128, 0.8);
+}
+
+@keyframes slideDownFading {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.item-enter {
+  animation: slideDownFading 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* Html5Qrcode Overrides - Hide the green box */
+#reader__scan_region canvas {
+    display: none !important;
+}
+
+#reader {
+  border: none !important;
+}
+#reader video {
+  border-radius: 0.75rem;
+  object-fit: cover;
+}
+#reader__dashboard_section_csr button {
+  display: none !important;
+}
+#reader__dashboard_section_swaplink {
+  display: none !important;
+}
