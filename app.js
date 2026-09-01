@@ -65,26 +65,35 @@ soundToggleBtn.addEventListener('click', () => {
     }
 });
 
-// Sound effect for successful scan
-function playBeepSound() {
+// Sound effect for scan results
+function playSound(type = 'success') {
     if (!isSoundEnabled) return;
     try {
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         const oscillator = audioCtx.createOscillator();
         const gainNode = audioCtx.createGain();
         
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); 
-        
-        gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
-        gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.01);
-        gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+        if (type === 'success') {
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); 
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.01);
+            gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.1);
+        } else if (type === 'duplicate') {
+            oscillator.type = 'square';
+            oscillator.frequency.setValueAtTime(300, audioCtx.currentTime);
+            oscillator.frequency.exponentialRampToValueAtTime(150, audioCtx.currentTime + 0.3);
+            gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.5, audioCtx.currentTime + 0.05);
+            gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.3);
+        }
         
         oscillator.connect(gainNode);
         gainNode.connect(audioCtx.destination);
-        
-        oscillator.start(audioCtx.currentTime);
-        oscillator.stop(audioCtx.currentTime + 0.1);
     } catch(e) {
         console.warn("Web Audio API not supported", e);
     }
@@ -444,8 +453,18 @@ async function onScanSuccess(decodedText, decodedResult) {
     clearTimeout(scanTimeout);
     scanTimeout = setTimeout(() => { lastScannedCode = null; }, 2000);
 
-    // Play beep sound
-    playBeepSound();
+    // Check for duplicate
+    const isDuplicate = allBarcodes.some(barcode => barcode.code === decodedText);
+    
+    if (isDuplicate) {
+        // Duplicate logic
+        playSound('duplicate');
+        showToast(`이미 등록된 바코드입니다: ${decodedText}`, 'error');
+        return; // Prevent insertion
+    }
+
+    // New barcode logic
+    playSound('success');
 
     // Save to Supabase
     const { error } = await supabaseClient
@@ -456,7 +475,7 @@ async function onScanSuccess(decodedText, decodedResult) {
         
     if (error) {
         console.error("Supabase insert error:", error);
-        alert("데이터를 저장하는데 실패했습니다. Supabase 설정을 확인해주세요.");
+        showToast("데이터를 저장하는데 실패했습니다. Supabase 설정을 확인해주세요.", "error");
     }
 }
 
