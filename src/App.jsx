@@ -7,7 +7,7 @@ import packageJson from '../package.json';
 import { 
   IconBarcode, IconMoon, IconSun, IconDownload, IconCamera, IconVolume, IconVolume3, 
   IconSearch, IconCopy, IconShare, IconMessagePlus, IconEdit, IconTrash, IconClock,
-  IconFolder, IconFolderPlus, IconCloudUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical
+  IconFolder, IconFolderPlus, IconCloudUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
 
@@ -63,6 +63,7 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeActionMenu, setActiveActionMenu] = useState(null);
+  const [updateInfo, setUpdateInfo] = useState(null);
   
   const [localFolders, setLocalFolders] = useState(() => {
     try { return JSON.parse(localStorage.getItem('folders')) || []; }
@@ -97,6 +98,32 @@ export default function App() {
   }, [darkMode]);
 
   // Supabase Realtime & Fetch
+  useEffect(() => {
+    const checkUpdate = async () => {
+      try {
+        const res = await fetch('https://api.github.com/repos/LeeAn0121/WebBarcode/releases/latest', { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        const currentTag = `v${packageJson.version}`;
+        
+        // If a new version exists and is different from current
+        if (data.tag_name && data.tag_name !== currentTag) {
+          setUpdateInfo({
+            version: data.tag_name,
+            notes: data.body,
+            url: data.html_url
+          });
+        }
+      } catch (err) {
+        console.error("Update check failed", err);
+      }
+    };
+    
+    checkUpdate();
+    const intervalId = setInterval(checkUpdate, 60000); // Check every 1 minute
+    return () => clearInterval(intervalId);
+  }, []);
+
   useEffect(() => {
     fetchBarcodes();
 
@@ -432,6 +459,42 @@ export default function App() {
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden text-slate-800 dark:text-slate-100">
       <Toaster position="bottom-center" theme={darkMode ? 'dark' : 'light'} />
+      
+      {/* Update Available Modal */}
+      {updateInfo && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"></div>
+          <div className="relative bg-white dark:bg-slate-800 rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 p-6 sm:p-8 max-w-sm w-full animate-in zoom-in-95 slide-in-from-bottom-4 duration-500 overflow-hidden">
+            <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-purple-500 to-pink-500"></div>
+            
+            <div className="flex flex-col items-center text-center gap-4">
+              <div className="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-full text-primary">
+                <IconRocket size={40} className="animate-bounce" />
+              </div>
+              
+              <div>
+                <h3 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-1">업데이트 가능</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400">새로운 기능이 추가된 최신 버전이 출시되었습니다!</p>
+              </div>
+              
+              <div className="flex items-center gap-3 bg-slate-50 dark:bg-slate-900/50 py-2.5 px-5 rounded-xl border border-slate-100 dark:border-slate-700 w-full justify-center">
+                <span className="font-mono text-slate-400 line-through text-sm">v{packageJson.version}</span>
+                <span className="text-slate-300">→</span>
+                <span className="font-mono font-bold text-primary text-base">{updateInfo.version}</span>
+              </div>
+
+              <div className="flex flex-col w-full gap-2 mt-2">
+                <button onClick={() => window.location.reload()} className="w-full bg-primary hover:bg-primaryHover text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-primary/20 flex items-center justify-center gap-2">
+                  <IconRefresh size={20} /> 지금 새로고침
+                </button>
+                <button onClick={() => setUpdateInfo(null)} className="w-full bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-500 dark:text-slate-400 font-medium py-3 rounded-xl transition-colors">
+                  나중에 하기
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Desktop Sidebar (Left) */}
       <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-darkCard border-r border-slate-200 dark:border-slate-800 z-50">
