@@ -749,18 +749,18 @@ export default function App() {
 
         {/* Mobile Bottom Tab Bar */}
         <nav className="md:hidden bg-white/95 dark:bg-darkCard/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 fixed bottom-0 left-0 right-0 z-50 pb-safe">
-          <div className="flex justify-around items-center px-2 py-1.5">
-            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === 'home' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-              <div className={`p-1 rounded-full ${activeTab === 'home' ? 'bg-primary/10' : ''}`}><Home size={22} /></div>
-              <span className="text-[10px] font-medium">홈</span>
+          <div className="flex justify-around items-center px-1 pt-1.5 pb-1">
+            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center gap-0.5 p-1 w-14 transition-colors ${activeTab === 'home' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
+              <div className={`p-1 rounded-full ${activeTab === 'home' ? 'bg-primary/10' : ''}`}><Home size={20} /></div>
+              <span className="text-[10px] font-medium leading-none">홈</span>
             </button>
-            <button onClick={() => setActiveTab('folders')} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === 'folders' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-              <div className={`p-1 rounded-full ${activeTab === 'folders' ? 'bg-primary/10' : ''}`}><Folder size={22} /></div>
-              <span className="text-[10px] font-medium">폴더</span>
+            <button onClick={() => setActiveTab('folders')} className={`flex flex-col items-center gap-0.5 p-1 w-14 transition-colors ${activeTab === 'folders' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
+              <div className={`p-1 rounded-full ${activeTab === 'folders' ? 'bg-primary/10' : ''}`}><Folder size={20} /></div>
+              <span className="text-[10px] font-medium leading-none">폴더</span>
             </button>
-            <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-1 p-2 w-16 transition-colors ${activeTab === 'settings' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-              <div className={`p-1 rounded-full ${activeTab === 'settings' ? 'bg-primary/10' : ''}`}><Database size={22} /></div>
-              <span className="text-[10px] font-medium">설정</span>
+            <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-0.5 p-1 w-14 transition-colors ${activeTab === 'settings' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
+              <div className={`p-1 rounded-full ${activeTab === 'settings' ? 'bg-primary/10' : ''}`}><Database size={20} /></div>
+              <span className="text-[10px] font-medium leading-none">설정</span>
             </button>
           </div>
         </nav>
