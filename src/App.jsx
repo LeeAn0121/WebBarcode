@@ -50,6 +50,7 @@ function playSound(type = 'success', isSoundEnabled) {
 export default function App() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches));
   const [barcodes, setBarcodes] = useState([]);
+  const barcodesRef = useRef([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [cameras, setCameras] = useState([]);
@@ -62,6 +63,11 @@ export default function App() {
   const pendingInsertsRef = useRef(new Set());
   const videoTrackRef = useRef(null);
   const lastScanTimeRef = useRef(0);
+
+  // Sync state to ref for callbacks
+  useEffect(() => {
+    barcodesRef.current = barcodes;
+  }, [barcodes]);
 
   // Theme toggle
   useEffect(() => {
@@ -117,8 +123,8 @@ export default function App() {
     // Custom visual flash effect
     const readerEl = document.getElementById('reader-overlay');
     
-    // Check duplicates
-    const isDuplicate = barcodes.some(b => b.code === cleanText) || pendingInsertsRef.current.has(cleanText);
+    // Check duplicates using ref to avoid stale closure
+    const isDuplicate = barcodesRef.current.some(b => b.code === cleanText) || pendingInsertsRef.current.has(cleanText);
     
     if (isDuplicate) {
       playSound('duplicate', isSoundEnabled);
