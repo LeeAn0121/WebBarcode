@@ -7,7 +7,7 @@ import packageJson from '../package.json';
 import { 
   IconBarcode, IconMoon, IconSun, IconDownload, IconCamera, IconVolume, IconVolume3, 
   IconSearch, IconCopy, IconShare, IconMessagePlus, IconEdit, IconTrash, IconClock,
-  IconFolder, IconFolderPlus, IconCloudUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh
+  IconFolder, IconFolderPlus, IconCloudUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
 
@@ -484,10 +484,13 @@ export default function App() {
               </div>
 
               <div className="flex flex-col w-full gap-2 mt-2">
-                <button onClick={() => window.location.reload()} className="w-full bg-primary hover:bg-primaryHover text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-primary/20 flex items-center justify-center gap-2">
-                  <IconRefresh size={20} /> 지금 새로고침
+                <button onClick={() => window.location.reload()} className="w-full bg-primary hover:bg-primaryHover text-white font-bold py-3 rounded-lg text-sm transition-all shadow-md shadow-primary/20 flex items-center justify-center gap-2">
+                  <IconRefresh size={18} /> 지금 새로고침
                 </button>
-                <button onClick={() => setUpdateInfo(null)} className="w-full bg-transparent hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-500 dark:text-slate-400 font-medium py-3 rounded-xl transition-colors">
+                <a href={updateInfo.url} target="_blank" rel="noopener noreferrer" className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2">
+                  <IconExternalLink size={18} /> 릴리즈 노트 보기
+                </a>
+                <button onClick={() => setUpdateInfo(null)} className="w-full bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium py-2 rounded-lg text-sm transition-colors mt-1">
                   나중에 하기
                 </button>
               </div>
