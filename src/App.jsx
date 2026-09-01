@@ -59,10 +59,9 @@ export default function App() {
   const [maxZoom, setMaxZoom] = useState(1);
   
   const scannerRef = useRef(null);
-  const lastScannedRef = useRef(null);
   const pendingInsertsRef = useRef(new Set());
-  const scanTimeoutRef = useRef(null);
   const videoTrackRef = useRef(null);
+  const lastScanTimeRef = useRef(0);
 
   // Theme toggle
   useEffect(() => {
@@ -84,7 +83,6 @@ export default function App() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'barcodes' }, payload => {
         if (payload.eventType === 'INSERT') {
           setBarcodes(prev => {
-            // Check if already in list (for optimistic updates or fast sync)
             if (prev.some(b => b.id === payload.new.id || b.code === payload.new.code)) return prev;
             return [payload.new, ...prev];
           });
@@ -108,11 +106,13 @@ export default function App() {
 
   const handleScan = async (decodedText) => {
     const cleanText = decodedText.trim();
-    if (cleanText === lastScannedRef.current) return;
     
-    lastScannedRef.current = cleanText;
-    clearTimeout(scanTimeoutRef.current);
-    scanTimeoutRef.current = setTimeout(() => { lastScannedRef.current = null; }, 2000);
+    // Global Debounce: Prevent any scan processing within 1.2 seconds of the last one.
+    // This prevents rapid misreads (garbage data) from the same physical barcode swipe,
+    // and also prevents spamming the error sound.
+    const now = Date.now();
+    if (now - lastScanTimeRef.current < 1200) return;
+    lastScanTimeRef.current = now;
 
     // Custom visual flash effect
     const readerEl = document.getElementById('reader-overlay');
