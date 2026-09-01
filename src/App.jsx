@@ -7,7 +7,7 @@ import packageJson from '../package.json';
 import { 
   Barcode, Moon, Sun, Download, Camera, Volume2, VolumeX, 
   Search, Copy, Share2, MessageSquarePlus, Edit3, Trash2, Clock,
-  Folder, FolderPlus, UploadCloud, DownloadCloud
+  Folder, FolderPlus, UploadCloud, DownloadCloud, Settings, X, AlertTriangle
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -60,6 +60,7 @@ export default function App() {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [maxZoom, setMaxZoom] = useState(1);
   const [currentFolder, setCurrentFolder] = useState('기본폴더');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   
   const scannerRef = useRef(null);
   const pendingInsertsRef = useRef(new Set());
@@ -297,6 +298,22 @@ export default function App() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    const codeConfirm = prompt('정말로 모든 바코드 스캔 기록을 삭제하시겠습니까?\n삭제를 원하시면 "삭제합니다"를 입력해주세요.');
+    if (codeConfirm === '삭제합니다') {
+      const { error } = await supabase.from('barcodes').delete().not('code', 'is', null);
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success('모든 스캔 기록이 삭제되었습니다.');
+        setBarcodes([]);
+        setIsSettingsOpen(false);
+      }
+    } else if (codeConfirm !== null) {
+      toast.warning('입력한 문구가 일치하지 않아 취소되었습니다.');
+    }
+  };
+
   const handleBackup = () => {
     if (barcodes.length === 0) return toast.warning('백업할 데이터가 없습니다.');
     const dataStr = JSON.stringify(barcodes, null, 2);
@@ -381,22 +398,56 @@ export default function App() {
             <button onClick={() => setDarkMode(!darkMode)} className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
               {darkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-600">
-              <button onClick={handleBackup} className="p-1.5 text-slate-500 hover:text-blue-500 rounded-lg hover:bg-white dark:hover:bg-slate-700 transition-colors" title="백업 (JSON)">
-                <DownloadCloud size={16} />
-              </button>
-              <button onClick={() => fileInputRef.current?.click()} className="p-1.5 text-slate-500 hover:text-indigo-500 rounded-lg hover:bg-white dark:hover:bg-slate-700 transition-colors" title="복원 (JSON)">
-                <UploadCloud size={16} />
-              </button>
-              <input type="file" ref={fileInputRef} onChange={handleRestore} accept=".json" className="hidden" />
-              <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 my-auto mx-1"></div>
-              <button onClick={exportExcel} className="flex items-center gap-1.5 px-2 py-1 text-slate-500 hover:text-green-500 rounded-lg hover:bg-white dark:hover:bg-slate-700 transition-colors text-sm font-medium">
-                <Download size={16} /> <span className="hidden sm:inline">엑셀</span>
-              </button>
-            </div>
+            <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
+              <Settings size={20} />
+            </button>
           </div>
         </div>
       </header>
+
+      {/* Settings Modal */}
+      {isSettingsOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 dark:bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-darkCard w-full max-w-sm rounded-3xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-5 border-b border-slate-100 dark:border-slate-800">
+              <h3 className="font-bold text-lg flex items-center gap-2 text-slate-800 dark:text-slate-100"><Settings size={18} className="text-slate-500"/> 설정</h3>
+              <button onClick={() => setIsSettingsOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-full p-1"><X size={20} /></button>
+            </div>
+            
+            <div className="p-5 flex flex-col gap-4">
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">데이터 내보내기/가져오기</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <button onClick={handleBackup} className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl transition-colors">
+                    <DownloadCloud size={24} className="text-blue-500" />
+                    <span className="text-xs font-medium">데이터 백업 (JSON)</span>
+                  </button>
+                  <button onClick={() => fileInputRef.current?.click()} className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl transition-colors">
+                    <UploadCloud size={24} className="text-indigo-500" />
+                    <span className="text-xs font-medium">데이터 복원 (JSON)</span>
+                  </button>
+                  <input type="file" ref={fileInputRef} onChange={handleRestore} accept=".json" className="hidden" />
+                </div>
+                
+                <button onClick={exportExcel} className="w-full flex items-center justify-center gap-2 p-3 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/40 border border-green-100 dark:border-green-800/50 text-green-700 dark:text-green-400 rounded-2xl transition-colors">
+                  <Download size={18} />
+                  <span className="text-sm font-medium">엑셀(Excel) 내보내기</span>
+                </button>
+              </div>
+
+              <div className="h-px bg-slate-100 dark:bg-slate-800 my-1"></div>
+
+              <div className="space-y-3">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider text-red-500">위험 구역</h4>
+                <button onClick={handleDeleteAll} className="w-full flex items-center justify-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 border border-red-100 dark:border-red-800/50 text-red-600 dark:text-red-400 rounded-2xl transition-colors">
+                  <AlertTriangle size={18} />
+                  <span className="text-sm font-bold">전체 기록 삭제</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
         
