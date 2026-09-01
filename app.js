@@ -447,35 +447,43 @@ function addBarcodeToList(data, isNew = false) {
 let lastScannedCode = null;
 let scanTimeout = null;
 
+const pendingInserts = new Set();
+
 async function onScanSuccess(decodedText, decodedResult) {
-    if (decodedText === lastScannedCode) return;
-    lastScannedCode = decodedText;
+    const cleanText = decodedText.trim();
+    if (cleanText === lastScannedCode) return;
+    lastScannedCode = cleanText;
     clearTimeout(scanTimeout);
     scanTimeout = setTimeout(() => { lastScannedCode = null; }, 2000);
 
-    // Check for duplicate
-    const isDuplicate = allBarcodes.some(barcode => barcode.code === decodedText);
+    // Check for duplicate (both in DB list and currently inserting)
+    const isDuplicate = allBarcodes.some(barcode => barcode.code === cleanText) || pendingInserts.has(cleanText);
     
     if (isDuplicate) {
         // Duplicate logic
         playSound('duplicate');
-        showToast(`이미 등록된 바코드입니다: ${decodedText}`, 'error');
+        showToast(`이미 등록된 바코드입니다: ${cleanText}`, 'error');
         return; // Prevent insertion
     }
 
     // New barcode logic
+    pendingInserts.add(cleanText);
     playSound('success');
 
     // Save to Supabase
     const { error } = await supabaseClient
         .from('barcodes')
         .insert([
-            { code: decodedText }
+            { code: cleanText }
         ]);
         
     if (error) {
         console.error("Supabase insert error:", error);
         showToast("데이터를 저장하는데 실패했습니다. Supabase 설정을 확인해주세요.", "error");
+        pendingInserts.delete(cleanText);
+    } else {
+        // Clean up pending after a few seconds (realtime will have picked it up by then)
+        setTimeout(() => pendingInserts.delete(cleanText), 3000);
     }
 }
 
