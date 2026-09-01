@@ -62,6 +62,7 @@ export default function App() {
   const [currentFolder, setCurrentFolder] = useState('기본폴더');
   const [activeTab, setActiveTab] = useState('home');
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [activeActionMenu, setActiveActionMenu] = useState(null);
   
   const [localFolders, setLocalFolders] = useState(() => {
     try { return JSON.parse(localStorage.getItem('folders')) || []; }
@@ -549,31 +550,50 @@ export default function App() {
                 <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/30">
                   <div className="space-y-3">
                     {filteredBarcodes.filter(b => (b.folder || '기본폴더') === currentFolder).map(item => (
-                      <div key={item.id} className="bg-white dark:bg-darkCard p-2.5 sm:p-3 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700/50 transition-all hover:shadow-sm group item-enter flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4">
+                      <div key={item.id} className="relative bg-white dark:bg-darkCard p-3 sm:p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700/50 transition-all hover:shadow-sm flex items-center justify-between gap-3 group">
                         <div className="flex items-center gap-3 overflow-hidden flex-1">
-                          <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-primary flex items-center justify-center shrink-0">
-                            <Barcode size={18} />
+                          <div className="h-10 w-10 shrink-0 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-primary flex items-center justify-center transition-transform group-hover:scale-105">
+                            <Barcode size={20} />
                           </div>
-                          <div className="overflow-hidden flex flex-col justify-center flex-1">
-                            <div className="flex items-baseline gap-2 truncate">
-                              <p className="font-mono font-bold text-base sm:text-lg text-slate-800 dark:text-slate-100 truncate">{item.code}</p>
-                              <p className="text-[10px] sm:text-xs text-slate-400 flex items-center gap-1 shrink-0"><Clock size={10}/> {format(new Date(item.created_at), 'HH:mm:ss')}</p>
+                          <div className="flex flex-col flex-1 overflow-hidden">
+                            <div className="flex items-center gap-2 truncate">
+                              <span className="font-mono font-bold text-base text-slate-800 dark:text-slate-100 truncate">{item.code}</span>
                             </div>
-                            {item.memo && (
-                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 truncate bg-slate-50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-700/50 inline-block w-fit max-w-full">
-                                {item.memo}
-                              </p>
-                            )}
+                            <div className="flex items-center gap-2 text-xs mt-0.5">
+                              <span className="text-slate-400 flex items-center gap-1 shrink-0"><Clock size={10}/> {format(new Date(item.created_at), 'HH:mm:ss')}</span>
+                              {item.memo && (
+                                <span className="truncate text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/50 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-700/50">
+                                  {item.memo}
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
                         
-                        <div className="flex items-center gap-1 shrink-0 bg-slate-50 dark:bg-slate-900/30 sm:bg-transparent sm:dark:bg-transparent rounded-lg p-1 sm:p-0 border border-slate-100 dark:border-slate-800 sm:border-0 self-end sm:self-auto">
-                          <button onClick={() => { navigator.clipboard.writeText(item.code); toast.success('복사됨'); }} className="p-1.5 sm:p-2 text-slate-400 hover:text-primary rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-colors" title="복사"><Copy size={16}/></button>
-                          <button onClick={() => handleShare(item)} className="p-1.5 sm:p-2 text-slate-400 hover:text-primary rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-colors" title="공유"><Share2 size={16}/></button>
-                          <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-0.5 sm:mx-1"></div>
-                          <button onClick={() => handleEditMemo(item.id, item.memo)} className="p-1.5 sm:p-2 text-slate-400 hover:text-blue-500 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-colors" title="메모"><MessageSquarePlus size={16}/></button>
-                          <button onClick={() => handleEditCode(item.id, item.code)} className="p-1.5 sm:p-2 text-slate-400 hover:text-green-500 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-colors" title="수정"><Edit3 size={16}/></button>
-                          <button onClick={() => handleDelete(item.id)} className="p-1.5 sm:p-2 text-slate-400 hover:text-red-500 rounded-lg hover:bg-white dark:hover:bg-slate-800 transition-colors" title="삭제"><Trash2 size={16}/></button>
+                        <div className="shrink-0 relative">
+                          <button 
+                            onClick={() => setActiveActionMenu(activeActionMenu === item.id ? null : item.id)}
+                            className="p-2 text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                            title="작업 메뉴 열기"
+                          >
+                            <MoreVertical size={20} />
+                          </button>
+                          
+                          {activeActionMenu === item.id && (
+                            <>
+                              <div className="fixed inset-0 z-30" onClick={() => setActiveActionMenu(null)}></div>
+                              <div className="absolute right-0 top-full mt-1 z-40 w-36 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+                                <div className="flex flex-col p-1">
+                                  <button onClick={() => { navigator.clipboard.writeText(item.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex items-center gap-2 w-full p-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors" title="바코드 복사"><Copy size={16}/> 복사</button>
+                                  <button onClick={() => { handleShare(item); setActiveActionMenu(null); }} className="flex items-center gap-2 w-full p-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors" title="공유하기"><Share2 size={16}/> 공유</button>
+                                  <button onClick={() => { handleEditMemo(item.id, item.memo); setActiveActionMenu(null); }} className="flex items-center gap-2 w-full p-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors" title="메모 추가/수정"><MessageSquarePlus size={16}/> 메모</button>
+                                  <button onClick={() => { handleEditCode(item.id, item.code); setActiveActionMenu(null); }} className="flex items-center gap-2 w-full p-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors" title="바코드 번호 수정"><Edit3 size={16}/> 수정</button>
+                                  <div className="h-px bg-slate-100 dark:bg-slate-700 my-1"></div>
+                                  <button onClick={() => { handleDelete(item.id); setActiveActionMenu(null); }} className="flex items-center gap-2 w-full p-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="삭제하기"><Trash2 size={16}/> 삭제</button>
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </div>
                     ))}
