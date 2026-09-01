@@ -61,7 +61,7 @@ export default function App() {
   const [maxZoom, setMaxZoom] = useState(1);
   const [currentFolder, setCurrentFolder] = useState('기본폴더');
   const [activeTab, setActiveTab] = useState('home');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
   const [localFolders, setLocalFolders] = useState(() => {
     try { return JSON.parse(localStorage.getItem('folders')) || []; }
     catch { return []; }
@@ -409,47 +409,16 @@ export default function App() {
     <>
       <Toaster position="bottom-center" theme={darkMode ? 'dark' : 'light'} />
 
-      {/* Sidebar Overlay */}
-      {isSidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-slate-900/50 backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)}></div>
-      )}
-
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-darkCard shadow-2xl transform transition-transform duration-300 flex flex-col ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="p-5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
-          <h2 className="font-bold text-lg text-primary flex items-center gap-2"><Barcode size={20}/> WebBarcode</h2>
-          <button onClick={() => setIsSidebarOpen(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"><X size={20}/></button>
-        </div>
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2">
-          <button onClick={() => { setActiveTab('home'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 p-3 rounded-xl font-medium transition-colors ${activeTab === 'home' ? 'bg-primary text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-            <Home size={18}/> 스캐너 홈
-          </button>
-          <button onClick={() => { setActiveTab('folders'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 p-3 rounded-xl font-medium transition-colors ${activeTab === 'folders' ? 'bg-primary text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-            <Folder size={18}/> 폴더 관리
-          </button>
-          <button onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); }} className={`flex items-center gap-3 p-3 rounded-xl font-medium transition-colors ${activeTab === 'settings' ? 'bg-primary text-white shadow-sm' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-            <Database size={18}/> 데이터 설정
-          </button>
-        </div>
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800">
-          <button onClick={() => setDarkMode(!darkMode)} className="w-full flex items-center justify-center gap-2 p-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-            {darkMode ? <Sun size={18}/> : <Moon size={18}/>}
-            {darkMode ? '라이트 모드로 변경' : '다크 모드로 변경'}
-          </button>
-        </div>
-      </div>
-
       {/* Header */}
-      <header className="bg-white/80 dark:bg-darkCard/80 backdrop-blur-md shadow-sm border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-30">
-        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 -ml-2 text-slate-500 hover:text-primary transition-colors">
-            <Menu size={24}/>
-          </button>
-          <div className="flex items-center gap-3 flex-1">
-            <div className="bg-gradient-to-br from-primary to-purple-500 text-white p-2 rounded-xl shadow-glow">
-              <Barcode />
-            </div>
-            <div>
+      <header className="bg-white/90 dark:bg-darkCard/90 backdrop-blur-lg shadow-sm border-b border-slate-200/50 dark:border-slate-700/50 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4">
+          
+          {/* Top Row: Logo & Dark Mode */}
+          <div className="flex justify-between items-center py-3">
+            <div className="flex items-center gap-3">
+              <div className="bg-gradient-to-br from-primary to-purple-500 text-white p-2 rounded-xl shadow-glow">
+                <Barcode size={20} />
+              </div>
               <h1 className="text-xl font-bold flex items-center gap-2">
                 WebBarcode 
                 <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${packageJson.version}`} target="_blank" rel="noopener noreferrer" className="bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-primary hover:border-primary/50 text-[10px] px-1.5 py-0.5 rounded font-mono border border-slate-200 dark:border-slate-600 transition-colors" title="릴리즈 노트 보기">
@@ -457,7 +426,25 @@ export default function App() {
                 </a>
               </h1>
             </div>
+            
+            <button onClick={() => setDarkMode(!darkMode)} className="p-2 text-slate-500 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors" title="다크모드 전환">
+              {darkMode ? <Sun size={20}/> : <Moon size={20}/>}
+            </button>
           </div>
+          
+          {/* Bottom Row: Tab Navigation */}
+          <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-3 pt-1 md:pt-0 sm:gap-4 hide-scrollbar">
+            <button onClick={() => setActiveTab('home')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'home' ? 'bg-primary text-white shadow-md shadow-primary/20 scale-100' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 scale-95 hover:scale-100'}`}>
+              <Home size={18}/> <span className="text-sm">스캐너 홈</span>
+            </button>
+            <button onClick={() => setActiveTab('folders')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'folders' ? 'bg-primary text-white shadow-md shadow-primary/20 scale-100' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 scale-95 hover:scale-100'}`}>
+              <Folder size={18}/> <span className="text-sm">폴더 관리</span>
+            </button>
+            <button onClick={() => setActiveTab('settings')} className={`flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all whitespace-nowrap ${activeTab === 'settings' ? 'bg-primary text-white shadow-md shadow-primary/20 scale-100' : 'bg-slate-50 dark:bg-slate-800/50 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 scale-95 hover:scale-100'}`}>
+              <Database size={18}/> <span className="text-sm">데이터 설정</span>
+            </button>
+          </div>
+          
         </div>
       </header>
 
@@ -466,12 +453,12 @@ export default function App() {
         
         {/* Tab: Home (Scanner & List) */}
         {activeTab === 'home' && (
-          <div className="flex flex-col lg:flex-row gap-6 w-full">
+          <div className="flex flex-col lg:flex-row gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             <section className="w-full lg:w-5/12 flex flex-col gap-4">
               <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden relative">
                 <div className="p-4 border-b border-slate-50 dark:border-slate-700/50 flex justify-between items-center">
                   <h2 className="font-bold flex items-center gap-2"><Camera className="text-primary" size={20} /> 카메라 스캔</h2>
-                  <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-primary rounded-full">
+                  <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-primary rounded-full hover:bg-indigo-100 transition-colors">
                     {isSoundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
                   </button>
                 </div>
@@ -488,25 +475,25 @@ export default function App() {
                   )}
 
                   {cameras.length > 1 && isScanning && (
-                    <select value={selectedCamera} onChange={(e) => { setSelectedCamera(e.target.value); stopScanner(); setTimeout(startScanner, 100); }} className="mb-4 w-full max-w-xs p-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm">
+                    <select value={selectedCamera} onChange={(e) => { setSelectedCamera(e.target.value); stopScanner(); setTimeout(startScanner, 100); }} className="mb-4 w-full max-w-xs p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium shadow-sm">
                       {cameras.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
                     </select>
                   )}
 
                   {maxZoom > 1 && isScanning && (
-                    <div className="w-full max-w-xs flex items-center gap-3 mb-4 bg-white dark:bg-slate-800 p-2 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <div className="w-full max-w-xs flex items-center gap-3 mb-4 bg-white dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
                       <span className="text-xs font-bold text-slate-400">Zoom</span>
                       <input type="range" min="1" max={maxZoom} step="0.1" value={zoomLevel} onChange={handleZoomChange} className="flex-1 accent-primary" />
                     </div>
                   )}
                   
-                  <div className="w-full relative rounded-2xl overflow-hidden bg-slate-900 min-h-[250px]">
+                  <div className="w-full relative rounded-2xl overflow-hidden bg-slate-900 min-h-[250px] sm:min-h-[300px]">
                     <div id="reader" className="w-full"></div>
                     <div id="reader-overlay" className="absolute inset-4 rounded-xl border-2 ring-4 ring-primary/50 border-dashed border-white/50 pointer-events-none transition-all duration-300"></div>
                     
                     {!isScanning && (
                       <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-900/90 z-10">
-                        <Barcode size={48} className="opacity-30 mb-2" />
+                        <Barcode size={48} className="opacity-30 mb-3" />
                         <p className="text-sm font-medium">카메라를 켜주세요</p>
                       </div>
                     )}
@@ -518,23 +505,24 @@ export default function App() {
             <section className="w-full lg:w-7/12 flex flex-col flex-1">
               <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col h-full min-h-[500px]">
                 <div className="p-4 border-b border-slate-50 dark:border-slate-700/50">
-                  <div className="flex justify-between items-center mb-4">
-                    <div className="flex items-center gap-2">
-                      <h2 className="font-bold flex items-center gap-2">스캔 기록</h2>
-                      <div className="relative">
-                        <select value={currentFolder} onChange={(e) => setCurrentFolder(e.target.value)} className="appearance-none bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold px-3 py-1.5 pr-6 rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer max-w-[150px] truncate">
-                          {folders.map(f => <option key={f} value={f}>{f}</option>)}
-                        </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-slate-400">
-                          <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                        </div>
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+                    <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+                      <h2 className="font-bold flex items-center gap-2"><Barcode size={18}/> 스캔 기록</h2>
+                      <span className="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">{barcodes.filter(b => (b.folder || '기본폴더') === currentFolder).length}건</span>
+                    </div>
+                    
+                    <div className="relative w-full sm:w-auto">
+                      <select value={currentFolder} onChange={(e) => setCurrentFolder(e.target.value)} className="w-full sm:w-[160px] appearance-none bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-bold px-4 py-2.5 pr-10 rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer shadow-sm">
+                        {folders.map(f => <option key={f} value={f}>{f}</option>)}
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
+                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
                       </div>
                     </div>
-                    <span className="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-full whitespace-nowrap">{barcodes.filter(b => (b.folder || '기본폴더') === currentFolder).length}건</span>
                   </div>
                   <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="바코드 번호 또는 메모 검색..." className="w-full bg-slate-50 dark:bg-slate-900/50 border-0 ring-1 ring-slate-200 dark:ring-slate-700 rounded-xl pl-10 p-2.5 text-sm focus:ring-2 focus:ring-primary outline-none" />
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="바코드 번호 또는 메모 검색..." className="w-full bg-slate-50 dark:bg-slate-900/50 border-0 ring-1 ring-slate-200 dark:ring-slate-700 rounded-xl pl-11 p-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-shadow" />
                   </div>
                 </div>
                 
@@ -584,32 +572,32 @@ export default function App() {
 
         {/* Tab: Folders */}
         {activeTab === 'folders' && (
-          <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col min-h-[500px]">
-            <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/30">
-              <h2 className="font-bold flex items-center gap-2 text-lg"><Folder className="text-primary" size={24} /> 폴더 트리 관리</h2>
-              <button onClick={handleAddFolder} className="bg-primary hover:bg-primaryHover text-white px-4 py-2 rounded-xl text-sm font-bold flex items-center gap-2 shadow-sm transition-colors">
-                <FolderPlus size={16}/> 새 폴더 생성
+          <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50 dark:bg-slate-900/30">
+              <h2 className="font-bold flex items-center gap-2 text-xl"><Folder className="text-primary" size={24} /> 폴더 트리 관리</h2>
+              <button onClick={handleAddFolder} className="w-full sm:w-auto bg-primary hover:bg-primaryHover text-white px-5 py-2.5 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm shadow-primary/20 transition-colors">
+                <FolderPlus size={18}/> 새 폴더 생성하기
               </button>
             </div>
             
-            <div className="flex-1 p-6 flex flex-col gap-4">
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">폴더 이름을 <code className="bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-700 dark:text-slate-200">창고/1층/A구역</code> 처럼 지으면 자동으로 트리 구조로 관리됩니다.</p>
+            <div className="flex-1 p-4 sm:p-6 flex flex-col gap-4">
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-2 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-xl border border-blue-100 dark:border-blue-800/30">💡 폴더 이름을 <code className="bg-white dark:bg-slate-800 px-1.5 py-0.5 rounded text-primary font-bold shadow-sm">창고/1층/A구역</code> 처럼 지으면 자동으로 트리 구조로 관리됩니다.</p>
               
-              <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl p-4 flex flex-col gap-2 flex-1 max-h-[60vh] overflow-y-auto custom-scrollbar">
+              <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700 rounded-2xl p-2 sm:p-4 flex flex-col gap-2 flex-1 max-h-[60vh] overflow-y-auto custom-scrollbar">
                 {folders.map(f => {
                   const parts = f.split('/');
                   const depth = parts.length - 1;
                   const name = parts[parts.length - 1];
                   const barcodeCount = barcodes.filter(b => (b.folder || '기본폴더') === f).length;
                   return (
-                    <div key={f} className="flex justify-between items-center hover:bg-white dark:hover:bg-darkCard p-3 rounded-xl transition-all shadow-sm border border-transparent hover:border-slate-200 dark:hover:border-slate-700 group" style={{ marginLeft: `${depth * 24}px` }}>
+                    <div key={f} className="flex justify-between items-center hover:bg-white dark:hover:bg-darkCard p-3 rounded-xl transition-all shadow-sm border border-transparent hover:border-slate-200 dark:hover:border-slate-700 group" style={{ marginLeft: `${depth * 16}px` }}>
                       <div className="flex items-center gap-3 overflow-hidden">
                         <Folder size={18} className="text-slate-400 shrink-0" />
                         <span className="font-medium text-slate-700 dark:text-slate-200 truncate" title={f}>{name}</span>
-                        <span className="text-xs bg-indigo-50 dark:bg-indigo-900/30 text-primary font-bold px-2 py-1 rounded-lg">{barcodeCount}개 바코드</span>
+                        <span className="text-xs bg-indigo-50 dark:bg-indigo-900/30 text-primary font-bold px-2.5 py-1 rounded-lg whitespace-nowrap">{barcodeCount}개</span>
                       </div>
                       {f !== '기본폴더' && (
-                        <button onClick={() => handleDeleteFolder(f)} className="text-slate-400 hover:text-red-500 bg-slate-100 hover:bg-red-50 dark:bg-slate-800 dark:hover:bg-red-900/30 p-2 rounded-lg transition-colors" title="폴더 삭제">
+                        <button onClick={() => handleDeleteFolder(f)} className="text-slate-400 hover:text-red-500 bg-slate-100 hover:bg-red-50 dark:bg-slate-800 dark:hover:bg-red-900/30 p-2 rounded-lg transition-colors shrink-0" title="폴더 삭제">
                           <Trash2 size={16}/>
                         </button>
                       )}
@@ -623,33 +611,37 @@ export default function App() {
 
         {/* Tab: Settings */}
         {activeTab === 'settings' && (
-          <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden min-h-[500px]">
+          <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-900/30">
-              <h2 className="font-bold flex items-center gap-2 text-lg"><Database className="text-primary" size={24} /> 데이터 및 시스템 설정</h2>
+              <h2 className="font-bold flex items-center gap-2 text-xl"><Database className="text-primary" size={24} /> 데이터 및 시스템 설정</h2>
             </div>
             
-            <div className="p-6 max-w-3xl mx-auto w-full flex flex-col gap-10">
+            <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full flex flex-col gap-10">
               
               {/* 내보내기 영역 */}
               <section className="space-y-4">
                 <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">데이터 백업 및 복원</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 flex flex-col gap-3">
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 flex flex-col gap-4 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-3 text-blue-500">
-                      <DownloadCloud size={24} />
-                      <h4 className="font-bold">JSON 백업</h4>
+                      <div className="bg-blue-100 dark:bg-blue-900/30 p-2.5 rounded-xl">
+                        <DownloadCloud size={24} />
+                      </div>
+                      <h4 className="font-bold text-lg text-slate-800 dark:text-slate-100">JSON 백업</h4>
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 flex-1">현재 앱에 저장된 모든 바코드 데이터를 JSON 파일로 다운로드합니다.</p>
-                    <button onClick={handleBackup} className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-2.5 rounded-xl transition-colors">백업 파일 다운로드</button>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 flex-1 leading-relaxed">현재 앱에 저장된 모든 바코드 데이터를 JSON 파일로 안전하게 다운로드합니다.</p>
+                    <button onClick={handleBackup} className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 rounded-xl transition-colors shadow-sm">백업 파일 다운로드</button>
                   </div>
 
-                  <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 flex flex-col gap-3">
+                  <div className="bg-slate-50 dark:bg-slate-900/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 flex flex-col gap-4 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-3 text-indigo-500">
-                      <UploadCloud size={24} />
-                      <h4 className="font-bold">JSON 복원</h4>
+                      <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2.5 rounded-xl">
+                        <UploadCloud size={24} />
+                      </div>
+                      <h4 className="font-bold text-lg text-slate-800 dark:text-slate-100">JSON 복원</h4>
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 flex-1">백업해 둔 JSON 파일을 업로드하여 데이터를 복구합니다.</p>
-                    <button onClick={() => fileInputRef.current?.click()} className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-medium py-2.5 rounded-xl transition-colors">백업 파일 업로드</button>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 flex-1 leading-relaxed">이전에 백업해 둔 JSON 파일을 업로드하여 데이터를 덮어쓰기 없이 복구합니다.</p>
+                    <button onClick={() => fileInputRef.current?.click()} className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded-xl transition-colors shadow-sm">백업 파일 업로드</button>
                     <input type="file" ref={fileInputRef} onChange={handleRestore} accept=".json" className="hidden" />
                   </div>
                 </div>
@@ -658,10 +650,15 @@ export default function App() {
               {/* 엑셀 영역 */}
               <section className="space-y-4">
                 <h3 className="text-sm font-bold text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">엑셀 출력</h3>
-                <div className="bg-green-50 dark:bg-green-900/10 p-5 rounded-2xl border border-green-100 dark:border-green-800/30 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div>
-                    <h4 className="font-bold text-green-700 dark:text-green-400 flex items-center gap-2"><Download size={20}/> Excel 변환</h4>
-                    <p className="text-sm text-green-600/80 dark:text-green-400/80 mt-1">스캔된 모든 기록을 PC에서 열 수 있는 엑셀 형식(.xlsx)으로 저장합니다.</p>
+                <div className="bg-green-50 dark:bg-green-900/10 p-5 rounded-2xl border border-green-100 dark:border-green-800/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm">
+                  <div className="flex items-start gap-4">
+                    <div className="bg-green-100 dark:bg-green-900/30 p-3 rounded-xl text-green-600 dark:text-green-400 shrink-0">
+                      <Download size={24}/>
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-green-700 dark:text-green-400 text-lg">Excel (.xlsx) 변환</h4>
+                      <p className="text-sm text-green-600/80 dark:text-green-400/80 mt-1 leading-relaxed">스캔된 모든 기록을 엑셀 형식으로 추출합니다.</p>
+                    </div>
                   </div>
                   <button onClick={exportExcel} className="w-full sm:w-auto shrink-0 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-xl transition-colors shadow-sm">
                     엑셀 파일로 추출
@@ -670,14 +667,14 @@ export default function App() {
               </section>
 
               {/* 위험 구역 */}
-              <section className="space-y-4">
+              <section className="space-y-4 pt-4">
                 <h3 className="text-sm font-bold text-red-500 uppercase tracking-widest border-b border-red-100 dark:border-red-900/30 pb-2 flex items-center gap-2"><AlertTriangle size={16}/> 위험 구역</h3>
-                <div className="bg-red-50 dark:bg-red-900/10 p-6 rounded-2xl border border-red-200 dark:border-red-800/30 flex flex-col gap-4">
+                <div className="bg-red-50 dark:bg-red-900/10 p-5 sm:p-6 rounded-2xl border border-red-200 dark:border-red-800/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm">
                   <div>
                     <h4 className="font-bold text-red-600 dark:text-red-400 text-lg">모든 데이터 삭제</h4>
-                    <p className="text-sm text-red-500/80 dark:text-red-400/80 mt-1">이 작업은 되돌릴 수 없습니다. 클라우드에 저장된 모든 바코드 데이터가 즉시 삭제됩니다.</p>
+                    <p className="text-sm text-red-500/80 dark:text-red-400/80 mt-1 leading-relaxed">이 작업은 되돌릴 수 없습니다. 서버의 모든 데이터가 영구 삭제됩니다.</p>
                   </div>
-                  <button onClick={handleDeleteAll} className="w-full sm:w-auto self-start bg-white dark:bg-slate-800 border-2 border-red-500 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white font-bold py-2.5 px-6 rounded-xl transition-colors">
+                  <button onClick={handleDeleteAll} className="w-full sm:w-auto shrink-0 bg-white dark:bg-slate-800 border-2 border-red-500 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white font-bold py-3 px-6 rounded-xl transition-colors">
                     영구 삭제 진행
                   </button>
                 </div>
