@@ -7,7 +7,7 @@ import packageJson from '../package.json';
 import { 
   Barcode, Moon, Sun, Download, Camera, Volume2, VolumeX, 
   Search, Copy, Share2, MessageSquarePlus, Edit3, Trash2, Clock,
-  Folder, FolderPlus, UploadCloud, DownloadCloud, Settings, X, AlertTriangle, Menu, Home, Database
+  Folder, FolderPlus, UploadCloud, DownloadCloud, Settings, X, AlertTriangle, Menu, Home, Database, MoreVertical
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -61,6 +61,7 @@ export default function App() {
   const [maxZoom, setMaxZoom] = useState(1);
   const [currentFolder, setCurrentFolder] = useState('기본폴더');
   const [activeTab, setActiveTab] = useState('home');
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   
   const [localFolders, setLocalFolders] = useState(() => {
     try { return JSON.parse(localStorage.getItem('folders')) || []; }
@@ -427,9 +428,28 @@ export default function App() {
               </h1>
             </div>
             
-            <button onClick={() => setDarkMode(!darkMode)} className="p-2 text-slate-500 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors" title="다크모드 전환">
-              {darkMode ? <Sun size={20}/> : <Moon size={20}/>}
-            </button>
+            {/* More Menu Dropdown */}
+            <div className="relative">
+              <button onClick={() => setIsMoreMenuOpen(!isMoreMenuOpen)} className="p-2 text-slate-500 hover:text-primary hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors" title="메뉴">
+                <MoreVertical size={20}/>
+              </button>
+              
+              {isMoreMenuOpen && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setIsMoreMenuOpen(false)}></div>
+                  <div className="absolute right-0 mt-2 w-40 bg-white dark:bg-darkCard rounded-2xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden z-50 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="p-2">
+                      <button onClick={() => { setDarkMode(!darkMode); setIsMoreMenuOpen(false); }} className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200 font-medium text-sm">
+                        <div className="flex items-center gap-3">
+                          {darkMode ? <Sun size={16}/> : <Moon size={16}/>}
+                          {darkMode ? '라이트 모드' : '다크 모드'}
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
           
           {/* Bottom Row: Tab Navigation */}
