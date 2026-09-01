@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { Html5Qrcode } from 'html5-qrcode';
 import { Toaster, toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import packageJson from '../package.json';
 import { 
   Barcode, Moon, Sun, Download, Camera, Volume2, VolumeX, 
   Search, Copy, Share2, MessageSquarePlus, Edit3, Trash2, Clock
@@ -295,7 +296,7 @@ export default function App() {
             </div>
             <div>
               <h1 className="text-xl font-bold flex items-center gap-2">
-                WebBarcode <span className="bg-slate-100 dark:bg-slate-700 text-slate-500 text-[10px] px-1.5 py-0.5 rounded font-mono border border-slate-200 dark:border-slate-600">v2.0 React</span>
+                WebBarcode <span className="bg-slate-100 dark:bg-slate-700 text-slate-500 text-[10px] px-1.5 py-0.5 rounded font-mono border border-slate-200 dark:border-slate-600">v{packageJson.version}</span>
               </h1>
             </div>
           </div>
