@@ -101,7 +101,7 @@ export default function App() {
   useEffect(() => {
     const checkUpdate = async () => {
       try {
-        const res = await fetch('https://api.github.com/repos/LeeAn0121/WebBarcode/releases/latest', { cache: 'no-store' });
+        const res = await fetch('https://api.github.com/repos/LeeAn0121/WebBarcode/releases/latest?t=' + new Date().getTime(), { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
         const currentTag = `v${packageJson.version}`;
@@ -120,7 +120,7 @@ export default function App() {
     };
     
     checkUpdate();
-    const intervalId = setInterval(checkUpdate, 60000); // Check every 1 minute
+    const intervalId = setInterval(checkUpdate, 30000); // Check every 30 seconds
     return () => clearInterval(intervalId);
   }, []);
 
@@ -543,8 +543,8 @@ export default function App() {
             <h1 className="font-bold text-lg tracking-tight">WebBarcode</h1>
           </div>
           <div className="flex items-center gap-4">
-            <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${packageJson.version}`} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-primary transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.03c3.18-.3 6.5-1.5 6.5-7.1 0-1.5-.5-2.8-1.4-3.8.1-.3.6-1.8-.1-3.8 0 0-1.2-.4-3.9 1.4a13 13 0 0 0-7 0C6 2.3 4.8 2.7 4.8 2.7.1 4.7.6 6.2.7 6.5.1 7.5-.4 8.8-.4 10.3c0 5.6 3.3 6.8 6.5 7.1-.8.8-1 2-1 3.2V22" /><path d="M9 22v-4a4.8 4.8 0 0 1 1-3.03" /></svg>
+            <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${packageJson.version}`} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-primary transition-colors shrink-0">
+              <svg className="shrink-0" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.03c3.18-.3 6.5-1.5 6.5-7.1 0-1.5-.5-2.8-1.4-3.8.1-.3.6-1.8-.1-3.8 0 0-1.2-.4-3.9 1.4a13 13 0 0 0-7 0C6 2.3 4.8 2.7 4.8 2.7.1 4.7.6 6.2.7 6.5.1 7.5-.4 8.8-.4 10.3c0 5.6 3.3 6.8 6.5 7.1-.8.8-1 2-1 3.2V22" /><path d="M9 22v-4a4.8 4.8 0 0 1 1-3.03" /></svg>
             </a>
             <button onClick={() => setDarkMode(!darkMode)} className="text-slate-500 hover:text-primary transition-colors">
               {darkMode ? <IconSun size={20}/> : <IconMoon size={20}/>}
