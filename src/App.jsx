@@ -113,12 +113,10 @@ export default function App() {
   const handleScan = async (decodedText) => {
     const cleanText = decodedText.trim();
     
-    // Global Debounce: Prevent any scan processing within 1.2 seconds of the last one.
-    // This prevents rapid misreads (garbage data) from the same physical barcode swipe,
-    // and also prevents spamming the error sound.
-    const now = Date.now();
-    if (now - lastScanTimeRef.current < 1200) return;
-    lastScanTimeRef.current = now;
+    // Pause the scanner completely to create a true delay between scans
+    if (scannerRef.current && scannerRef.current.getState() === 2) { // 2 = SCANNING
+      scannerRef.current.pause(true); // true = pause scanning but keep video feed active
+    }
 
     // Custom visual flash effect
     const readerEl = document.getElementById('reader-overlay');
@@ -130,7 +128,6 @@ export default function App() {
       playSound('duplicate', isSoundEnabled);
       toast.error(`이미 등록된 바코드입니다: ${cleanText}`);
       
-      // Flash red
       if (readerEl) {
         readerEl.classList.remove('ring-primary/50');
         readerEl.classList.add('ring-red-500', 'bg-red-500/10');
@@ -139,6 +136,11 @@ export default function App() {
           readerEl.classList.add('ring-primary/50');
         }, 300);
       }
+      
+      // Resume scanner after delay
+      setTimeout(() => {
+        if (scannerRef.current && isScanning) scannerRef.current.resume();
+      }, 1500);
       return;
     }
 
@@ -146,7 +148,6 @@ export default function App() {
     playSound('success', isSoundEnabled);
     if (navigator.vibrate) navigator.vibrate(50);
     
-    // Flash green
     if (readerEl) {
       readerEl.classList.remove('ring-primary/50');
       readerEl.classList.add('ring-green-500', 'bg-green-500/10');
@@ -156,7 +157,6 @@ export default function App() {
       }, 300);
     }
 
-    // Optimistic insert could be added here, but relying on realtime is safer
     const { error } = await supabase.from('barcodes').insert([{ code: cleanText }]);
     
     if (error) {
@@ -166,6 +166,11 @@ export default function App() {
     } else {
       setTimeout(() => pendingInsertsRef.current.delete(cleanText), 3000);
     }
+
+    // Resume scanner after delay
+    setTimeout(() => {
+      if (scannerRef.current && isScanning) scannerRef.current.resume();
+    }, 1500);
   };
 
   const startScanner = async () => {
