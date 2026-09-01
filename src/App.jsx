@@ -607,7 +607,7 @@ export default function App() {
             </section>
 
             <section className="w-full lg:w-7/12 flex flex-col flex-1">
-              <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col h-full min-h-[500px]">
+              <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col h-full lg:min-h-[500px]">
                 <div className="p-4 border-b border-slate-50 dark:border-slate-700/50">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
                     <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
@@ -631,7 +631,7 @@ export default function App() {
                   </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/30">
+                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/30 max-h-[380px] lg:max-h-full">
                   <div className="space-y-3">
                     {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).map(item => (
                       <div key={item.id} className="relative bg-white dark:bg-darkCard p-3 sm:p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700/50 transition-all hover:shadow-sm flex items-center justify-between gap-3 group">
