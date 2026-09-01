@@ -6,7 +6,8 @@ import * as XLSX from 'xlsx';
 import packageJson from '../package.json';
 import { 
   Barcode, Moon, Sun, Download, Camera, Volume2, VolumeX, 
-  Search, Copy, Share2, MessageSquarePlus, Edit3, Trash2, Clock
+  Search, Copy, Share2, MessageSquarePlus, Edit3, Trash2, Clock,
+  Folder, FolderPlus, UploadCloud, DownloadCloud
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -58,16 +59,23 @@ export default function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [maxZoom, setMaxZoom] = useState(1);
+  const [currentFolder, setCurrentFolder] = useState('기본폴더');
   
   const scannerRef = useRef(null);
   const pendingInsertsRef = useRef(new Set());
   const videoTrackRef = useRef(null);
   const lastScanTimeRef = useRef(0);
+  const fileInputRef = useRef(null);
+  const currentFolderRef = useRef('기본폴더');
+
+  // Derived unique folders from barcodes
+  const folders = Array.from(new Set(['기본폴더', ...barcodes.map(b => b.folder).filter(Boolean)]));
 
   // Sync state to ref for callbacks
   useEffect(() => {
     barcodesRef.current = barcodes;
-  }, [barcodes]);
+    currentFolderRef.current = currentFolder;
+  }, [barcodes, currentFolder]);
 
   // Theme toggle
   useEffect(() => {
@@ -121,8 +129,8 @@ export default function App() {
     // Custom visual flash effect
     const readerEl = document.getElementById('reader-overlay');
     
-    // Check duplicates using ref to avoid stale closure
-    const isDuplicate = barcodesRef.current.some(b => b.code === cleanText) || pendingInsertsRef.current.has(cleanText);
+    // Check duplicates per folder using ref to avoid stale closure
+    const isDuplicate = barcodesRef.current.some(b => b.code === cleanText && (b.folder || '기본폴더') === currentFolderRef.current) || pendingInsertsRef.current.has(cleanText);
     
     if (isDuplicate) {
       playSound('duplicate', isSoundEnabled);
@@ -157,11 +165,15 @@ export default function App() {
       }, 300);
     }
 
-    const { error } = await supabase.from('barcodes').insert([{ code: cleanText }]);
+    const { error } = await supabase.from('barcodes').insert([{ code: cleanText, folder: currentFolderRef.current }]);
     
     if (error) {
       console.error(error);
-      toast.error('데이터 저장 실패');
+      if (error.code === '42703' || (error.message && error.message.includes('folder'))) {
+        toast.error("데이터베이스에 'folder' 컬럼이 없습니다. Supabase 설정을 확인해주세요!");
+      } else {
+        toast.error('데이터 저장 실패');
+      }
       pendingInsertsRef.current.delete(cleanText);
     } else {
       setTimeout(() => pendingInsertsRef.current.delete(cleanText), 3000);
@@ -277,6 +289,60 @@ export default function App() {
     }
   };
 
+  const handleAddFolder = () => {
+    const newFolder = prompt('새 폴더 이름을 입력하세요:');
+    if (newFolder && newFolder.trim() !== '') {
+      setCurrentFolder(newFolder.trim());
+      toast.success(`'${newFolder.trim()}' 폴더가 생성되었습니다. 바코드를 스캔하면 이 폴더에 저장됩니다.`);
+    }
+  };
+
+  const handleBackup = () => {
+    if (barcodes.length === 0) return toast.warning('백업할 데이터가 없습니다.');
+    const dataStr = JSON.stringify(barcodes, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `WebBarcode_Backup_${format(new Date(), 'yyyyMMdd_HHmmss')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('백업 파일이 다운로드 되었습니다.');
+  };
+
+  const handleRestore = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const importedData = JSON.parse(event.target.result);
+        if (!Array.isArray(importedData)) throw new Error('Invalid format');
+        
+        // Remove id and created_at if necessary to avoid conflicts, or just let Supabase handle it if we are restoring to an empty DB.
+        // For safety, we'll strip 'id' so it generates new ones, and insert.
+        const cleanData = importedData.map(item => ({
+          code: item.code,
+          memo: item.memo,
+          folder: item.folder || '기본폴더',
+          created_at: item.created_at || new Date().toISOString()
+        }));
+
+        const { error } = await supabase.from('barcodes').insert(cleanData);
+        if (error) throw error;
+        
+        toast.success(`${cleanData.length}개의 데이터가 성공적으로 복원되었습니다.`);
+        fetchBarcodes();
+      } catch (err) {
+        console.error(err);
+        toast.error('복원 중 오류가 발생했습니다. 파일 형식을 확인해주세요.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = null; // reset input
+  };
+
   const handleShare = async (item) => {
     const timeStr = format(new Date(item.created_at || Date.now()), 'HH:mm:ss');
     let text = `[WebBarcode]\n바코드: ${item.code}\n시간: ${timeStr}`;
@@ -315,9 +381,19 @@ export default function App() {
             <button onClick={() => setDarkMode(!darkMode)} className="p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
               {darkMode ? <Sun size={20} /> : <Moon size={20} />}
             </button>
-            <button onClick={exportExcel} className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-600 px-3 py-1.5 rounded-lg hover:border-green-500 hover:text-green-500 transition-colors text-sm font-medium">
-              <Download size={16} /> <span className="hidden sm:inline">엑셀</span>
-            </button>
+            <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-600">
+              <button onClick={handleBackup} className="p-1.5 text-slate-500 hover:text-blue-500 rounded-lg hover:bg-white dark:hover:bg-slate-700 transition-colors" title="백업 (JSON)">
+                <DownloadCloud size={16} />
+              </button>
+              <button onClick={() => fileInputRef.current?.click()} className="p-1.5 text-slate-500 hover:text-indigo-500 rounded-lg hover:bg-white dark:hover:bg-slate-700 transition-colors" title="복원 (JSON)">
+                <UploadCloud size={16} />
+              </button>
+              <input type="file" ref={fileInputRef} onChange={handleRestore} accept=".json" className="hidden" />
+              <div className="w-px h-5 bg-slate-300 dark:bg-slate-600 my-auto mx-1"></div>
+              <button onClick={exportExcel} className="flex items-center gap-1.5 px-2 py-1 text-slate-500 hover:text-green-500 rounded-lg hover:bg-white dark:hover:bg-slate-700 transition-colors text-sm font-medium">
+                <Download size={16} /> <span className="hidden sm:inline">엑셀</span>
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -379,8 +455,21 @@ export default function App() {
           <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col h-full min-h-[500px]">
             <div className="p-4 border-b border-slate-50 dark:border-slate-700/50">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="font-bold flex items-center gap-2">스캔 히스토리</h2>
-                <span className="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-full">{barcodes.length}건</span>
+                <div className="flex items-center gap-2">
+                  <h2 className="font-bold flex items-center gap-2">스캔 기록</h2>
+                  <div className="relative">
+                    <select value={currentFolder} onChange={(e) => setCurrentFolder(e.target.value)} className="appearance-none bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold px-3 py-1.5 pr-6 rounded-lg text-primary focus:outline-none focus:ring-2 focus:ring-primary/50 cursor-pointer">
+                      {folders.map(f => <option key={f} value={f}>{f}</option>)}
+                    </select>
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1.5 text-slate-400">
+                      <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    </div>
+                  </div>
+                  <button onClick={handleAddFolder} className="text-slate-400 hover:text-primary transition-colors p-1" title="새 폴더">
+                    <FolderPlus size={16} />
+                  </button>
+                </div>
+                <span className="bg-primary/10 text-primary text-xs font-bold px-2.5 py-1 rounded-full">{barcodes.filter(b => (b.folder || '기본폴더') === currentFolder).length}건</span>
               </div>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -390,7 +479,7 @@ export default function App() {
             
             <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/30">
               <div className="space-y-3">
-                {filteredBarcodes.map(item => (
+                {filteredBarcodes.filter(b => (b.folder || '기본폴더') === currentFolder).map(item => (
                   <div key={item.id} className="bg-white dark:bg-darkCard p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-700/50 transition-all hover:shadow-md group item-enter">
                     <div className="flex justify-between items-start gap-3">
                       <div className="flex gap-3 overflow-hidden flex-1">
