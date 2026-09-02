@@ -75,8 +75,8 @@ const Auth = ({ supabase }: { supabase: any }) => {
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none"></div>
         
         <div className="flex justify-center mb-6 relative z-10">
-          <div className="w-16 h-16 bg-white dark:bg-slate-700 rounded-2xl flex items-center justify-center shadow-md border border-slate-100 dark:border-slate-600">
-            <IconBarcode size={32} className="text-primary" />
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-md border border-slate-100 dark:border-slate-600 overflow-hidden">
+            <img src="/icon.jpg" alt="Logo" className="w-full h-full object-cover" />
           </div>
         </div>
         
@@ -815,8 +815,8 @@ const handleEditMemo = (id, currentMemo) => {
         {/* Mobile Header (Top) */}
         <header className="md:hidden bg-white/90 dark:bg-darkCard/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 sticky top-0 px-4 py-3 flex justify-between items-center shadow-sm">
           <div className="flex items-center gap-2.5">
-            <div className="bg-gradient-to-br from-primary to-purple-500 text-white p-1.5 rounded-lg shadow-glow">
-              <IconBarcode size={18} />
+            <div className="w-7 h-7 rounded-lg shadow-glow overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
+              <img src="/icon.jpg" alt="Logo" className="w-full h-full object-cover" />
             </div>
             <h1 className="font-bold text-lg tracking-tight">WebBarcode</h1>
           </div>
