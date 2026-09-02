@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { Toaster, toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import packageJson from '../package.json';
@@ -48,6 +48,17 @@ function playSound(type = 'success', isSoundEnabled) {
   }
 }
 
+const formatsToSupport = [
+  Html5QrcodeSupportedFormats.QR_CODE,
+  Html5QrcodeSupportedFormats.CODE_128,
+  Html5QrcodeSupportedFormats.CODE_39,
+  Html5QrcodeSupportedFormats.EAN_13,
+  Html5QrcodeSupportedFormats.EAN_8,
+  Html5QrcodeSupportedFormats.UPC_A,
+  Html5QrcodeSupportedFormats.UPC_E,
+  Html5QrcodeSupportedFormats.ITF
+];
+
 export default function App() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches));
   const [barcodes, setBarcodes] = useState([]);
@@ -78,7 +89,7 @@ export default function App() {
     let failCount = 0;
     
     try {
-      const html5QrCode = new Html5Qrcode("image-reader-hidden");
+      const html5QrCode = new Html5Qrcode("image-reader-hidden", { formatsToSupport });
       
       for (let i = 0; i < files.length; i++) {
         setImageProgress({ current: i + 1, total: files.length });
@@ -274,7 +285,7 @@ export default function App() {
   const startScanner = async () => {
     try {
       if (!scannerRef.current) {
-        scannerRef.current = new Html5Qrcode("reader");
+        scannerRef.current = new Html5Qrcode("reader", { formatsToSupport });
       }
       
       const devices = await Html5Qrcode.getCameras();
@@ -286,7 +297,11 @@ export default function App() {
         
         await scannerRef.current.start(
           camId,
-          { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
+          { 
+            fps: 10, 
+            qrbox: { width: 300, height: 200 }, 
+            aspectRatio: 1.0,
+          },
           handleScan,
           () => {} // ignore scan failures
         );
