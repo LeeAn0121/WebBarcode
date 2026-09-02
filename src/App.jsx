@@ -244,7 +244,7 @@ export default function App() {
         
         await scannerRef.current.start(
           camId,
-          { fps: 10, qrbox: { width: 260, height: 140 }, aspectRatio: 1.5 },
+          { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 },
           handleScan,
           () => {} // ignore scan failures
         );
