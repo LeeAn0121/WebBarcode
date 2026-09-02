@@ -167,7 +167,20 @@ export default function App() {
     
     checkUpdate();
     const intervalId = setInterval(checkUpdate, 30000); // Check every 30 seconds
-    return () => clearInterval(intervalId);
+    const renderFormattedCode = (c) => {
+    if (c && c.length === 17 && /^[a-zA-Z0-9]+$/.test(c)) {
+      return (
+        <span className="inline-flex items-center">
+          <span>{c.substring(0, 11)}</span>
+          <span className="text-slate-300 dark:text-slate-600 mx-1">-</span>
+          <span className="text-primary">{c.substring(11)}</span>
+        </span>
+      );
+    }
+    return c;
+  };
+
+  return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
