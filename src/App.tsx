@@ -89,17 +89,46 @@ export default function App() {
     let failCount = 0;
     
     try {
-      const html5QrCode = new Html5Qrcode("image-reader-hidden"); // Remove formatsToSupport so it scans ALL possible formats for images
+      const html5QrCode = new Html5Qrcode("image-reader-hidden"); // Fallback
+      
+      // Native BarcodeDetector (Chrome/Android, Safari/iOS 17+) for incredibly fast and accurate image scanning
+      let nativeDetector: any = null;
+      if ('BarcodeDetector' in window) {
+        try {
+          nativeDetector = new (window as any).BarcodeDetector();
+        } catch(e) {}
+      }
       
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
         setImageProgress({ current: i + 1, total: files.length });
         try {
-          const decodedText = await html5QrCode.scanFile(file, false);
+          let decodedText = null;
+          
+          // 1. Try Native API first (Super accurate for photos)
+          if (nativeDetector) {
+            try {
+              const imageBitmap = await createImageBitmap(file);
+              const barcodes = await nativeDetector.detect(imageBitmap);
+              if (barcodes && barcodes.length > 0) {
+                decodedText = barcodes[0].rawValue;
+              }
+            } catch(e) {
+              console.warn("Native detection failed", e);
+            }
+          }
+          
+          // 2. Fallback to html5-qrcode
+          if (!decodedText) {
+            decodedText = await html5QrCode.scanFile(file, false);
+          }
+          
           if (decodedText) {
             await handleScan(decodedText, true);
             successCount++;
             toast.success(`${file.name}: 스캔 성공!`);
+          } else {
+             throw new Error("NotFoundException"); // Trigger the catch block
           }
         } catch (err: any) {
           failCount++;
