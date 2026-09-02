@@ -76,7 +76,7 @@ const Auth = ({ supabase }: { supabase: any }) => {
         
         <div className="flex justify-center mb-6 relative z-10">
           <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-md border border-slate-100 dark:border-slate-600 overflow-hidden">
-            <img src="/icon.jpg" alt="Logo" className="w-full h-full object-cover" />
+            <img src={`${import.meta.env.BASE_URL}icon.jpg`} alt="Logo" className="w-full h-full object-cover" />
           </div>
         </div>
         
@@ -816,7 +816,7 @@ const handleEditMemo = (id, currentMemo) => {
         <header className="md:hidden bg-white/90 dark:bg-darkCard/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 sticky top-0 px-4 py-3 flex justify-between items-center shadow-sm">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg shadow-glow overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
-              <img src="/icon.jpg" alt="Logo" className="w-full h-full object-cover" />
+              <img src={`${import.meta.env.BASE_URL}icon.jpg`} alt="Logo" className="w-full h-full object-cover" />
             </div>
             <h1 className="font-bold text-lg tracking-tight">WebBarcode</h1>
           </div>
