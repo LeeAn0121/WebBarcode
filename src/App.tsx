@@ -157,6 +157,36 @@ export default function App() {
     const intervalId = setInterval(checkUpdate, 300000); // Check every 5 minutes
     return () => clearInterval(intervalId);
   }, []);
+  // 네이티브 스캐닝 엔진 보조 (초고속 하드웨어 가속)
+  useEffect(() => {
+    let nativeInterval: any;
+    if (isScanning && 'BarcodeDetector' in window) {
+      try {
+        const detector = new (window as any).BarcodeDetector();
+        let lastScannedTime = 0;
+        nativeInterval = setInterval(async () => {
+          // Prevent scanning if html5-qrcode is paused
+          if (scannerRef.current && scannerRef.current.getState() !== 2) return;
+          
+          const now = Date.now();
+          if (now - lastScannedTime < 1000) return; // 1 second throttle
+          
+          const video = document.querySelector('video');
+          if (video && video.readyState >= 2) {
+            try {
+              const barcodes = await detector.detect(video);
+              if (barcodes && barcodes.length > 0) {
+                lastScannedTime = now;
+                await handleScan(barcodes[0].rawValue);
+              }
+            } catch(e) {}
+          }
+        }, 150); // 150ms 마다 스캔 (매우 빠름)
+      } catch(e) {}
+    }
+    return () => clearInterval(nativeInterval);
+  }, [isScanning, barcodes]); // barcodes dependency needed so handleScan has latest state
+
 
   useEffect(() => {
     fetchBarcodes();
@@ -275,9 +305,13 @@ export default function App() {
         await scannerRef.current.start(
           camId,
           { 
-            fps: 10, 
-            qrbox: { width: 300, height: 200 }, 
-            aspectRatio: 1.0,
+            fps: 15, 
+            qrbox: { width: window.innerWidth < 400 ? 300 : 350, height: 120 }, // 와이드 비율로 변경 (1D 바코드 최적화)
+            videoConstraints: {
+              width: { min: 1280, ideal: 1920 },  // 강제로 고해상도(FHD) 요청
+              height: { min: 720, ideal: 1080 },
+              advanced: [{ focusMode: "continuous" }] // 연속 AF 강제 활성화
+            }
           },
           handleScan,
           () => {} // ignore scan failures
