@@ -643,7 +643,7 @@ export default function App() {
                   </div>
                 </div>
                 
-                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/30 max-h-[400px] lg:max-h-full overscroll-contain touch-pan-y">
+                <div className="flex-1 overflow-y-scroll p-4 custom-scrollbar bg-slate-50/50 dark:bg-slate-900/30 max-h-[400px] lg:max-h-full overscroll-contain touch-pan-y" style={{ WebkitOverflowScrolling: 'touch' }}>
                   <div className="space-y-3">
                     {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).map(item => (
                       <div key={item.id} className="relative bg-white dark:bg-darkCard p-3 sm:p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700/50 transition-all hover:shadow-sm flex items-center justify-between gap-3 group">
