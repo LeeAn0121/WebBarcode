@@ -414,9 +414,19 @@ function App() {
       } else {
         toast.error("카메라를 찾을 수 없습니다.");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error("카메라를 시작할 수 없습니다. 권한을 확인해주세요.");
+      let errMsg = "카메라를 시작할 수 없습니다. 브라우저 주소창 왼쪽의 자물쇠(🔒)를 눌러 권한을 재설정해주세요.";
+      
+      if (err.name === 'NotFoundError' || err.message?.includes('found')) {
+        errMsg = "PC에 연결된 웹캠(카메라) 장치를 찾을 수 없습니다.";
+      } else if (err.name === 'NotAllowedError' || err.message?.includes('Permission')) {
+        errMsg = "카메라 권한이 차단되었습니다. 주소창의 자물쇠 아이콘을 눌러 권한을 허용해주세요.";
+      } else if (!window.isSecureContext) {
+        errMsg = "안전한 연결(HTTPS)이 아니어서 브라우저가 카메라 접근을 차단했습니다.";
+      }
+      
+      toast.error(errMsg, { duration: 5000 });
     }
   };
 
