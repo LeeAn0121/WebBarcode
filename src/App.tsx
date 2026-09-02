@@ -122,6 +122,7 @@ function App() {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeActionMenu, setActiveActionMenu] = useState<any>(null);
   const [moveModal, setMoveModal] = useState({ isOpen: false, item: null as any, targetFolder: '기본폴더' });
+  const [promptModal, setPromptModal] = useState({ isOpen: false, title: '', placeholder: '', value: '', type: 'text', description: '', confirmText: '확인', onConfirm: (val: string) => {} });
   const [session, setSession] = useState<any>(null);
   
   useEffect(() => {
@@ -522,13 +523,23 @@ function App() {
       toast.error('폴더 이동에 실패했습니다.');
     }
   };
-const handleEditMemo = async (id, currentMemo) => {
-    const newMemo = prompt('메모 (비워두면 삭제):', currentMemo || '');
-    if (newMemo !== null && newMemo !== currentMemo) {
-      const { error } = await supabase.from('barcodes').update({ memo: newMemo.trim() }).eq('id', id);
-      if (error) toast.error(error.message);
-      else toast.success('메모가 저장되었습니다.');
-    }
+const handleEditMemo = (id, currentMemo) => {
+    setPromptModal({
+      isOpen: true,
+      title: '메모 추가/수정',
+      description: '바코드에 대한 메모를 입력하세요. 비워두면 삭제됩니다.',
+      placeholder: '예: 유통기한 2026-09-02',
+      value: currentMemo || '',
+      type: 'text',
+      confirmText: '저장하기',
+      onConfirm: async (newMemo) => {
+        if (newMemo !== currentMemo) {
+          const { error } = await supabase.from('barcodes').update({ memo: newMemo.trim() }).eq('id', id);
+          if (error) toast.error(error.message);
+          else toast.success('메모가 저장되었습니다.');
+        }
+      }
+    });
   };
 
   const handleAddFolder = () => {
@@ -1085,6 +1096,63 @@ const handleEditMemo = async (id, currentMemo) => {
         )}
           </div>
         </main>
+
+        {/* Modals */}
+        {promptModal.isOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setPromptModal({ ...promptModal, isOpen: false })}>
+            <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{promptModal.title}</h3>
+              {promptModal.description && <p className="text-sm text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">{promptModal.description}</p>}
+              <input 
+                type={promptModal.type} 
+                autoFocus
+                value={promptModal.value}
+                onChange={(e) => setPromptModal({ ...promptModal, value: e.target.value })}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    promptModal.onConfirm(promptModal.value);
+                    setPromptModal({ ...promptModal, isOpen: false });
+                  }
+                }}
+                className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary outline-none mb-6"
+                placeholder={promptModal.placeholder}
+              />
+              <div className="flex gap-3">
+                <button onClick={() => setPromptModal({ ...promptModal, isOpen: false })} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition-colors">취소</button>
+                <button onClick={() => { promptModal.onConfirm(promptModal.value); setPromptModal({ ...promptModal, isOpen: false }); }} className="flex-1 py-3 bg-primary hover:bg-primaryHover text-white font-bold rounded-xl shadow-md transition-all">{promptModal.confirmText}</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {moveModal.isOpen && moveModal.item && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setMoveModal({ ...moveModal, isOpen: false })}>
+            <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">폴더 이동</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">선택한 바코드를 이동할 폴더를 선택하세요.</p>
+              
+              <div className="relative mb-6">
+                <select 
+                  value={moveModal.targetFolder}
+                  onChange={(e) => setMoveModal({ ...moveModal, targetFolder: e.target.value })}
+                  className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 pr-10 text-sm font-medium focus:ring-2 focus:ring-primary outline-none text-slate-700 dark:text-slate-200"
+                >
+                  {folders.map(f => (
+                    <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <IconFolder size={18} />
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={() => setMoveModal({ ...moveModal, isOpen: false })} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition-colors">취소</button>
+                <button onClick={handleMoveFolderSubmit} className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-md transition-all">이동하기</button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Mobile Bottom Tab Bar */}
         <nav className="md:hidden bg-white/95 dark:bg-darkCard/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 fixed bottom-0 left-0 right-0 z-50 pb-safe">
