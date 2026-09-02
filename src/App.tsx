@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+const [moveModal, setMoveModal] = useState({ isOpen: false, item: null as any, targetFolder: '기본폴더' });
+  import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { Toaster, toast } from 'sonner';
@@ -402,7 +403,43 @@ export default function App() {
     }
   };
 
-  const handleEditMemo = async (id, currentMemo) => {
+  
+  const handleClone = async (item: any) => {
+    try {
+      const newItem = {
+        code: item.code,
+        memo: item.memo ? `${item.memo} (복제)` : '복제됨',
+        folder: item.folder || '기본폴더',
+        // created_at is handled by DB default
+      };
+      const { data, error } = await supabase.from('barcodes').insert([newItem]).select();
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setBarcodes(prev => [data[0], ...prev]);
+        toast.success('바코드 복제 성공!');
+      }
+      setActiveActionMenu(null);
+    } catch(e) {
+      console.error(e);
+      toast.error('바코드 복제에 실패했습니다.');
+    }
+  };
+
+  const handleMoveFolderSubmit = async () => {
+    if (!moveModal.item) return;
+    try {
+      const { error } = await supabase.from('barcodes').update({ folder: moveModal.targetFolder }).eq('id', moveModal.item.id);
+      if (error) throw error;
+      setBarcodes(prev => prev.map(b => b.id === moveModal.item.id ? { ...b, folder: moveModal.targetFolder } : b));
+      toast.success('폴더 이동 완료!');
+      setMoveModal({ isOpen: false, item: null, targetFolder: '기본폴더' });
+      setActiveActionMenu(null);
+    } catch(e) {
+      console.error(e);
+      toast.error('폴더 이동에 실패했습니다.');
+    }
+  };
+const handleEditMemo = async (id, currentMemo) => {
     const newMemo = prompt('메모 (비워두면 삭제):', currentMemo || '');
     if (newMemo !== null && newMemo !== currentMemo) {
       const { error } = await supabase.from('barcodes').update({ memo: newMemo.trim() }).eq('id', id);
@@ -771,15 +808,25 @@ export default function App() {
                           
                           {activeActionMenu === item.id && (
                             <>
-                              <div className="fixed inset-0 z-30" onClick={() => setActiveActionMenu(null)}></div>
-                              <div className="absolute right-0 top-full mt-1 z-40 w-36 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-                                <div className="flex flex-col p-1">
-                                  <button onClick={() => { navigator.clipboard.writeText(item.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex items-center gap-2 w-full p-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors" title="바코드 복사"><IconCopy size={16}/> 복사</button>
-                                  <button onClick={() => { handleShare(item); setActiveActionMenu(null); }} className="flex items-center gap-2 w-full p-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors" title="공유하기"><IconShare size={16}/> 공유</button>
-                                  <button onClick={() => { handleEditMemo(item.id, item.memo); setActiveActionMenu(null); }} className="flex items-center gap-2 w-full p-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors" title="메모 추가/수정"><IconMessagePlus size={16}/> 메모</button>
-                                  <button onClick={() => { handleEditCode(item.id, item.code); setActiveActionMenu(null); }} className="flex items-center gap-2 w-full p-2.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg transition-colors" title="바코드 번호 수정"><IconEdit size={16}/> 수정</button>
-                                  <div className="h-px bg-slate-100 dark:bg-slate-700 my-1"></div>
-                                  <button onClick={() => { handleDelete(item.id); setActiveActionMenu(null); }} className="flex items-center gap-2 w-full p-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="삭제하기"><IconTrash size={16}/> 삭제</button>
+                              {/* Mobile-friendly Bottom Sheet / Desktop Modal */}
+                              <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 transition-all" onClick={() => setActiveActionMenu(null)}>
+                                <div className="bg-white dark:bg-slate-800 w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                                  <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto my-3 sm:hidden"></div>
+                                  <div className="px-6 pb-2 pt-2 border-b border-slate-100 dark:border-slate-700 flex flex-col">
+                                    <span className="font-mono font-bold text-lg text-slate-800 dark:text-slate-100 truncate">{item.code}</span>
+                                    <span className="text-xs text-slate-500 mb-2">{item.folder || '기본폴더'}</span>
+                                  </div>
+                                  <div className="flex flex-col p-2 max-h-[70vh] overflow-y-auto">
+                                    <button onClick={() => { navigator.clipboard.writeText(item.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconCopy size={20} className="text-primary"/> 복사하기</button>
+                                    <button onClick={() => handleShare(item)} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconShare size={20} className="text-primary"/> 외부로 공유</button>
+                                    <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2"></div>
+                                    <button onClick={() => { handleEditMemo(item.id, item.memo); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconMessagePlus size={20} className="text-blue-500"/> 메모 추가/수정</button>
+                                    <button onClick={() => { setMoveModal({ isOpen: true, item, targetFolder: item.folder || '기본폴더' }); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconFolder size={20} className="text-emerald-500"/> 다른 폴더로 이동</button>
+                                    <button onClick={() => handleClone(item)} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconCopy size={20} className="text-amber-500"/> 이 바코드 복제하기</button>
+                                    <button onClick={() => { handleEditCode(item.id, item.code); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconEdit size={20} className="text-slate-500"/> 바코드 번호 수정</button>
+                                    <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2"></div>
+                                    <button onClick={() => { handleDelete(item.id); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"><IconTrash size={20}/> 삭제하기</button>
+                                  </div>
                                 </div>
                               </div>
                             </>
