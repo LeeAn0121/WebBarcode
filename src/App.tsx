@@ -89,7 +89,7 @@ export default function App() {
     let failCount = 0;
     
     try {
-      const html5QrCode = new Html5Qrcode("image-reader-hidden", { formatsToSupport });
+      const html5QrCode = new Html5Qrcode("image-reader-hidden"); // Remove formatsToSupport so it scans ALL possible formats for images
       
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
@@ -105,8 +105,13 @@ export default function App() {
           failCount++;
           let errorMsg = "바코드를 찾을 수 없습니다.";
           const rawErr = err?.message || err || "";
-          if (typeof rawErr === 'string' && !rawErr.includes("NotFoundException")) {
-            errorMsg = rawErr;
+          
+          if (typeof rawErr === 'string') {
+            if (rawErr.toLowerCase().includes("notfoundexception") || rawErr.toLowerCase().includes("no multiformat readers")) {
+              errorMsg = "바코드/QR이 없거나 해상도가 너무 낮습니다.";
+            } else {
+              errorMsg = rawErr;
+            }
           }
           toast.error(`${file.name} 실패: ${errorMsg}`);
         }
