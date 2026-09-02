@@ -433,7 +433,8 @@ function App() {
         errMsg = "안전한 연결(HTTPS)이 아니어서 브라우저가 카메라 접근을 차단했습니다.";
       }
       
-      toast.error(errMsg, { duration: 5000 });
+      const exactError = err.name ? `${err.name}: ${err.message}` : String(err);
+      toast.error(`${errMsg} (상세: ${exactError})`, { duration: 10000 });
     }
   };
 
