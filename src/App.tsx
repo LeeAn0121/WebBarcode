@@ -48,18 +48,69 @@ function playSound(type = 'success', isSoundEnabled) {
   }
 }
 
-const formatsToSupport = [
-  Html5QrcodeSupportedFormats.QR_CODE,
-  Html5QrcodeSupportedFormats.CODE_128,
-  Html5QrcodeSupportedFormats.CODE_39,
-  Html5QrcodeSupportedFormats.EAN_13,
-  Html5QrcodeSupportedFormats.EAN_8,
-  Html5QrcodeSupportedFormats.UPC_A,
-  Html5QrcodeSupportedFormats.UPC_E,
-  Html5QrcodeSupportedFormats.ITF
-];
 
-export default function App() {
+const Auth = ({ supabase }: { supabase: any }) => {
+  const [loading, setLoading] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
+
+  const handleAuth = async (e: any) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({ email, password });
+        if (error) throw error;
+        toast.success('회원가입 성공! 이제 로그인해주세요.');
+        setIsSignUp(false);
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        toast.success('로그인 성공!');
+      }
+    } catch (error: any) {
+      toast.error(error.message || '인증에 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-slate-900 px-4">
+      <div className="w-full max-w-sm bg-white dark:bg-slate-800 rounded-3xl shadow-xl p-8 border border-slate-100 dark:border-slate-700">
+        <div className="flex justify-center mb-6">
+          <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center">
+            <IconBarcode size={32} className="text-primary" />
+          </div>
+        </div>
+        <h1 className="text-2xl font-bold text-center text-slate-800 dark:text-slate-100 mb-8">
+          WebBarcode
+        </h1>
+        <form onSubmit={handleAuth} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">이메일</label>
+            <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary outline-none" placeholder="example@email.com" />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">비밀번호</label>
+            <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary outline-none" placeholder="••••••••" />
+          </div>
+          <button type="submit" disabled={loading} className="w-full py-3 bg-primary hover:bg-primaryHover text-white font-bold rounded-xl shadow-md transition-all mt-4">
+            {loading ? '처리 중...' : (isSignUp ? '회원가입 하기' : '로그인 하기')}
+          </button>
+        </form>
+        <div className="mt-6 text-center">
+          <button type="button" onClick={() => setIsSignUp(!isSignUp)} className="text-sm text-slate-500 hover:text-primary font-medium transition-colors">
+            {isSignUp ? '이미 계정이 있으신가요? 로그인' : '계정이 없으신가요? 회원가입'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+function App() {
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches));
   const [barcodes, setBarcodes] = useState([]);
   const barcodesRef = useRef([]);
@@ -75,6 +126,13 @@ export default function App() {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeActionMenu, setActiveActionMenu] = useState<any>(null);
   const [moveModal, setMoveModal] = useState({ isOpen: false, item: null as any, targetFolder: '기본폴더' });
+  const [session, setSession] = useState<any>(null);
+  
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    return () => subscription.unsubscribe();
+  }, []);
   const [updateInfo, setUpdateInfo] = useState(null);
   
   const [localFolders, setLocalFolders] = useState(() => {
@@ -214,7 +272,7 @@ export default function App() {
   }, []);
 
   const fetchBarcodes = async () => {
-    const { data, error } = await supabase.from('barcodes').select('*').order('created_at', { ascending: false });
+    const { data, error } = await supabase.from('barcodes').select('*').eq('user_id', session?.user?.id).order('created_at', { ascending: false });
     if (!error && data) setBarcodes(data);
   };
 
@@ -410,6 +468,7 @@ export default function App() {
         code: item.code,
         memo: item.memo ? `${item.memo} (복제)` : '복제됨',
         folder: item.folder || '기본폴더',
+        user_id: session?.user?.id,
         // created_at is handled by DB default
       };
       const { data, error } = await supabase.from('barcodes').insert([newItem]).select();
@@ -591,6 +650,16 @@ const handleEditMemo = async (id, currentMemo) => {
     }
     return c;
   };
+
+  
+  if (!session) {
+    return (
+      <>
+        <Toaster position="top-center" richColors />
+        <Auth supabase={supabase} />
+      </>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden text-slate-800 dark:text-slate-100">
@@ -985,3 +1054,5 @@ const handleEditMemo = async (id, currentMemo) => {
     </div>
   );
 }
+
+export default App;
