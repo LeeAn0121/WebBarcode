@@ -198,7 +198,17 @@ export default function App() {
         const data = await res.json();
         const currentVersion = packageJson.version;
         
-        if (data.version && data.version !== currentVersion) {
+        const isNewer = (oldV: string, newV: string) => {
+          const a = oldV.split('.').map(Number);
+          const b = newV.split('.').map(Number);
+          for (let i = 0; i < 3; i++) {
+            if (b[i] > a[i]) return true;
+            if (b[i] < a[i]) return false;
+          }
+          return false;
+        };
+        
+        if (data.version && isNewer(currentVersion, data.version)) {
           const firstSeenKey = `update_seen_v${data.version}`;
           let firstSeen = localStorage.getItem(firstSeenKey);
           
