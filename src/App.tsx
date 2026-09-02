@@ -92,15 +92,23 @@ export default function App() {
       const html5QrCode = new Html5Qrcode("image-reader-hidden", { formatsToSupport });
       
       for (let i = 0; i < files.length; i++) {
+        const file = files[i];
         setImageProgress({ current: i + 1, total: files.length });
         try {
-          const decodedText = await html5QrCode.scanFile(files[i], false);
+          const decodedText = await html5QrCode.scanFile(file, false);
           if (decodedText) {
             await handleScan(decodedText, true);
             successCount++;
+            toast.success(`${file.name}: 스캔 성공!`);
           }
-        } catch (err) {
+        } catch (err: any) {
           failCount++;
+          let errorMsg = "바코드를 찾을 수 없습니다.";
+          const rawErr = err?.message || err || "";
+          if (typeof rawErr === 'string' && !rawErr.includes("NotFoundException")) {
+            errorMsg = rawErr;
+          }
+          toast.error(`${file.name} 실패: ${errorMsg}`);
         }
       }
       html5QrCode.clear();
