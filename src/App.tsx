@@ -163,44 +163,39 @@ export default function App() {
   useEffect(() => {
     const checkUpdate = async () => {
       try {
-        const res = await fetch('https://api.github.com/repos/LeeAn0121/WebBarcode/releases/latest?t=' + new Date().getTime(), { cache: 'no-store' });
-        if (res.status === 403) return 'RATE_LIMIT';
+        // Use raw.githubusercontent.com to completely bypass GitHub API rate limits (403 Forbidden)
+        const res = await fetch('https://raw.githubusercontent.com/LeeAn0121/WebBarcode/master/package.json?t=' + new Date().getTime(), { cache: 'no-store' });
         if (!res.ok) return;
         const data = await res.json();
-        const currentTag = `v${packageJson.version}`;
+        const currentVersion = packageJson.version;
         
-        // If a new version exists and is different from current
-        if (data.tag_name && data.tag_name !== currentTag) {
-          // GitHub Actions deploy takes ~1-2 minutes.
-          // Wait until 2 minutes have passed since the release was published to ensure the site is actually updated before prompting.
-          const publishedTime = new Date(data.published_at).getTime();
+        if (data.version && data.version !== currentVersion) {
+          const firstSeenKey = `update_seen_v${data.version}`;
+          let firstSeen = localStorage.getItem(firstSeenKey);
+          
+          if (!firstSeen) {
+            firstSeen = new Date().getTime().toString();
+            localStorage.setItem(firstSeenKey, firstSeen);
+          }
+          
           const now = new Date().getTime();
-          const isReady = (now - publishedTime) > 90000; // 1.5 minutes
+          const isReady = (now - parseInt(firstSeen)) > 90000; // Wait 1.5 minutes after first detection for GH Pages deploy
           
           if (isReady) {
             setUpdateInfo({
-              version: data.tag_name,
-              notes: data.body,
-              url: data.html_url
+              version: `v${data.version}`,
+              notes: "안정성 개선 및 새로운 기능이 추가된 최신 버전이 출시되었습니다.",
+              url: `https://github.com/LeeAn0121/WebBarcode/releases/tag/v${data.version}`
             });
           }
         }
       } catch (err) {
-        console.error("Update check failed", err);
+        // silent
       }
     };
     
-    let intervalId: any;
-    
-    const runCheck = async () => {
-      const status = await checkUpdate();
-      if (status === 'RATE_LIMIT' && intervalId) {
-        clearInterval(intervalId);
-      }
-    };
-    
-    runCheck();
-    intervalId = setInterval(runCheck, 300000); // Check every 5 minutes (300,000ms) to prevent GitHub API rate limit (60 req/hr)
+    checkUpdate();
+    const intervalId = setInterval(checkUpdate, 300000); // Check every 5 minutes
     return () => clearInterval(intervalId);
   }, []);
 
