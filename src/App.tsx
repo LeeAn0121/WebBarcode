@@ -94,7 +94,7 @@ export default function App() {
       for (let i = 0; i < files.length; i++) {
         setImageProgress({ current: i + 1, total: files.length });
         try {
-          const decodedText = await html5QrCode.scanFile(files[i], true);
+          const decodedText = await html5QrCode.scanFile(files[i], false);
           if (decodedText) {
             await handleScan(decodedText, true);
             successCount++;
@@ -681,7 +681,20 @@ export default function App() {
                   )}
                   
                   <div className="w-full relative rounded-2xl overflow-hidden bg-slate-900 min-h-[250px] sm:min-h-[300px]">
+                    
+                    <div id="image-reader-hidden" className="opacity-0 absolute pointer-events-none w-[300px] h-[300px] -z-50"></div>
                     <div id="reader" className="w-full"></div>
+                    
+                    {isProcessingImages && (
+                      <div className="absolute inset-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-6">
+                        <IconPhoto className="text-primary animate-pulse mb-3" size={40} />
+                        <div className="w-full max-w-[200px] h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mb-2">
+                          <div className="h-full bg-primary transition-all duration-300" style={{ width: `${(imageProgress.current / imageProgress.total) * 100}%` }}></div>
+                        </div>
+                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">이미지 분석 중...</span>
+                        <span className="text-xs text-slate-500 mt-1">{imageProgress.current} / {imageProgress.total} 완료</span>
+                      </div>
+                    )}
                     <div id="reader-overlay" className="absolute inset-4 rounded-xl border-2 ring-4 ring-primary/50 border-dashed border-white/50 pointer-events-none transition-all duration-300"></div>
                     
                     {!isScanning && (
