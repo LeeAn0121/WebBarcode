@@ -126,6 +126,8 @@ function App() {
   const [cameras, setCameras] = useState([]);
   const [selectedCamera, setSelectedCamera] = useState('');
   const [isScanning, setIsScanning] = useState(false);
+  const [isBatchMode, setIsBatchMode] = useState(false);
+  const lastScannedRef = useRef<{code: string, time: number} | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [maxZoom, setMaxZoom] = useState(1);
   const [currentFolder, setCurrentFolder] = useState('전체');
