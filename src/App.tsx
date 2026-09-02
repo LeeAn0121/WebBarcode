@@ -297,9 +297,18 @@ export default function App() {
       
       const devices = await Html5Qrcode.getCameras();
       if (devices && devices.length) {
-        setCameras(devices);
-        const rearCamera = devices.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('후면'));
-        const camId = selectedCamera || rearCamera?.id || devices[0].id;
+        // Filter out front cameras
+        const rearDevices = devices.filter(d => {
+          const lowerLabel = d.label.toLowerCase();
+          return !lowerLabel.includes('front') && !lowerLabel.includes('전면');
+        });
+        
+        // Use rear devices if found, otherwise fallback to all devices
+        const availableCameras = rearDevices.length > 0 ? rearDevices : devices;
+        setCameras(availableCameras);
+        
+        const rearCamera = availableCameras.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('후면'));
+        const camId = selectedCamera || rearCamera?.id || availableCameras[0].id;
         setSelectedCamera(camId);
         
         await scannerRef.current.start(
@@ -308,6 +317,7 @@ export default function App() {
             fps: 15, 
             qrbox: { width: window.innerWidth < 400 ? 300 : 350, height: 120 }, // 와이드 비율로 변경 (1D 바코드 최적화)
             videoConstraints: {
+              facingMode: "environment", // 후면 카메라 강제
               width: { min: 1280, ideal: 1920 },  // 강제로 고해상도(FHD) 요청
               height: { min: 720, ideal: 1080 },
               advanced: [{ focusMode: "continuous" }] // 연속 AF 강제 활성화
