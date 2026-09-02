@@ -167,20 +167,7 @@ export default function App() {
     
     checkUpdate();
     const intervalId = setInterval(checkUpdate, 30000); // Check every 30 seconds
-    const renderFormattedCode = (c) => {
-    if (c && c.length === 17 && /^[a-zA-Z0-9]+$/.test(c)) {
-      return (
-        <span className="inline-flex items-center">
-          <span>{c.substring(0, 11)}</span>
-          <span className="text-slate-300 dark:text-slate-600 mx-1">-</span>
-          <span className="text-primary">{c.substring(11)}</span>
-        </span>
-      );
-    }
-    return c;
-  };
-
-  return () => clearInterval(intervalId);
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
@@ -518,6 +505,19 @@ export default function App() {
     b.code.toLowerCase().includes(searchQuery.toLowerCase()) || 
     (b.memo && b.memo.toLowerCase().includes(searchQuery.toLowerCase()))
   );
+
+  const renderFormattedCode = (c) => {
+    if (c && c.length === 17 && /^[a-zA-Z0-9]+$/.test(c)) {
+      return (
+        <span className="inline-flex items-center">
+          <span>{c.substring(0, 11)}</span>
+          <span className="text-slate-300 dark:text-slate-600 mx-1">-</span>
+          <span className="text-primary">{c.substring(11)}</span>
+        </span>
+      );
+    }
+    return c;
+  };
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden text-slate-800 dark:text-slate-100">
