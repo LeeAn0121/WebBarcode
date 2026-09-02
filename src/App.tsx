@@ -366,21 +366,33 @@ function App() {
         const camId = selectedCamera || rearCamera?.id || availableCameras[0].id;
         setSelectedCamera(camId);
         
-        await scannerRef.current.start(
-          camId,
-          { 
-            fps: 15, 
-            qrbox: { width: window.innerWidth < 400 ? 300 : 350, height: 120 }, // 와이드 비율로 변경 (1D 바코드 최적화)
-            videoConstraints: {
-              facingMode: "environment", // 후면 카메라 강제
-              width: { min: 1280, ideal: 1920 },  // 강제로 고해상도(FHD) 요청
-              height: { min: 720, ideal: 1080 },
-              advanced: [{ focusMode: "continuous" }] // 연속 AF 강제 활성화
-            }
-          },
-          handleScan,
-          () => {} // ignore scan failures
-        );
+        try {
+          await scannerRef.current.start(
+            camId,
+            { 
+              fps: 15, 
+              qrbox: { width: window.innerWidth < 400 ? 300 : 350, height: 120 },
+              videoConstraints: {
+                width: { min: 1280, ideal: 1920 },
+                height: { min: 720, ideal: 1080 },
+                advanced: [{ focusMode: "continuous" }]
+              }
+            },
+            handleScan,
+            () => {}
+          );
+        } catch (highResErr) {
+          console.warn("고해상도/초점 강제 설정 실패, 일반 모드로 재시도합니다:", highResErr);
+          await scannerRef.current.start(
+            camId,
+            { 
+              fps: 10, 
+              qrbox: { width: window.innerWidth < 400 ? 300 : 350, height: 120 }
+            },
+            handleScan,
+            () => {}
+          );
+        }
         setIsScanning(true);
         
         // Setup Zoom if available
