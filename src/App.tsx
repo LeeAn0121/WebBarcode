@@ -151,6 +151,7 @@ export default function App() {
     const checkUpdate = async () => {
       try {
         const res = await fetch('https://api.github.com/repos/LeeAn0121/WebBarcode/releases/latest?t=' + new Date().getTime(), { cache: 'no-store' });
+        if (res.status === 403) return 'RATE_LIMIT';
         if (!res.ok) return;
         const data = await res.json();
         const currentTag = `v${packageJson.version}`;
@@ -176,8 +177,17 @@ export default function App() {
       }
     };
     
-    checkUpdate();
-    const intervalId = setInterval(checkUpdate, 30000); // Check every 30 seconds
+    let intervalId: any;
+    
+    const runCheck = async () => {
+      const status = await checkUpdate();
+      if (status === 'RATE_LIMIT' && intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+    
+    runCheck();
+    intervalId = setInterval(runCheck, 300000); // Check every 5 minutes (300,000ms) to prevent GitHub API rate limit (60 req/hr)
     return () => clearInterval(intervalId);
   }, []);
 
