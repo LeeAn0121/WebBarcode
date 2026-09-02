@@ -244,11 +244,17 @@ function App() {
 
 
   useEffect(() => {
-    fetchBarcodes();
+    if (session?.user?.id) {
+      fetchBarcodes();
+    }
 
     const subscription = supabase
       .channel('public:barcodes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'barcodes' }, payload => {
+        // filter incoming payloads if needed, though RLS handles it.
+        // If no RLS, we only accept if user_id matches session
+        if (payload.new && payload.new.user_id && payload.new.user_id !== session?.user?.id) return;
+        
         if (payload.eventType === 'INSERT') {
           setBarcodes(prev => {
             if (prev.some(b => b.id === payload.new.id || b.code === payload.new.code)) return prev;
@@ -265,7 +271,7 @@ function App() {
     return () => {
       supabase.removeChannel(subscription);
     };
-  }, []);
+  }, [session?.user?.id]);
 
   const fetchBarcodes = async () => {
     const { data, error } = await supabase.from('barcodes').select('*').eq('user_id', session?.user?.id).order('created_at', { ascending: false });
