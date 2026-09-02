@@ -7,7 +7,7 @@ import packageJson from '../package.json';
 import { 
   IconBarcode, IconMoon, IconSun, IconDownload, IconCamera, IconVolume, IconVolume3, 
   IconSearch, IconCopy, IconShare, IconMessagePlus, IconEdit, IconTrash, IconClock,
-  IconFolder, IconFolderPlus, IconCloudUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink
+  IconFolder, IconFolderPlus, IconCloudUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink, IconPhoto
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
 
@@ -63,6 +63,44 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeActionMenu, setActiveActionMenu] = useState(null);
+  const [isProcessingImages, setIsProcessingImages] = useState(false);
+  const [imageProgress, setImageProgress] = useState({ current: 0, total: 0 });
+  const imageInputRef = useRef(null);
+  
+  const handleImageUpload = async (e) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    
+    setIsProcessingImages(true);
+    setImageProgress({ current: 0, total: files.length });
+    
+    let successCount = 0;
+    let failCount = 0;
+    
+    try {
+      const html5QrCode = new Html5Qrcode("image-reader-hidden");
+      
+      for (let i = 0; i < files.length; i++) {
+        setImageProgress({ current: i + 1, total: files.length });
+        try {
+          const decodedText = await html5QrCode.scanFile(files[i], true);
+          if (decodedText) {
+            await handleScan(decodedText, true);
+            successCount++;
+          }
+        } catch (err) {
+          failCount++;
+        }
+      }
+      html5QrCode.clear();
+    } catch (err) {
+      console.error("Image scanner setup failed", err);
+    }
+    
+    setIsProcessingImages(false);
+    toast.success(`이미지 스캔 완료! (성공: ${successCount}건 / 실패: ${failCount}건)`);
+    if (e.target) e.target.value = null;
+  };
   const [updateInfo, setUpdateInfo] = useState(null);
   
   const [localFolders, setLocalFolders] = useState(() => {
@@ -161,11 +199,11 @@ export default function App() {
     if (!error && data) setBarcodes(data);
   };
 
-  const handleScan = async (decodedText) => {
+  const handleScan = async (decodedText, isImage = false) => {
     const cleanText = decodedText.trim();
     
-    // Pause the scanner completely to create a true delay between scans
-    if (scannerRef.current && scannerRef.current.getState() === 2) { // 2 = SCANNING
+    // Pause the scanner completely to create a true delay between scans (only for live camera)
+    if (!isImage && scannerRef.current && scannerRef.current.getState() === 2) { // 2 = SCANNING
       scannerRef.current.pause(true); // true = pause scanning but keep video feed active
     }
 
@@ -190,9 +228,11 @@ export default function App() {
       }
       
       // Resume scanner after delay
-      setTimeout(() => {
-        if (scannerRef.current && isScanning) scannerRef.current.resume();
-      }, 1500);
+      if (!isImage) {
+        setTimeout(() => {
+          if (scannerRef.current && isScanning) scannerRef.current.resume();
+        }, 1500);
+      }
       return;
     }
 
@@ -224,9 +264,11 @@ export default function App() {
     }
 
     // Resume scanner after delay
-    setTimeout(() => {
-      if (scannerRef.current && isScanning) scannerRef.current.resume();
-    }, 1500);
+    if (!isImage) {
+      setTimeout(() => {
+        if (scannerRef.current && isScanning) scannerRef.current.resume();
+      }, 1500);
+    }
   };
 
   const startScanner = async () => {
@@ -573,10 +615,17 @@ export default function App() {
             <section className="w-full lg:w-5/12 flex flex-col gap-4">
               <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden relative">
                 <div className="p-4 border-b border-slate-50 dark:border-slate-700/50 flex justify-between items-center">
-                  <h2 className="font-bold flex items-center gap-2"><IconCamera className="text-primary" size={20} /> 카메라 스캔</h2>
-                  <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-primary rounded-full hover:bg-indigo-100 transition-colors">
-                    {isSoundEnabled ? <IconVolume size={16} /> : <IconVolume3 size={16} />}
-                  </button>
+                  <h2 className="font-bold flex items-center gap-2"><IconCamera className="text-primary" size={20} /> 스캔</h2>
+                  <div className="flex gap-2">
+                    <button onClick={() => imageInputRef.current?.click()} className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-primary rounded-full hover:bg-indigo-100 transition-colors" title="이미지로 바코드 찾기">
+                      <IconPhoto size={16} />
+                    </button>
+                    <input type="file" accept="image/*" multiple className="hidden" ref={imageInputRef} onChange={handleImageUpload} />
+                    
+                    <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-primary rounded-full hover:bg-indigo-100 transition-colors">
+                      {isSoundEnabled ? <IconVolume size={16} /> : <IconVolume3 size={16} />}
+                    </button>
+                  </div>
                 </div>
                 
                 <div className="p-4 bg-slate-50/50 dark:bg-slate-900/20 flex flex-col items-center">
@@ -653,7 +702,7 @@ export default function App() {
                           </div>
                           <div className="flex flex-col flex-1 overflow-hidden">
                             <div className="flex items-center gap-2 truncate">
-                              <span className="font-mono font-bold text-base text-slate-800 dark:text-slate-100 truncate">{item.code}</span>
+                              <span className="font-mono font-bold text-base text-slate-800 dark:text-slate-100 truncate">{renderFormattedCode(item.code)}</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs mt-0.5">
                               <span className="text-slate-400 flex items-center gap-1 shrink-0"><IconClock size={10}/> {format(new Date(item.created_at), 'HH:mm:ss')}</span>
