@@ -1,5 +1,4 @@
-const [moveModal, setMoveModal] = useState({ isOpen: false, item: null as any, targetFolder: '기본폴더' });
-  import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { Toaster, toast } from 'sonner';
@@ -74,7 +73,8 @@ export default function App() {
   const [currentFolder, setCurrentFolder] = useState('전체');
   const [activeTab, setActiveTab] = useState('home');
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
-  const [activeActionMenu, setActiveActionMenu] = useState(null);
+  const [activeActionMenu, setActiveActionMenu] = useState<any>(null);
+  const [moveModal, setMoveModal] = useState({ isOpen: false, item: null as any, targetFolder: '기본폴더' });
   const [updateInfo, setUpdateInfo] = useState(null);
   
   const [localFolders, setLocalFolders] = useState(() => {
