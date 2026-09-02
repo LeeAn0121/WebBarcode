@@ -7,7 +7,7 @@ import packageJson from '../package.json';
 import { 
   IconBarcode, IconMoon, IconSun, IconDownload, IconCamera, IconVolume, IconVolume3, 
   IconSearch, IconCopy, IconShare, IconMessagePlus, IconEdit, IconTrash, IconClock,
-  IconFolder, IconFolderPlus, IconCloudUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink, IconPhoto
+  IconFolder, IconFolderPlus, IconCloudUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
 
@@ -74,86 +74,6 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeActionMenu, setActiveActionMenu] = useState(null);
-  const [isProcessingImages, setIsProcessingImages] = useState(false);
-  const [imageProgress, setImageProgress] = useState({ current: 0, total: 0 });
-  const imageInputRef = useRef(null);
-  
-  const handleImageUpload = async (e) => {
-    const files = Array.from(e.target.files);
-    if (!files.length) return;
-    
-    setIsProcessingImages(true);
-    setImageProgress({ current: 0, total: files.length });
-    
-    let successCount = 0;
-    let failCount = 0;
-    
-    try {
-      const html5QrCode = new Html5Qrcode("image-reader-hidden"); // Fallback
-      
-      // Native BarcodeDetector (Chrome/Android, Safari/iOS 17+) for incredibly fast and accurate image scanning
-      let nativeDetector: any = null;
-      if ('BarcodeDetector' in window) {
-        try {
-          nativeDetector = new (window as any).BarcodeDetector();
-        } catch(e) {}
-      }
-      
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        setImageProgress({ current: i + 1, total: files.length });
-        try {
-          let decodedText = null;
-          
-          // 1. Try Native API first (Super accurate for photos)
-          if (nativeDetector) {
-            try {
-              const imageBitmap = await createImageBitmap(file);
-              const barcodes = await nativeDetector.detect(imageBitmap);
-              if (barcodes && barcodes.length > 0) {
-                decodedText = barcodes[0].rawValue;
-              }
-            } catch(e) {
-              console.warn("Native detection failed", e);
-            }
-          }
-          
-          // 2. Fallback to html5-qrcode
-          if (!decodedText) {
-            decodedText = await html5QrCode.scanFile(file, false);
-          }
-          
-          if (decodedText) {
-            await handleScan(decodedText, true);
-            successCount++;
-            toast.success(`${file.name}: 스캔 성공!`);
-          } else {
-             throw new Error("NotFoundException"); // Trigger the catch block
-          }
-        } catch (err: any) {
-          failCount++;
-          let errorMsg = "바코드를 찾을 수 없습니다.";
-          const rawErr = err?.message || err || "";
-          
-          if (typeof rawErr === 'string') {
-            if (rawErr.toLowerCase().includes("notfoundexception") || rawErr.toLowerCase().includes("no multiformat readers")) {
-              errorMsg = "바코드/QR이 없거나 해상도가 너무 낮습니다.";
-            } else {
-              errorMsg = rawErr;
-            }
-          }
-          toast.error(`${file.name} 실패: ${errorMsg}`);
-        }
-      }
-      html5QrCode.clear();
-    } catch (err) {
-      console.error("Image scanner setup failed", err);
-    }
-    
-    setIsProcessingImages(false);
-    toast.success(`이미지 스캔 완료! (성공: ${successCount}건 / 실패: ${failCount}건)`);
-    if (e.target) e.target.value = null;
-  };
   const [updateInfo, setUpdateInfo] = useState(null);
   
   const [localFolders, setLocalFolders] = useState(() => {
@@ -267,11 +187,11 @@ export default function App() {
     if (!error && data) setBarcodes(data);
   };
 
-  const handleScan = async (decodedText, isImage = false) => {
+  const handleScan = async (decodedText) => {
     const cleanText = decodedText.trim();
     
     // Pause the scanner completely to create a true delay between scans (only for live camera)
-    if (!isImage && scannerRef.current && scannerRef.current.getState() === 2) { // 2 = SCANNING
+    if (true && scannerRef.current && scannerRef.current.getState() === 2) { // 2 = SCANNING
       scannerRef.current.pause(true); // true = pause scanning but keep video feed active
     }
 
@@ -296,7 +216,7 @@ export default function App() {
       }
       
       // Resume scanner after delay
-      if (!isImage) {
+      {
         setTimeout(() => {
           if (scannerRef.current && isScanning) scannerRef.current.resume();
         }, 1500);
@@ -332,7 +252,7 @@ export default function App() {
     }
 
     // Resume scanner after delay
-    if (!isImage) {
+    {
       setTimeout(() => {
         if (scannerRef.current && isScanning) scannerRef.current.resume();
       }, 1500);
@@ -700,13 +620,8 @@ export default function App() {
             <section className="w-full lg:w-5/12 flex flex-col gap-4">
               <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden relative">
                 <div className="p-4 border-b border-slate-50 dark:border-slate-700/50 flex justify-between items-center">
-                  <h2 className="font-bold flex items-center gap-2"><IconCamera className="text-primary" size={20} /> 스캔</h2>
+                  <h2 className="font-bold flex items-center gap-2"><IconCamera className="text-primary" size={20} /> 카메라 스캔</h2>
                   <div className="flex gap-2">
-                    <button onClick={() => imageInputRef.current?.click()} className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-primary rounded-full hover:bg-indigo-100 transition-colors" title="이미지로 바코드 찾기">
-                      <IconPhoto size={16} />
-                    </button>
-                    <input type="file" accept="image/*" multiple className="hidden" ref={imageInputRef} onChange={handleImageUpload} />
-                    
                     <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-primary rounded-full hover:bg-indigo-100 transition-colors">
                       {isSoundEnabled ? <IconVolume size={16} /> : <IconVolume3 size={16} />}
                     </button>
@@ -739,19 +654,7 @@ export default function App() {
                   
                   <div className="w-full relative rounded-2xl overflow-hidden bg-slate-900 min-h-[250px] sm:min-h-[300px]">
                     
-                    <div id="image-reader-hidden" className="opacity-0 absolute pointer-events-none w-[300px] h-[300px] -z-50"></div>
                     <div id="reader" className="w-full"></div>
-                    
-                    {isProcessingImages && (
-                      <div className="absolute inset-0 z-50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm flex flex-col items-center justify-center p-6">
-                        <IconPhoto className="text-primary animate-pulse mb-3" size={40} />
-                        <div className="w-full max-w-[200px] h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden mb-2">
-                          <div className="h-full bg-primary transition-all duration-300" style={{ width: `${(imageProgress.current / imageProgress.total) * 100}%` }}></div>
-                        </div>
-                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">이미지 분석 중...</span>
-                        <span className="text-xs text-slate-500 mt-1">{imageProgress.current} / {imageProgress.total} 완료</span>
-                      </div>
-                    )}
                     <div id="reader-overlay" className="absolute inset-4 rounded-xl border-2 ring-4 ring-primary/50 border-dashed border-white/50 pointer-events-none transition-all duration-300"></div>
                     
                     {!isScanning && (
