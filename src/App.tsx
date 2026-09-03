@@ -136,6 +136,7 @@ function App() {
   const [activeActionMenu, setActiveActionMenu] = useState<any>(null);
   const [moveModal, setMoveModal] = useState({ isOpen: false, item: null as any, targetFolder: '기본폴더' });
   const [shareModal, setShareModal] = useState({ isOpen: false, url: '', title: '', description: '' });
+  const [shareConfig, setShareConfig] = useState({ isOpen: false, type: '', folderName: '', item: null as any, expireHours: 1 });
   const [collabFolders, setCollabFolders] = useState<{owner_id: string, folder_name: string}[]>([]);
   const [loadingShare, setLoadingShare] = useState(false);
   const [promptModal, setPromptModal] = useState({ isOpen: false, title: '', placeholder: '', value: '', type: 'text', description: '', confirmText: '확인', onConfirm: (val: string) => {} });
@@ -541,6 +542,7 @@ function App() {
     try {
       const { data: invite, error } = await supabase.from('folder_invites').select('*').eq('id', inviteId).single();
       if (error || !invite) throw new Error('유효하지 않거나 만료된 초대입니다.');
+      if (invite.expires_at && new Date(invite.expires_at) < new Date()) throw new Error('기간이 만료된 초대 링크입니다.');
       
       if (invite.owner_id === session?.user?.id) {
         throw new Error('내 자신의 폴더에는 이미 권한이 있습니다.');
@@ -576,32 +578,70 @@ function App() {
     }
   };
 
-  const handleCreateInvite = async (folderName: string) => {
+  const handleCreateInvite = (folderName: string) => {
     if (!session?.user?.id) return toast.error('로그인이 필요합니다.');
-    try {
-      const { data, error } = await supabase.from('folder_invites').insert({
-        owner_id: session.user.id,
-        folder_name: folderName
-      }).select('id').single();
-      if (error) throw error;
+    setShareConfig({ isOpen: true, type: 'invite', folderName, item: null, expireHours: 1 });
+  };
 
-      const inviteUrl = `${window.location.origin}${window.location.pathname}#invite=${data.id}`;
-      setShareModal({
-        isOpen: true,
-        url: inviteUrl,
-        title: `'${folderName}' 실시간 협업 초대`,
-        description: '이 QR/링크를 동료가 스캔하면 해당 폴더를 실시간으로 함께 작업할 수 있습니다.'
-      });
+  
+  const processShareConfig = async () => {
+    setLoadingShare(true);
+    const expires_at = new Date(Date.now() + shareConfig.expireHours * 60 * 60 * 1000).toISOString();
+    
+    try {
+      if (shareConfig.type === 'invite') {
+        const { data, error } = await supabase.from('folder_invites').insert({
+          owner_id: session.user.id,
+          folder_name: shareConfig.folderName,
+          expires_at
+        }).select('id').single();
+        if (error) throw error;
+
+        const inviteUrl = `${window.location.origin}${window.location.pathname}#invite=${data.id}`;
+        setShareModal({
+          isOpen: true,
+          url: inviteUrl,
+          title: `'${shareConfig.folderName}' 협업 초대`,
+          description: `만료시간: ${shareConfig.expireHours}시간 후\n이 QR/링크를 동료가 스캔하면 폴더를 실시간으로 공유합니다.`
+        });
+      } else {
+        const isFolder = shareConfig.type === 'share_folder';
+        const items = isFolder 
+          ? barcodes.filter(b => (b.folder || '기본폴더') === shareConfig.folderName)
+          : [shareConfig.item];
+        
+        const payload = items.map(item => ({ code: item.code, memo: item.memo }));
+        const { data, error } = await supabase.from('shared_links').insert([{
+          owner_id: session.user.id,
+          folder_name: isFolder ? shareConfig.folderName : '단일 바코드',
+          barcodes_data: payload,
+          expires_at
+        }]).select('id').single();
+        if (error) throw error;
+
+        const shareUrl = `${window.location.origin}${window.location.pathname}#share=${data.id}`;
+        setShareModal({ 
+          isOpen: true, 
+          url: shareUrl, 
+          title: isFolder ? `'${shareConfig.folderName}' 폴더 공유` : '바코드 공유하기', 
+          description: `만료시간: ${shareConfig.expireHours}시간 후\n데이터를 복사하여 전달합니다.` 
+        });
+      }
+      setShareConfig({ ...shareConfig, isOpen: false });
     } catch(e) {
-      toast.error('초대 링크 생성 실패. (SQL 스크립트를 실행했는지 확인해주세요)');
+      toast.error('링크 생성 실패. (expires_at 컬럼을 추가하는 SQL을 실행하셨나요?)');
+    } finally {
+      setLoadingShare(false);
     }
   };
+
 
   const handleReceiveShare = async (shareId: string) => {
     setLoadingShare(true);
     try {
       const { data, error } = await supabase.from('shared_links').select('*').eq('id', shareId).single();
       if (error || !data) throw new Error('유효하지 않거나 만료된 링크입니다.');
+      if (data.expires_at && new Date(data.expires_at) < new Date()) throw new Error('기간이 만료된 공유 링크입니다.');
       
       const confirm = window.confirm(`'${data.folder_name}' 폴더와 ${data.barcodes_data.length}개의 바코드를 내 계정으로 가져오시겠습니까?\n(이미 등록된 동일한 바코드는 제외됩니다)`);
       if (!confirm) {
@@ -655,27 +695,11 @@ function App() {
     }
   }, [session, window.location.hash]);
 
-  const handleShareFolder = async (folderName: string) => {
+  const handleShareFolder = (folderName: string) => {
     if (!session?.user?.id) return toast.error('로그인이 필요합니다.');
     const items = barcodes.filter(b => (b.folder || '기본폴더') === folderName);
     if (items.length === 0) return toast.error('빈 폴더는 공유할 수 없습니다.');
-    
-    try {
-      const payload = items.map(item => ({ code: item.code, memo: item.memo }));
-      const { data, error } = await supabase.from('shared_links').insert([{
-        owner_id: session.user.id,
-        folder_name: folderName,
-        barcodes_data: payload
-      }]).select('id').single();
-
-      if (error) throw error;
-
-      const shareUrl = `${window.location.origin}${window.location.pathname}#share=${data.id}`;
-      setShareModal({ isOpen: true, url: shareUrl, title: `'${folderName}' 폴더 공유`, description: '폴더 안의 모든 바코드를 다른 기기나 사용자에게 복사하여 전달합니다.' });
-    } catch(e) {
-      console.error(e);
-      toast.error('공유 링크 생성 실패. (shared_links 테이블을 만들었는지 확인해주세요)');
-    }
+    setShareConfig({ isOpen: true, type: 'share_folder', folderName, item: null, expireHours: 1 });
   };
 
   const handleMoveFolderSubmit = async () => {
@@ -823,31 +847,10 @@ const handleEditMemo = (id, currentMemo) => {
     e.target.value = null;
   };
 
-  const handleShare = async (item) => {
+  const handleShare = (item) => {
     if (!session?.user?.id) return toast.error('로그인이 필요합니다.');
-    
-    try {
-      const payload = [{ code: item.code, memo: item.memo }];
-      const { data, error } = await supabase.from('shared_links').insert([{
-        owner_id: session.user.id,
-        folder_name: '단일 바코드',
-        barcodes_data: payload
-      }]).select('id').single();
-
-      if (error) throw error;
-
-      const shareUrl = `${window.location.origin}${window.location.pathname}#share=${data.id}`;
-      setShareModal({ 
-        isOpen: true, 
-        url: shareUrl, 
-        title: '바코드 공유하기', 
-        description: `[${item.code}] 바코드 1개를 다른 사용자에게 전달합니다.` 
-      });
-      setActiveActionMenu(null);
-    } catch(e) {
-      console.error(e);
-      toast.error('공유 링크 생성 실패.');
-    }
+    setShareConfig({ isOpen: true, type: 'share_item', folderName: '', item, expireHours: 1 });
+    setActiveActionMenu(null);
   };
 
   const filteredBarcodes = barcodes.filter(b => 
@@ -1316,6 +1319,43 @@ const handleEditMemo = (id, currentMemo) => {
         )}
 
         
+        
+        {shareConfig.isOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareConfig({ ...shareConfig, isOpen: false })}>
+            <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">
+                {shareConfig.type === 'invite' ? '협업 방 초대' : '공유 링크 생성'}
+              </h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">생성될 링크와 QR코드의 만료 시간을 선택하세요. 시간이 지나면 링크가 자동으로 비활성화됩니다.</p>
+              
+              <div className="relative mb-6">
+                <select 
+                  value={shareConfig.expireHours}
+                  onChange={(e) => setShareConfig({ ...shareConfig, expireHours: Number(e.target.value) })}
+                  className="w-full appearance-none bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 pr-10 text-sm font-medium focus:ring-2 focus:ring-primary outline-none text-slate-700 dark:text-slate-200"
+                >
+                  <option value={1}>1시간 후 만료</option>
+                  <option value={4}>4시간 후 만료</option>
+                  <option value={8}>8시간 후 만료</option>
+                  <option value={12}>12시간 후 만료</option>
+                  <option value={24}>24시간 후 만료</option>
+                  <option value={48}>48시간 후 만료</option>
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                  <IconClock size={18} />
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button onClick={() => setShareConfig({ ...shareConfig, isOpen: false })} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition-colors">취소</button>
+                <button onClick={processShareConfig} disabled={loadingShare} className="flex-1 py-3 bg-primary hover:bg-primaryHover text-white font-bold rounded-xl shadow-md transition-all flex items-center justify-center">
+                  {loadingShare ? <IconRefresh className="animate-spin" size={20}/> : '링크 만들기'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {shareModal.isOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareModal({ isOpen: false, url: '', title: '', description: '' })}>
             <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 text-center" onClick={e => e.stopPropagation()}>
