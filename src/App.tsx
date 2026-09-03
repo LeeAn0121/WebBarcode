@@ -1393,6 +1393,9 @@ const handleEditMemo = (id, currentMemo) => {
                   try {
                     const text = shareModal.shareText || `📦 [WebBarcode] 공유 데이터 도착!\n\n항목: ${shareModal.title}\n${shareModal.description}\n\n👉 ${shareModal.url}`;
                     
+                    // 카카오톡 등 메신저의 버그(이미지와 텍스트 동시 공유 시 텍스트 증발)를 방지하기 위해 텍스트 선 복사
+                    navigator.clipboard.writeText(text);
+                    
                     if (navigator.share) {
                       try {
                         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(shareModal.url)}`;
@@ -1401,17 +1404,18 @@ const handleEditMemo = (id, currentMemo) => {
                         const file = new File([blob], 'qrcode.png', { type: 'image/png' });
                         
                         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                          await navigator.share({ title: shareModal.title, text, files: [file] });
+                          toast.success('텍스트가 복사되었습니다! 카톡 전송 후 [붙여넣기] 해주세요.', { duration: 4000 });
+                          await navigator.share({ title: shareModal.title, files: [file] });
                         } else {
                           await navigator.share({ title: shareModal.title, text });
                         }
                       } catch (err: any) {
                         if (err.name !== 'AbortError') {
+                          toast.success('텍스트가 복사되었습니다!');
                           await navigator.share({ title: shareModal.title, text }).catch(()=>{});
                         }
                       }
                     } else {
-                      navigator.clipboard.writeText(text);
                       toast.success('공유 텍스트가 복사되었습니다!');
                     }
                   } catch(e) {
