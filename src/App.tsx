@@ -135,7 +135,7 @@ function App() {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeActionMenu, setActiveActionMenu] = useState<any>(null);
   const [moveModal, setMoveModal] = useState({ isOpen: false, item: null as any, targetFolder: '기본폴더' });
-  const [shareModal, setShareModal] = useState({ isOpen: false, url: '', title: '', description: '' });
+  const [shareModal, setShareModal] = useState({ isOpen: false, url: '', title: '', description: '', shareText: '' });
   const [shareConfig, setShareConfig] = useState({ isOpen: false, type: '', folderName: '', item: null as any, expireHours: 1 });
   const [collabFolders, setCollabFolders] = useState<{owner_id: string, folder_name: string}[]>([]);
   const [loadingShare, setLoadingShare] = useState(false);
@@ -598,11 +598,14 @@ function App() {
         if (error) throw error;
 
         const inviteUrl = `${window.location.origin}${window.location.pathname}#invite=${data.id}`;
+        const shareText = `📦 [WebBarcode] 실시간 협업 초대 도착!\n\n📂 대상 폴더: '${shareConfig.folderName}'\n⏳ 만료: ${shareConfig.expireHours}시간 후\n\n아래 링크나 첨부된 QR을 열어 실시간으로 함께 작업하세요!\n👉 ${inviteUrl}`;
+        
         setShareModal({
           isOpen: true,
           url: inviteUrl,
           title: `'${shareConfig.folderName}' 협업 초대`,
-          description: `만료시간: ${shareConfig.expireHours}시간 후\n이 QR/링크를 동료가 스캔하면 폴더를 실시간으로 공유합니다.`
+          description: `만료시간: ${shareConfig.expireHours}시간 후\n이 QR/링크를 동료가 스캔하면 폴더를 실시간으로 공유합니다.`,
+          shareText
         });
       } else {
         const isFolder = shareConfig.type === 'share_folder';
@@ -620,11 +623,25 @@ function App() {
         if (error) throw error;
 
         const shareUrl = `${window.location.origin}${window.location.pathname}#share=${data.id}`;
+        
+        let shareText = `📦 [WebBarcode] 공유 데이터 도착!\n`;
+        if (!isFolder && shareConfig.item) {
+           const item = shareConfig.item;
+           const timeStr = format(new Date(item.created_at || Date.now()), 'HH:mm:ss');
+           shareText += `\n📌 바코드: ${item.code}`;
+           shareText += `\n⏰ 스캔시간: ${timeStr}`;
+           if (item.memo) shareText += `\n📝 메모: ${item.memo}`;
+        } else {
+           shareText += `\n📂 항목: '${shareConfig.folderName}' 폴더 (${items.length}개)`;
+        }
+        shareText += `\n⏳ 만료: ${shareConfig.expireHours}시간 후\n\n👉 확인 링크: ${shareUrl}`;
+
         setShareModal({ 
           isOpen: true, 
           url: shareUrl, 
           title: isFolder ? `'${shareConfig.folderName}' 폴더 공유` : '바코드 공유하기', 
-          description: `만료시간: ${shareConfig.expireHours}시간 후\n데이터를 복사하여 전달합니다.` 
+          description: `만료시간: ${shareConfig.expireHours}시간 후\n데이터를 복사하여 전달합니다.`,
+          shareText
         });
       }
       setShareConfig({ ...shareConfig, isOpen: false });
@@ -1357,7 +1374,7 @@ const handleEditMemo = (id, currentMemo) => {
         )}
 
         {shareModal.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareModal({ isOpen: false, url: '', title: '', description: '' })}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareModal({ isOpen: false, url: '', title: '', description: '', shareText: '' })}>
             <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 text-center" onClick={e => e.stopPropagation()}>
               <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">{shareModal.title}</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">{shareModal.description}</p>
@@ -1374,7 +1391,7 @@ const handleEditMemo = (id, currentMemo) => {
                 </button>
                 <button onClick={async () => {
                   try {
-                    const text = `📦 [WebBarcode] 공유 데이터 도착!\n\n항목: ${shareModal.title}\n${shareModal.description}\n\n👉 ${shareModal.url}`;
+                    const text = shareModal.shareText || `📦 [WebBarcode] 공유 데이터 도착!\n\n항목: ${shareModal.title}\n${shareModal.description}\n\n👉 ${shareModal.url}`;
                     
                     if (navigator.share) {
                       try {
@@ -1405,7 +1422,7 @@ const handleEditMemo = (id, currentMemo) => {
                 </button>
               </div>
 
-              <button onClick={() => setShareModal({ isOpen: false, url: '', title: '', description: '' })} className="w-full py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition-colors">닫기</button>
+              <button onClick={() => setShareModal({ isOpen: false, url: '', title: '', description: '', shareText: '' })} className="w-full py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition-colors">닫기</button>
             </div>
           </div>
         )}
