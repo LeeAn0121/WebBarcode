@@ -525,6 +525,85 @@ function App() {
     }
   };
 
+
+  const handleReceiveShare = async (shareId: string) => {
+    setLoadingShare(true);
+    try {
+      const { data, error } = await supabase.from('shared_links').select('*').eq('id', shareId).single();
+      if (error || !data) throw new Error('유효하지 않거나 만료된 링크입니다.');
+      
+      const confirm = window.confirm(`'${data.folder_name}' 폴더와 ${data.barcodes_data.length}개의 바코드를 내 계정으로 가져오시겠습니까?\n(이미 등록된 동일한 바코드는 제외됩니다)`);
+      if (!confirm) {
+        window.location.hash = '';
+        return;
+      }
+
+      // Check existing to avoid duplicates
+      const existingCodes = new Set(barcodesRef.current.map(b => b.code));
+      const inserts = data.barcodes_data
+        .filter((b: any) => !existingCodes.has(b.code))
+        .map((b: any) => ({
+          code: b.code,
+          memo: b.memo,
+          folder: data.folder_name,
+          user_id: session?.user?.id
+        }));
+
+      if (inserts.length === 0) {
+        toast.error('모두 이미 존재하는 바코드입니다.');
+      } else {
+        const { error: insertErr } = await supabase.from('barcodes').insert(inserts);
+        if (insertErr) throw insertErr;
+        
+        toast.success(`${inserts.length}개의 바코드를 성공적으로 가져왔습니다!`);
+        
+        if (!folders.includes(data.folder_name)) {
+           const updatedFolders = [...folders, data.folder_name];
+           setLocalFolders(updatedFolders);
+           localStorage.setItem('folders', JSON.stringify(updatedFolders));
+        }
+        
+        fetchBarcodes();
+      }
+    } catch(e: any) {
+      toast.error(e.message || '가져오기 실패');
+    } finally {
+      window.location.hash = '';
+      setLoadingShare(false);
+    }
+  };
+
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash.startsWith('#share=') && session?.user?.id && !loadingShare) {
+       const shareId = hash.replace('#share=', '');
+       handleReceiveShare(shareId);
+    }
+  }, [session, window.location.hash]);
+
+  const handleShareFolder = async (folderName: string) => {
+    if (!session?.user?.id) return toast.error('로그인이 필요합니다.');
+    const items = barcodes.filter(b => (b.folder || '기본폴더') === folderName);
+    if (items.length === 0) return toast.error('빈 폴더는 공유할 수 없습니다.');
+    
+    try {
+      const payload = items.map(item => ({ code: item.code, memo: item.memo }));
+      const { data, error } = await supabase.from('shared_links').insert([{
+        owner_id: session.user.id,
+        folder_name: folderName,
+        barcodes_data: payload
+      }]).select('id').single();
+
+      if (error) throw error;
+
+      const shareUrl = `${window.location.origin}${window.location.pathname}#share=${data.id}`;
+      setShareModal({ isOpen: true, url: shareUrl, folderName });
+    } catch(e) {
+      console.error(e);
+      toast.error('공유 링크 생성 실패. (shared_links 테이블을 만들었는지 확인해주세요)');
+    }
+  };
+
   const handleMoveFolderSubmit = async () => {
     if (!moveModal.item) return;
     try {
