@@ -753,7 +753,7 @@ const handleEditMemo = (id, currentMemo) => {
     const timeStr = format(new Date(item.created_at || Date.now()), 'HH:mm:ss');
     let text = `[WebBarcode]\n바코드: ${item.code}\n시간: ${timeStr}`;
     if (item.memo) text += `\n메모: ${item.memo}`;
-    text += `\n\n확인: ${window.location.origin}#${item.id}`;
+    text += `\n\n확인: ${window.location.origin}${window.location.pathname}#${item.id}`;
     
     if (navigator.share) {
       try { await navigator.share({ text }); } catch (e) {}
