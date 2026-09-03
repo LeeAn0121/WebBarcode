@@ -1369,8 +1369,39 @@ const handleEditMemo = (id, currentMemo) => {
               
               <div className="flex gap-2 mb-6">
                 <input type="text" readOnly value={shareModal.url} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-600 dark:text-slate-300 outline-none" />
-                <button onClick={() => { navigator.clipboard.writeText(shareModal.url); toast.success('링크 복사됨!'); }} className="bg-primary hover:bg-primaryHover text-white p-3 rounded-xl transition-colors shrink-0">
+                <button onClick={() => { navigator.clipboard.writeText(shareModal.url); toast.success('링크 복사됨!'); }} className="bg-primary hover:bg-primaryHover text-white p-3 rounded-xl transition-colors shrink-0" title="링크 복사">
                   <IconCopy size={18} />
+                </button>
+                <button onClick={async () => {
+                  try {
+                    const text = `📦 [WebBarcode] 공유 데이터 도착!\n\n항목: ${shareModal.title}\n${shareModal.description}\n\n👉 ${shareModal.url}`;
+                    
+                    if (navigator.share) {
+                      try {
+                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(shareModal.url)}`;
+                        const response = await fetch(qrUrl);
+                        const blob = await response.blob();
+                        const file = new File([blob], 'qrcode.png', { type: 'image/png' });
+                        
+                        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                          await navigator.share({ title: shareModal.title, text, files: [file] });
+                        } else {
+                          await navigator.share({ title: shareModal.title, text });
+                        }
+                      } catch (err: any) {
+                        if (err.name !== 'AbortError') {
+                          await navigator.share({ title: shareModal.title, text }).catch(()=>{});
+                        }
+                      }
+                    } else {
+                      navigator.clipboard.writeText(text);
+                      toast.success('공유 텍스트가 복사되었습니다!');
+                    }
+                  } catch(e) {
+                    toast.error('공유하기에 실패했습니다.');
+                  }
+                }} className="bg-emerald-500 hover:bg-emerald-600 text-white p-3 rounded-xl transition-colors shrink-0" title="외부로 공유(이미지 포함)">
+                  <IconShare size={18} />
                 </button>
               </div>
 
