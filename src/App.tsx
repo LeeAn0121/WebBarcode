@@ -135,7 +135,7 @@ function App() {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeActionMenu, setActiveActionMenu] = useState<any>(null);
   const [moveModal, setMoveModal] = useState({ isOpen: false, item: null as any, targetFolder: '기본폴더' });
-  const [shareModal, setShareModal] = useState({ isOpen: false, url: '', folderName: '' });
+  const [shareModal, setShareModal] = useState({ isOpen: false, url: '', title: '', description: '' });
   const [loadingShare, setLoadingShare] = useState(false);
   const [promptModal, setPromptModal] = useState({ isOpen: false, title: '', placeholder: '', value: '', type: 'text', description: '', confirmText: '확인', onConfirm: (val: string) => {} });
   const [session, setSession] = useState<any>(null);
@@ -597,7 +597,7 @@ function App() {
       if (error) throw error;
 
       const shareUrl = `${window.location.origin}${window.location.pathname}#share=${data.id}`;
-      setShareModal({ isOpen: true, url: shareUrl, folderName });
+      setShareModal({ isOpen: true, url: shareUrl, title: `'${folderName}' 폴더 공유`, description: '폴더 안의 모든 바코드를 다른 기기나 사용자에게 복사하여 전달합니다.' });
     } catch(e) {
       console.error(e);
       toast.error('공유 링크 생성 실패. (shared_links 테이블을 만들었는지 확인해주세요)');
@@ -750,16 +750,29 @@ const handleEditMemo = (id, currentMemo) => {
   };
 
   const handleShare = async (item) => {
-    const timeStr = format(new Date(item.created_at || Date.now()), 'HH:mm:ss');
-    let text = `[WebBarcode]\n바코드: ${item.code}\n시간: ${timeStr}`;
-    if (item.memo) text += `\n메모: ${item.memo}`;
-    text += `\n\n확인: ${window.location.origin}${window.location.pathname}#${item.id}`;
+    if (!session?.user?.id) return toast.error('로그인이 필요합니다.');
     
-    if (navigator.share) {
-      try { await navigator.share({ text }); } catch (e) {}
-    } else {
-      navigator.clipboard.writeText(text);
-      toast.success('복사되었습니다.');
+    try {
+      const payload = [{ code: item.code, memo: item.memo }];
+      const { data, error } = await supabase.from('shared_links').insert([{
+        owner_id: session.user.id,
+        folder_name: '단일 바코드',
+        barcodes_data: payload
+      }]).select('id').single();
+
+      if (error) throw error;
+
+      const shareUrl = `${window.location.origin}${window.location.pathname}#share=${data.id}`;
+      setShareModal({ 
+        isOpen: true, 
+        url: shareUrl, 
+        title: '바코드 공유하기', 
+        description: `[${item.code}] 바코드 1개를 다른 사용자에게 전달합니다.` 
+      });
+      setActiveActionMenu(null);
+    } catch(e) {
+      console.error(e);
+      toast.error('공유 링크 생성 실패.');
     }
   };
 
@@ -1227,10 +1240,10 @@ const handleEditMemo = (id, currentMemo) => {
 
         
         {shareModal.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareModal({ isOpen: false, url: '', folderName: '' })}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareModal({ isOpen: false, url: '', title: '', description: '' })}>
             <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 text-center" onClick={e => e.stopPropagation()}>
-              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">폴더 공유하기</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">'{shareModal.folderName}' 폴더의 바코드를 다른 기기나 사용자에게 전달합니다.</p>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">{shareModal.title}</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">{shareModal.description}</p>
               
               <div className="bg-white p-3 rounded-2xl mx-auto w-fit mb-5 shadow-inner border border-slate-100">
                 <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareModal.url)}`} alt="Share QR" className="w-40 h-40 mx-auto" />
@@ -1244,7 +1257,7 @@ const handleEditMemo = (id, currentMemo) => {
                 </button>
               </div>
 
-              <button onClick={() => setShareModal({ isOpen: false, url: '', folderName: '' })} className="w-full py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition-colors">닫기</button>
+              <button onClick={() => setShareModal({ isOpen: false, url: '', title: '', description: '' })} className="w-full py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition-colors">닫기</button>
             </div>
           </div>
         )}
