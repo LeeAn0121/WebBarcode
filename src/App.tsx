@@ -1392,9 +1392,10 @@ const handleEditMemo = (id, currentMemo) => {
                 <button onClick={async () => {
                   try {
                     const text = shareModal.shareText || `📦 [WebBarcode] 공유 데이터 도착!\n\n항목: ${shareModal.title}\n${shareModal.description}\n\n👉 ${shareModal.url}`;
-                    navigator.clipboard.writeText(text); // 텍스트 1순위 복사
                     
-                    // 모바일(Web Share API 지원 환경)
+                    // 유저의 명시적 요청: 내용 전체는 클립보드에 복사하고, 이미지는 시스템 공유 앱으로.
+                    navigator.clipboard.writeText(text).catch(() => {});
+                    
                     if (navigator.share) {
                       try {
                         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(shareModal.url)}`;
@@ -1403,42 +1404,23 @@ const handleEditMemo = (id, currentMemo) => {
                         const file = new File([blob], 'qrcode.png', { type: 'image/png' });
                         
                         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                          // 텍스트와 이미지 동시 전송 (카톡 외의 정상적인 앱들 대응)
+                          // 시스템 네이티브 공유 호출 (이미지 첨부 및 텍스트 동시 전송)
                           await navigator.share({ title: shareModal.title, text: text, files: [file] });
                         } else {
                           await navigator.share({ title: shareModal.title, text: text });
                         }
                       } catch (err: any) {
                         if (err.name !== 'AbortError') {
-                          toast.success('텍스트가 복사되었습니다!');
-                          await navigator.share({ title: shareModal.title, text }).catch(()=>{});
+                          await navigator.share({ title: shareModal.title, text: text }).catch(()=>{});
                         }
                       }
                     } else {
-                      // PC 브라우저 환경 (자동 다운로드 + 복사)
-                      try {
-                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(shareModal.url)}`;
-                        const response = await fetch(qrUrl);
-                        const blob = await response.blob();
-                        const objectUrl = URL.createObjectURL(blob);
-                        
-                        const a = document.createElement('a');
-                        a.href = objectUrl;
-                        a.download = `WebBarcode_${shareModal.title.replace(/\s+/g, '_')}.png`;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(objectUrl);
-                        
-                        toast.success('텍스트가 복사되고 QR코드가 다운로드 되었습니다! (PC환경)', { duration: 4000 });
-                      } catch (e) {
-                        toast.success('공유 텍스트가 복사되었습니다! (QR은 우클릭으로 저장해주세요)');
-                      }
+                      toast.success('시스템 공유를 지원하지 않는 브라우저입니다. 텍스트가 복사되었습니다!');
                     }
                   } catch(e) {
                     toast.error('공유 처리에 실패했습니다.');
                   }
-                }} className="bg-emerald-500 hover:bg-emerald-600 text-white p-3 rounded-xl transition-colors shrink-0" title="외부로 공유(모바일: 카톡 / PC: 자동다운로드)">
+                }} className="bg-emerald-500 hover:bg-emerald-600 text-white p-3 rounded-xl transition-colors shrink-0" title="시스템 앱으로 공유">
                   <IconShare size={18} />
                 </button>
               </div>
