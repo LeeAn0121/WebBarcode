@@ -136,6 +136,7 @@ function App() {
   const [activeActionMenu, setActiveActionMenu] = useState<any>(null);
   const [moveModal, setMoveModal] = useState({ isOpen: false, item: null as any, targetFolder: '기본폴더' });
   const [shareModal, setShareModal] = useState({ isOpen: false, url: '', title: '', description: '' });
+  const [collabFolders, setCollabFolders] = useState<{owner_id: string, folder_name: string}[]>([]);
   const [loadingShare, setLoadingShare] = useState(false);
   const [promptModal, setPromptModal] = useState({ isOpen: false, title: '', placeholder: '', value: '', type: 'text', description: '', confirmText: '확인', onConfirm: (val: string) => {} });
   const [session, setSession] = useState<any>(null);
@@ -262,6 +263,7 @@ function App() {
   useEffect(() => {
     if (session?.user?.id) {
       fetchBarcodes();
+      fetchCollabFolders();
     }
 
     const subscription = supabase
@@ -288,6 +290,13 @@ function App() {
       supabase.removeChannel(subscription);
     };
   }, [session?.user?.id]);
+
+  
+  const fetchCollabFolders = async () => {
+    if (!session?.user?.id) return;
+    const { data } = await supabase.from('folder_guests').select('owner_id, folder_name').eq('guest_id', session.user.id);
+    if (data) setCollabFolders(data);
+  };
 
   const fetchBarcodes = async () => {
     const { data, error } = await supabase.from('barcodes').select('*').eq('user_id', session?.user?.id).order('created_at', { ascending: false });
@@ -526,6 +535,68 @@ function App() {
   };
 
 
+  
+  const handleReceiveInvite = async (inviteId: string) => {
+    setLoadingShare(true);
+    try {
+      const { data: invite, error } = await supabase.from('folder_invites').select('*').eq('id', inviteId).single();
+      if (error || !invite) throw new Error('유효하지 않거나 만료된 초대입니다.');
+      
+      if (invite.owner_id === session?.user?.id) {
+        throw new Error('내 자신의 폴더에는 이미 권한이 있습니다.');
+      }
+
+      const confirm = window.confirm(`'${invite.folder_name}' 폴더의 실시간 협업에 참여하시겠습니까?\n(참여 후 나와 상대방이 스캔하는 바코드가 실시간으로 공유됩니다)`);
+      if (!confirm) return;
+
+      const { error: joinErr } = await supabase.from('folder_guests').insert({
+        owner_id: invite.owner_id,
+        folder_name: invite.folder_name,
+        guest_id: session?.user?.id
+      });
+      
+      // Ignore unique constraint error if already joined
+      if (joinErr && !joinErr.message.includes('unique constraint')) throw joinErr;
+
+      toast.success('협업 폴더에 성공적으로 참여했습니다!');
+      
+      if (!folders.includes(invite.folder_name)) {
+        const updated = [...folders, invite.folder_name];
+        setLocalFolders(updated);
+        localStorage.setItem('folders', JSON.stringify(updated));
+      }
+      
+      fetchCollabFolders();
+      fetchBarcodes();
+    } catch(e: any) {
+      toast.error(e.message || '초대 수락 실패');
+    } finally {
+      window.location.hash = '';
+      setLoadingShare(false);
+    }
+  };
+
+  const handleCreateInvite = async (folderName: string) => {
+    if (!session?.user?.id) return toast.error('로그인이 필요합니다.');
+    try {
+      const { data, error } = await supabase.from('folder_invites').insert({
+        owner_id: session.user.id,
+        folder_name: folderName
+      }).select('id').single();
+      if (error) throw error;
+
+      const inviteUrl = `${window.location.origin}${window.location.pathname}#invite=${data.id}`;
+      setShareModal({
+        isOpen: true,
+        url: inviteUrl,
+        title: `'${folderName}' 실시간 협업 초대`,
+        description: '이 QR/링크를 동료가 스캔하면 해당 폴더를 실시간으로 함께 작업할 수 있습니다.'
+      });
+    } catch(e) {
+      toast.error('초대 링크 생성 실패. (SQL 스크립트를 실행했는지 확인해주세요)');
+    }
+  };
+
   const handleReceiveShare = async (shareId: string) => {
     setLoadingShare(true);
     try {
@@ -578,6 +649,9 @@ function App() {
     if (hash.startsWith('#share=') && session?.user?.id && !loadingShare) {
        const shareId = hash.replace('#share=', '');
        handleReceiveShare(shareId);
+    } else if (hash.startsWith('#invite=') && session?.user?.id && !loadingShare) {
+       const inviteId = hash.replace('#invite=', '');
+       handleReceiveInvite(inviteId);
     }
   }, [session, window.location.hash]);
 
@@ -1112,12 +1186,15 @@ const handleEditMemo = (id, currentMemo) => {
                     <div key={f} className="flex justify-between items-center hover:bg-white dark:hover:bg-darkCard p-2.5 rounded-lg text-sm transition-all shadow-sm border border-transparent hover:border-slate-200 dark:hover:border-slate-700 group" style={{ marginLeft: `${depth * 16}px` }}>
                       <div className="flex items-center gap-3 overflow-hidden">
                         <IconFolder size={18} className="text-slate-400 shrink-0" />
-                        <span className="font-medium text-slate-700 dark:text-slate-200 truncate" title={f}>{name}</span>
+                        <span className="font-medium text-slate-700 dark:text-slate-200 truncate" title={f}>{name} {collabFolders.some(c => c.folder_name === f) && <span className="text-[10px] bg-emerald-100 text-emerald-600 px-1 py-0.5 rounded ml-1">협업중</span>}</span>
                         <span className="text-xs bg-indigo-50 dark:bg-indigo-900/30 text-primary font-bold px-2.5 py-1 rounded-lg whitespace-nowrap">{barcodeCount}개</span>
                       </div>
                       <div className="flex gap-1 shrink-0">
-                        <button onClick={() => handleShareFolder(f)} className="text-slate-400 hover:text-blue-500 bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-900/30 p-2 rounded-lg transition-colors" title="폴더 공유 (QR/링크)">
+                        <button onClick={() => handleCreateInvite(f)} className="text-slate-400 hover:text-emerald-500 bg-slate-100 hover:bg-emerald-50 dark:bg-slate-800 dark:hover:bg-emerald-900/30 p-2 rounded-lg transition-colors" title="실시간 방 초대 (같이 스캔하기)">
                           <IconShare size={16}/>
+                        </button>
+                        <button onClick={() => handleShareFolder(f)} className="text-slate-400 hover:text-blue-500 bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-900/30 p-2 rounded-lg transition-colors" title="폴더 복사본 보내기">
+                          <IconCopy size={16}/>
                         </button>
                         {f !== '기본폴더' && (
                           <button onClick={() => handleDeleteFolder(f)} className="text-slate-400 hover:text-red-500 bg-slate-100 hover:bg-red-50 dark:bg-slate-800 dark:hover:bg-red-900/30 p-2 rounded-lg transition-colors" title="폴더 삭제">
