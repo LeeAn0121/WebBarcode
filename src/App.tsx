@@ -1403,10 +1403,10 @@ const handleEditMemo = (id, currentMemo) => {
                         const file = new File([blob], 'qrcode.png', { type: 'image/png' });
                         
                         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                          toast.success('텍스트가 복사되었습니다! 카톡 전송 후 [붙여넣기] 해주세요.', { duration: 4000 });
-                          await navigator.share({ title: shareModal.title, files: [file] });
+                          // 텍스트와 이미지 동시 전송 (카톡 외의 정상적인 앱들 대응)
+                          await navigator.share({ title: shareModal.title, text: text, files: [file] });
                         } else {
-                          await navigator.share({ title: shareModal.title, text });
+                          await navigator.share({ title: shareModal.title, text: text });
                         }
                       } catch (err: any) {
                         if (err.name !== 'AbortError') {
