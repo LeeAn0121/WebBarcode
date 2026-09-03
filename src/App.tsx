@@ -7,7 +7,7 @@ import packageJson from '../package.json';
 import { 
   IconBarcode, IconMoon, IconSun, IconDownload, IconCamera, IconVolume, IconVolume3, 
   IconSearch, IconCopy, IconShare, IconMessagePlus, IconEdit, IconTrash, IconClock,
-  IconFolder, IconFolderPlus, IconCloudUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink
+  IconFolder, IconFolderPlus, IconCloudUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink, IconLink
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
 
@@ -135,6 +135,8 @@ function App() {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeActionMenu, setActiveActionMenu] = useState<any>(null);
   const [moveModal, setMoveModal] = useState({ isOpen: false, item: null as any, targetFolder: '기본폴더' });
+  const [shareModal, setShareModal] = useState({ isOpen: false, url: '', folderName: '' });
+  const [loadingShare, setLoadingShare] = useState(false);
   const [promptModal, setPromptModal] = useState({ isOpen: false, title: '', placeholder: '', value: '', type: 'text', description: '', confirmText: '확인', onConfirm: (val: string) => {} });
   const [session, setSession] = useState<any>(null);
   
@@ -1021,11 +1023,16 @@ const handleEditMemo = (id, currentMemo) => {
                         <span className="font-medium text-slate-700 dark:text-slate-200 truncate" title={f}>{name}</span>
                         <span className="text-xs bg-indigo-50 dark:bg-indigo-900/30 text-primary font-bold px-2.5 py-1 rounded-lg whitespace-nowrap">{barcodeCount}개</span>
                       </div>
-                      {f !== '기본폴더' && (
-                        <button onClick={() => handleDeleteFolder(f)} className="text-slate-400 hover:text-red-500 bg-slate-100 hover:bg-red-50 dark:bg-slate-800 dark:hover:bg-red-900/30 p-2 rounded-lg transition-colors shrink-0" title="폴더 삭제">
-                          <IconTrash size={16}/>
+                      <div className="flex gap-1 shrink-0">
+                        <button onClick={() => handleShareFolder(f)} className="text-slate-400 hover:text-blue-500 bg-slate-100 hover:bg-blue-50 dark:bg-slate-800 dark:hover:bg-blue-900/30 p-2 rounded-lg transition-colors" title="폴더 공유 (QR/링크)">
+                          <IconShare size={16}/>
                         </button>
-                      )}
+                        {f !== '기본폴더' && (
+                          <button onClick={() => handleDeleteFolder(f)} className="text-slate-400 hover:text-red-500 bg-slate-100 hover:bg-red-50 dark:bg-slate-800 dark:hover:bg-red-900/30 p-2 rounded-lg transition-colors" title="폴더 삭제">
+                            <IconTrash size={16}/>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   )
                 })}
@@ -1135,6 +1142,30 @@ const handleEditMemo = (id, currentMemo) => {
                 <button onClick={() => setPromptModal({ ...promptModal, isOpen: false })} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition-colors">취소</button>
                 <button onClick={() => { promptModal.onConfirm(promptModal.value); setPromptModal({ ...promptModal, isOpen: false }); }} className="flex-1 py-3 bg-primary hover:bg-primaryHover text-white font-bold rounded-xl shadow-md transition-all">{promptModal.confirmText}</button>
               </div>
+            </div>
+          </div>
+        )}
+
+        
+        {shareModal.isOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareModal({ isOpen: false, url: '', folderName: '' })}>
+            <div className="bg-white dark:bg-slate-800 w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 text-center" onClick={e => e.stopPropagation()}>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">폴더 공유하기</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">'{shareModal.folderName}' 폴더의 바코드를 다른 기기나 사용자에게 전달합니다.</p>
+              
+              <div className="bg-white p-3 rounded-2xl mx-auto w-fit mb-5 shadow-inner border border-slate-100">
+                <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareModal.url)}`} alt="Share QR" className="w-40 h-40 mx-auto" />
+              </div>
+              <p className="text-xs text-slate-400 mb-4">위 QR코드를 WebBarcode 앱의 카메라로 스캔하거나,<br/>아래 링크를 복사하여 공유하세요.</p>
+              
+              <div className="flex gap-2 mb-6">
+                <input type="text" readOnly value={shareModal.url} className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-600 dark:text-slate-300 outline-none" />
+                <button onClick={() => { navigator.clipboard.writeText(shareModal.url); toast.success('링크 복사됨!'); }} className="bg-primary hover:bg-primaryHover text-white p-3 rounded-xl transition-colors shrink-0">
+                  <IconCopy size={18} />
+                </button>
+              </div>
+
+              <button onClick={() => setShareModal({ isOpen: false, url: '', folderName: '' })} className="w-full py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold rounded-xl transition-colors">닫기</button>
             </div>
           </div>
         )}
