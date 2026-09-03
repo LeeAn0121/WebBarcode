@@ -1395,7 +1395,7 @@ const handleEditMemo = (id, currentMemo) => {
                     navigator.clipboard.writeText(text); // 텍스트 1순위 복사
                     
                     // 모바일(Web Share API 지원 환경)
-                    if (navigator.share && /mobile|iphone|ipad|android/i.test(navigator.userAgent)) {
+                    if (navigator.share) {
                       try {
                         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(shareModal.url)}`;
                         const response = await fetch(qrUrl);
