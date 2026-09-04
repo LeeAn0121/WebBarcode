@@ -1041,7 +1041,62 @@ const handleEditMemo = (id, currentMemo) => {
             {/* Tab: Home (List) */}
         {activeTab === 'home' && (
           <div className="flex flex-col w-full flex-1 h-full animate-in fade-in slide-in-from-bottom-4 duration-[2000ms] ease-out">
-            <section className="w-full flex flex-col flex-1 pb-24">
+            
+      {/* Inline Scanner Area */}
+      {isScannerModalOpen && (
+        <div className="w-full aspect-[4/3] bg-black relative shrink-0 z-40 shadow-2xl flex flex-col animate-in slide-in-from-top-4 duration-500 overflow-hidden rounded-b-3xl">
+           <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-50">
+             <button onClick={() => { stopScanner(); setIsScannerModalOpen(false); }} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg">
+               <IconX size={24} />
+             </button>
+             <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg">
+               {isSoundEnabled ? <IconVolume size={20} /> : <IconVolume3 size={20} />}
+             </button>
+           </div>
+           
+           <div className="flex-1 relative overflow-hidden">
+              <div id="reader" className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"></div>
+              {isScanning && (
+                <div id="reader-overlay" className="absolute inset-x-8 inset-y-12 rounded-3xl border-2 ring-[1000px] ring-black/50 border-white/80 pointer-events-none transition-all duration-[2000ms] ease-out"></div>
+              )}
+           </div>
+           
+           <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col items-center gap-4 z-50">
+              {isScanning && cameras.length > 1 && (
+                <button 
+                  disabled={isSwitching}
+                  onClick={async () => {
+                    if (isSwitching) return;
+                    setIsSwitching(true);
+                    try {
+                      const currentIndex = parseInt(selectedCamera || "0");
+                      const nextIndex = (currentIndex + 1) % cameras.length;
+                      if (scannerRef.current) { try { await scannerRef.current.stop(); } catch(e) {} }
+                      await new Promise(resolve => setTimeout(resolve, 400));
+                      await startScanner(nextIndex);
+                    } finally {
+                      setIsSwitching(false);
+                    }
+                  }}
+                  className="flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-5 py-2.5 rounded-full font-bold shadow-lg"
+                >
+                  <IconRefresh size={18} className={isSwitching ? 'animate-spin' : ''} />
+                  {isSwitching ? '전환중...' : '렌즈 전환'}
+                </button>
+              )}
+              
+              {maxZoom > 1 && isScanning && (
+                <div className="w-full max-w-[200px] flex items-center gap-3 bg-black/40 backdrop-blur-md p-2 rounded-2xl shadow-lg border border-white/10">
+                  <IconSearch size={14} className="text-white/70" />
+                  <input type="range" min="1" max={maxZoom} step="0.1" value={zoomLevel} onChange={handleZoomChange} className="flex-1 accent-primary" />
+                </div>
+              )}
+           </div>
+        </div>
+      )}
+      
+      <section className="w-full flex flex-col flex-1 pb-24 overflow-y-auto relative custom-scrollbar">
+
               <div className="flex flex-col h-full">
                 <div className="p-4 border-b border-slate-50 dark:border-slate-700/50">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
@@ -1169,61 +1224,6 @@ const handleEditMemo = (id, currentMemo) => {
                 <IconCamera size={28} />
               </button>
             )}
-          </div>
-        )}
-        
-        {/* Full Screen Scanner Modal */}
-        {isScannerModalOpen && (
-          <div className="absolute inset-0 z-[100] bg-black flex flex-col animate-in fade-in duration-[2000ms] ease-out">
-             <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-50">
-               <button onClick={() => { stopScanner(); setIsScannerModalOpen(false); }} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white">
-                 <IconX size={24} />
-               </button>
-               <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white">
-                 {isSoundEnabled ? <IconVolume size={20} /> : <IconVolume3 size={20} />}
-               </button>
-             </div>
-             
-             <div className="flex-1 relative overflow-hidden">
-                <div id="reader" className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"></div>
-                {isScanning && (
-                  <div id="reader-overlay" className="absolute inset-x-8 inset-y-32 rounded-3xl border-2 ring-[1000px] ring-black/50 border-white/80 pointer-events-none transition-all duration-[2000ms] ease-out"></div>
-                )}
-             </div>
-             
-             <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col items-center gap-6 z-50">
-                {isScanning && cameras.length > 1 && (
-                  <button 
-                    disabled={isSwitching}
-                    onClick={async () => {
-                      if (isSwitching) return;
-                      setIsSwitching(true);
-                      try {
-                        const currentIndex = parseInt(selectedCamera || "0");
-                        const nextIndex = (currentIndex + 1) % cameras.length;
-                        if (scannerRef.current) { try { await scannerRef.current.stop(); } catch(e) {} }
-                        await new Promise(resolve => setTimeout(resolve, 400));
-                        await startScanner(nextIndex);
-                      } finally {
-                        setIsSwitching(false);
-                      }
-                    }}
-                    className="flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-6 py-3 rounded-full font-bold tracking-wide"
-                  >
-                    <IconRefresh size={20} className={isSwitching ? 'animate-spin' : ''} />
-                    {isSwitching ? '전환중...' : '렌즈 전환'}
-                  </button>
-                )}
-                
-                {maxZoom > 1 && isScanning && (
-                  <div className="w-full max-w-[250px] flex items-center gap-3 bg-white/10 backdrop-blur-md p-3 rounded-2xl">
-                    <IconSearch size={16} className="text-white/70" />
-                    <input type="range" min="1" max={maxZoom} step="0.1" value={zoomLevel} onChange={handleZoomChange} className="flex-1 accent-primary" />
-                  </div>
-                )}
-                
-                <p className="text-white/60 text-sm font-medium tracking-wide">바코드를 사각형 안에 비춰주세요</p>
-             </div>
           </div>
         )}
         
