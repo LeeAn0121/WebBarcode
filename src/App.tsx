@@ -1052,23 +1052,7 @@ const handleEditMemo = (id, currentMemo) => {
                     </button>
                   )}
 
-                  {cameras.length > 0 && isScanning && (
-                    <select value={selectedCamera} onChange={async (e) => {
-                      const newCam = e.target.value;
-                      setSelectedCamera(newCam);
-                      if (scannerRef.current && isScanning) {
-                        try {
-                          await scannerRef.current.stop();
-                        } catch(err) { console.error(err); }
-                        setIsScanning(false);
-                      }
-                      setTimeout(() => startScanner(newCam), 200);
-                    }} className="mb-4 w-full max-w-xs p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium shadow-sm">
-                      <option value="">자동 감지 (후면 우선)</option>
-                      <option value="force_rear">강제 후면 모드 (안될 때 선택)</option>
-                      {cameras.map(c => <option key={c.id} value={c.id}>{c.label || '알 수 없는 카메라'}</option>)}
-                    </select>
-                  )}
+                  
 
                   {maxZoom > 1 && isScanning && (
                     <div className="w-full max-w-xs flex items-center gap-3 mb-4 bg-white dark:bg-slate-800 p-2.5 rounded-lg text-sm border border-slate-200 dark:border-slate-700 shadow-sm">
