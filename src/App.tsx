@@ -395,12 +395,19 @@ function App() {
         setCameras(availableCameras);
         
         const rearCamera = availableCameras.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('후면'));
-        const camId = selectedCamera || rearCamera?.id || availableCameras[0].id;
-        setSelectedCamera(camId);
+        
+        // 사용자가 명시적으로 선택하지 않은 경우, 후면 카메라를 우선시하는 객체를 사용
+        const cameraConfig = selectedCamera ? selectedCamera : { facingMode: "environment" };
+        
+        if (!selectedCamera && rearCamera) {
+           setSelectedCamera(rearCamera.id);
+        } else if (!selectedCamera && availableCameras.length > 0) {
+           setSelectedCamera(availableCameras[0].id);
+        }
         
         try {
           await scannerRef.current.start(
-            camId,
+            cameraConfig,
             { 
               fps: 15, 
               qrbox: { width: window.innerWidth < 400 ? 300 : 350, height: 120 },
@@ -416,7 +423,7 @@ function App() {
         } catch (highResErr) {
           console.warn("고해상도/초점 강제 설정 실패, 일반 모드로 재시도합니다:", highResErr);
           await scannerRef.current.start(
-            camId,
+            cameraConfig,
             { 
               fps: 10, 
               qrbox: { width: window.innerWidth < 400 ? 300 : 350, height: 120 }
