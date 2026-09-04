@@ -130,6 +130,7 @@ function App() {
   const lastScannedRef = useRef<{code: string, time: number} | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
   const [maxZoom, setMaxZoom] = useState(1);
+  const [facingMode, setFacingMode] = useState<'environment'|'user'>('environment');
   const [currentFolder, setCurrentFolder] = useState('전체');
   const [activeTab, setActiveTab] = useState('home');
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
@@ -1054,6 +1055,21 @@ const handleEditMemo = (id, currentMemo) => {
 
                   
 
+                  
+                  {isScanning && (
+                    <button 
+                      onClick={() => {
+                        const newMode = facingMode === 'environment' ? 'user' : 'environment';
+                        setFacingMode(newMode);
+                        if (scannerRef.current) {
+                           scannerRef.current.stop().then(() => startScanner(newMode)).catch(console.error);
+                        }
+                      }}
+                      className="mb-4 flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 transition-colors"
+                    >
+                      <IconRefresh size={18} /> 카메라 전환 (앞/뒤)
+                    </button>
+                  )}
                   {maxZoom > 1 && isScanning && (
                     <div className="w-full max-w-xs flex items-center gap-3 mb-4 bg-white dark:bg-slate-800 p-2.5 rounded-lg text-sm border border-slate-200 dark:border-slate-700 shadow-sm">
                       <span className="text-xs font-bold text-slate-400">Zoom</span>
