@@ -312,11 +312,19 @@ function App() {
 
   const handleScan = async (decodedText) => {
     const cleanText = decodedText.trim();
+    const now = Date.now();
     
-    // Pause the scanner completely to create a true delay between scans (only for live camera)
-    if (true && scannerRef.current && scannerRef.current.getState() === 2) { // 2 = SCANNING
-      scannerRef.current.pause(true); // true = pause scanning but keep video feed active
+    // 쿨다운(Debounce): 같은 바코드는 3초, 다른 바코드라도 1초 쿨다운을 적용해 연속 스캔 폭주 방지
+    const isSameCode = lastScannedRef.current.code === cleanText;
+    const cooldownPeriod = isSameCode ? 3000 : 1000;
+    
+    if (now - lastScannedRef.current.time < cooldownPeriod) {
+      return; // 쿨다운 중 무시 (멈춤 없이 스무스하게 넘어감)
     }
+    
+    lastScannedRef.current = { code: cleanText, time: now };
+    
+
 
     // Custom visual flash effect
     const readerEl = document.getElementById('reader-overlay');
@@ -338,12 +346,7 @@ function App() {
         }, 300);
       }
       
-      // Resume scanner after delay
-      {
-        setTimeout(() => {
-          if (scannerRef.current && isScanning) scannerRef.current.resume();
-        }, 1500);
-      }
+
       return;
     }
 
@@ -374,12 +377,7 @@ function App() {
       setTimeout(() => pendingInsertsRef.current.delete(cleanText), 3000);
     }
 
-    // Resume scanner after delay
-    {
-      setTimeout(() => {
-        if (scannerRef.current && isScanning) scannerRef.current.resume();
-      }, 1500);
-    }
+
   };
 
   const startScanner = async (camIndexOverride?: number) => {
@@ -1044,7 +1042,7 @@ const handleEditMemo = (id, currentMemo) => {
             
       {/* Inline Scanner Area */}
       {isScannerModalOpen && (
-        <div className="w-full aspect-[4/3] bg-black relative shrink-0 z-40 shadow-2xl flex flex-col animate-in slide-in-from-top-4 duration-500 overflow-hidden rounded-b-3xl">
+        <div className="w-full h-[50vh] shrink-0 bg-black relative z-40 shadow-2xl flex flex-col animate-in slide-in-from-top-4 duration-500 overflow-hidden rounded-b-3xl">
            <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-50">
              <button onClick={() => { stopScanner(); setIsScannerModalOpen(false); }} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg">
                <IconX size={24} />
