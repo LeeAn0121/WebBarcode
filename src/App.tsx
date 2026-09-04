@@ -1010,7 +1010,7 @@ const handleEditMemo = (id, currentMemo) => {
             <IconBarcode size={24} />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight">WebBarcode</h1>
+            <button onClick={() => window.location.href = window.location.pathname} className="text-xl font-bold tracking-tight hover:text-primary transition-colors text-left">WebBarcode</button>
             <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${packageJson.version}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-slate-500 hover:text-primary flex items-center gap-1 mt-0.5 transition-colors" title="릴리즈 노트 보기">
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.03c3.18-.3 6.5-1.5 6.5-7.1 0-1.5-.5-2.8-1.4-3.8.1-.3.6-1.8-.1-3.8 0 0-1.2-.4-3.9 1.4a13 13 0 0 0-7 0C6 2.3 4.8 2.7 4.8 2.7.1 4.7.6 6.2.7 6.5.1 7.5-.4 8.8-.4 10.3c0 5.6 3.3 6.8 6.5 7.1-.8.8-1 2-1 3.2V22" /><path d="M9 22v-4a4.8 4.8 0 0 1 1-3.03" /></svg>
               v{packageJson.version}
@@ -1213,7 +1213,7 @@ const handleEditMemo = (id, currentMemo) => {
                   </div>
                 </div>
                 
-                <div className="flex-1 p-4 bg-slate-50/50 dark:bg-slate-900/30 overflow-visible lg:overflow-y-auto lg:custom-scrollbar">
+                <div className="flex-1 p-4 bg-slate-50/50 dark:bg-slate-900/30 overflow-y-auto custom-scrollbar max-h-[55vh] lg:max-h-none lg:h-full">
                   <div className="space-y-3">
                     {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).map(item => (
                       <div 
