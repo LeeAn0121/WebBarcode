@@ -389,47 +389,33 @@ function App() {
         if (currentDevices && currentDevices.length > 0) {
           setCameras(currentDevices);
         } else {
-          toast.error("카메라를 찾을 수 없습니다.");
+          toast.error("카메라 장치를 찾을 수 없습니다.");
           return;
         }
       }
       
-      // Determine index to use
-      let idx = 0;
+      let startIdx = 0;
       if (camIndexOverride !== undefined) {
-         idx = camIndexOverride;
+         startIdx = camIndexOverride;
       } else {
-         // initial load, try to find a back camera
          const backIndex = currentDevices.findIndex((d: any) => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('후면'));
-         if (backIndex !== -1) idx = backIndex;
+         if (backIndex !== -1) startIdx = backIndex;
       }
       
-      // Ensure index is valid
-      if (idx < 0 || idx >= currentDevices.length) idx = 0;
+      let success = false;
+      let lastErr = null;
+      let currentIdx = startIdx;
       
-      const targetDevice = currentDevices[idx];
-      setSelectedCamera(idx.toString()); // use selectedCamera state to store current index
+      // Override가 있으면 해당 렌즈만, 아니면 최대 4개의 렌즈를 순차적으로 시도
+      const attempts = camIndexOverride !== undefined ? 1 : Math.min(4, currentDevices.length);
       
-      try {
-        await scannerRef.current.start(
-          targetDevice.id, // Exact hardware device ID
-          { 
-            fps: 10, 
-            qrbox: { width: window.innerWidth < 400 ? 300 : 350, height: 120 }
-          },
-          handleScan,
-          () => {}
-        );
-        setIsScanning(true);
-      } catch (err) {
-        console.warn("첫 번째 기기 시도 실패, 다음 렌즈로 시도합니다.", err);
-        // Fallback to the next available camera if the selected one fails
-        const fallbackIdx = (idx + 1) % currentDevices.length;
-        if (currentDevices.length > 1) {
-          const fallbackDevice = currentDevices[fallbackIdx];
-          setSelectedCamera(fallbackIdx.toString());
+      for (let i = 0; i < attempts; i++) {
+        try {
+          const targetDevice = currentDevices[currentIdx];
+          setSelectedCamera(currentIdx.toString());
+          
           await scannerRef.current.start(
-            fallbackDevice.id,
+            targetDevice.id,
             { 
               fps: 10, 
               qrbox: { width: window.innerWidth < 400 ? 300 : 350, height: 120 }
@@ -437,8 +423,20 @@ function App() {
             handleScan,
             () => {}
           );
+          
+          success = true;
           setIsScanning(true);
+          break; // 성공 시 루프 탈출
+        } catch (err) {
+          console.warn(`Camera index ${currentIdx} failed:`, err);
+          lastErr = err;
+          // 실패 시 다음 카메라로 이동 (initial load 시에만)
+          currentIdx = (currentIdx + 1) % currentDevices.length;
         }
+      }
+      
+      if (!success) {
+        throw lastErr;
       }
       
       // Setup Zoom if available
@@ -459,11 +457,17 @@ function App() {
 
     } catch (err: any) {
       console.error(err);
-      let errMsg = "카메라를 시작할 수 없습니다. 권한을 확인해주세요.";
-      if (err.name === 'NotAllowedError' || err.message?.includes('Permission')) {
-        errMsg = "카메라 권한이 차단되었습니다. 주소창 자물쇠 아이콘을 눌러 허용해주세요.";
+      const errName = err.name || "UnknownError";
+      const errMsgTxt = err.message || "";
+      let toastMsg = `카메라 시작 실패 (${errName})`;
+      
+      if (errName === 'NotAllowedError' || errMsgTxt.includes('Permission')) {
+        toastMsg = "카메라 권한이 차단되었습니다. 주소창 자물쇠 아이콘을 눌러 허용해주세요.";
+      } else if (errName === 'NotReadableError' || errMsgTxt.includes('in use')) {
+        toastMsg = "카메라가 이미 다른 앱이나 탭에서 사용 중입니다. 백그라운드 앱을 종료해주세요.";
       }
-      toast.error(errMsg);
+      
+      toast.error(toastMsg);
     }
   };
   const stopScanner = () => {
@@ -1068,7 +1072,10 @@ const handleEditMemo = (id, currentMemo) => {
                         const currentIndex = parseInt(selectedCamera || "0");
                         const nextIndex = (currentIndex + 1) % cameras.length;
                         if (scannerRef.current) {
-                           scannerRef.current.stop().then(() => startScanner(nextIndex)).catch(console.error);
+                           scannerRef.current.stop()
+                             .then(() => new Promise(resolve => setTimeout(resolve, 300)))
+                             .then(() => startScanner(nextIndex))
+                             .catch(console.error);
                         }
                       }}
                       className="mb-4 flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 transition-colors"
