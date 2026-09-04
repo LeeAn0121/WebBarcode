@@ -409,7 +409,7 @@ function App() {
       }
       
       let startIdx = 0;
-      if (camIndexOverride !== undefined) {
+      if (typeof camIndexOverride === 'number') {
          startIdx = camIndexOverride;
       } else {
          const backIndex = currentDevices.findIndex((d: any) => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('후면'));
