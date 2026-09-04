@@ -1057,76 +1057,93 @@ const handleEditMemo = (id, currentMemo) => {
         {activeTab === 'home' && (
           <div className="flex flex-col lg:flex-row gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
             <section className="w-full lg:w-5/12 flex flex-col gap-4">
-              <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden relative">
-                <div className="p-4 border-b border-slate-50 dark:border-slate-700/50 flex justify-between items-center">
-                  <h2 className="font-bold flex items-center gap-2"><IconCamera className="text-primary" size={20} /> 카메라 스캔</h2>
-                  <div className="flex gap-2">
-                    <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="p-2 bg-indigo-50 dark:bg-indigo-900/30 text-primary rounded-full hover:bg-indigo-100 transition-colors">
+              <div className="bg-slate-900 rounded-3xl shadow-soft border border-slate-100 dark:border-slate-800 overflow-hidden relative group">
+                
+                {/* 헤더 오버레이 */}
+                <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-gradient-to-b from-black/50 to-transparent z-20 pointer-events-none">
+                  <h2 className="font-bold flex items-center gap-2 text-white/90 drop-shadow-md">
+                    <IconCamera size={18} /> 바코드 스캔
+                  </h2>
+                  <div className="flex gap-2 pointer-events-auto">
+                    <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="p-2 bg-black/30 backdrop-blur-sm text-white rounded-full hover:bg-black/50 transition-colors">
                       {isSoundEnabled ? <IconVolume size={16} /> : <IconVolume3 size={16} />}
                     </button>
                   </div>
                 </div>
                 
-                <div className="p-4 bg-slate-50/50 dark:bg-slate-900/20 flex flex-col items-center">
-                  {!isScanning ? (
-                    <button onClick={startScanner} className="bg-primary hover:bg-primaryHover text-white py-3 px-6 rounded-2xl shadow-glow w-full max-w-xs flex justify-center items-center gap-2 mb-4 font-semibold">
-                      <IconCamera size={18} /> 스캐너 켜기
-                    </button>
-                  ) : (
-                    <button onClick={stopScanner} className="bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-800 dark:text-slate-200 py-3 px-6 rounded-2xl w-full max-w-xs flex justify-center items-center gap-2 mb-4 font-medium transition-colors">
-                      중지
-                    </button>
+                {/* 메인 카메라 영역 (높이 고정 및 비율 최적화) */}
+                <div className="w-full relative h-[300px] sm:h-[350px] lg:h-[400px] bg-black">
+                  
+                  {/* html5-qrcode가 주입될 div */}
+                  <div 
+                    id="reader" 
+                    className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"
+                  ></div>
+                  
+                  {/* 스캔 타겟 가이드라인 (스캔 중일 때만 표시) */}
+                  {isScanning && (
+                    <div id="reader-overlay" className="absolute inset-x-8 inset-y-16 rounded-xl border-2 ring-4 ring-primary/30 border-dashed border-white/60 pointer-events-none transition-all duration-300"></div>
+                  )}
+                  
+                  {/* 비활성 상태 오버레이 */}
+                  {!isScanning && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 bg-slate-900/80 backdrop-blur-sm z-10">
+                      <button onClick={() => startScanner()} className="bg-primary hover:bg-primaryHover text-white p-5 rounded-full shadow-glow flex flex-col items-center justify-center gap-2 mb-4 font-semibold transition-transform hover:scale-105">
+                        <IconCamera size={32} />
+                      </button>
+                      <p className="text-sm font-medium">버튼을 눌러 카메라 켜기</p>
+                    </div>
                   )}
 
-                  
+                  {/* 스캔 중 상태의 플로팅 컨트롤 */}
+                  {isScanning && (
+                    <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-3 z-20">
+                      
+                      {/* 줌 컨트롤 (우측 상단 등에 배치할 수도 있지만 접근성을 위해 하단 배치) */}
+                      {maxZoom > 1 && (
+                        <div className="w-full max-w-[200px] mx-auto flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-2.5 rounded-2xl text-sm border border-white/10 shadow-lg">
+                          <IconSearch size={14} className="text-white/70" />
+                          <input type="range" min="1" max={maxZoom} step="0.1" value={zoomLevel} onChange={handleZoomChange} className="flex-1 accent-primary" />
+                        </div>
+                      )}
 
-                  
-                  {isScanning && cameras.length > 1 && (
-                    <button 
-                      disabled={isSwitching}
-                      onClick={async () => {
-                        if (isSwitching) return;
-                        setIsSwitching(true);
-                        try {
-                          const currentIndex = parseInt(selectedCamera || "0");
-                          const nextIndex = (currentIndex + 1) % cameras.length;
-                          
-                          if (scannerRef.current) {
-                             try { await scannerRef.current.stop(); } catch(e) {}
-                          }
-                          
-                          // 하드웨어 락 해제를 위한 넉넉한 대기 시간
-                          await new Promise(resolve => setTimeout(resolve, 400));
-                          await startScanner(nextIndex);
-                        } finally {
-                          setIsSwitching(false);
-                        }
-                      }}
-                      className={`mb-4 flex items-center gap-2 ${isSwitching ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50'} px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors`}
-                    >
-                      <IconRefresh size={18} className={isSwitching ? 'animate-spin' : ''} /> 
-                      {isSwitching ? '전환 중...' : '카메라(렌즈) 전환하기'}
-                    </button>
-                  )}
-                  {maxZoom > 1 && isScanning && (
-                    <div className="w-full max-w-xs flex items-center gap-3 mb-4 bg-white dark:bg-slate-800 p-2.5 rounded-lg text-sm border border-slate-200 dark:border-slate-700 shadow-sm">
-                      <span className="text-xs font-bold text-slate-400">Zoom</span>
-                      <input type="range" min="1" max={maxZoom} step="0.1" value={zoomLevel} onChange={handleZoomChange} className="flex-1 accent-primary" />
+                      {/* 하단 버튼 툴바 */}
+                      <div className="flex justify-center items-center gap-4">
+                        {/* 중지 버튼 */}
+                        <button onClick={stopScanner} className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white p-3 rounded-full shadow-lg transition-colors" title="스캐너 중지">
+                          <IconX size={24} />
+                        </button>
+                        
+                        {/* 카메라 전환 버튼 */}
+                        {cameras.length > 1 && (
+                          <button 
+                            disabled={isSwitching}
+                            onClick={async () => {
+                              if (isSwitching) return;
+                              setIsSwitching(true);
+                              try {
+                                const currentIndex = parseInt(selectedCamera || "0");
+                                const nextIndex = (currentIndex + 1) % cameras.length;
+                                if (scannerRef.current) {
+                                   try { await scannerRef.current.stop(); } catch(e) {}
+                                }
+                                await new Promise(resolve => setTimeout(resolve, 400));
+                                await startScanner(nextIndex);
+                              } finally {
+                                setIsSwitching(false);
+                              }
+                            }}
+                            className={`bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white px-5 py-3 rounded-full shadow-lg transition-colors flex items-center gap-2 ${isSwitching ? 'opacity-50' : ''}`}
+                          >
+                            <IconRefresh size={20} className={isSwitching ? 'animate-spin' : ''} />
+                            <span className="text-sm font-semibold tracking-wide">{isSwitching ? '전환중' : '렌즈 전환'}</span>
+                          </button>
+                        )}
+                      </div>
+                      
                     </div>
                   )}
                   
-                  <div className="w-full relative rounded-2xl overflow-hidden bg-slate-900 min-h-[250px] sm:min-h-[300px]">
-                    
-                    <div id="reader" className="w-full"></div>
-                    <div id="reader-overlay" className="absolute inset-4 rounded-xl border-2 ring-4 ring-primary/50 border-dashed border-white/50 pointer-events-none transition-all duration-300"></div>
-                    
-                    {!isScanning && (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 bg-slate-900/90 z-10">
-                        <IconBarcode size={48} className="opacity-30 mb-3" />
-                        <p className="text-sm font-medium">카메라를 켜주세요</p>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
             </section>
