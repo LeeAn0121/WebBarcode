@@ -136,6 +136,9 @@ function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeActionMenu, setActiveActionMenu] = useState<any>(null);
+  const [isSelectionMode, setIsSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const pressTimerRef = useRef<any>(null);
   const [moveModal, setMoveModal] = useState({ isOpen: false, item: null as any, targetFolder: '기본폴더' });
   const [shareModal, setShareModal] = useState({ isOpen: false, url: '', title: '', description: '', shareText: '' });
   const [shareConfig, setShareConfig] = useState({ isOpen: false, type: '', folderName: '', item: null as any, expireHours: 1 });
@@ -515,6 +518,43 @@ function App() {
     ws['!cols'] = [{wch:25}, {wch:30}, {wch:25}];
     XLSX.utils.book_append_sheet(wb, ws, "Scans");
     XLSX.writeFile(wb, `WebBarcode_${format(new Date(), 'yyyyMMdd')}.xlsx`);
+  };
+
+  const handleMultiDelete = async () => {
+    if (selectedIds.length === 0) return;
+    if (confirm(`선택한 ${selectedIds.length}개의 바코드를 정말 삭제하시겠습니까?`)) {
+      const { error } = await supabase.from('barcodes').delete().in('id', selectedIds);
+      if (error) {
+        toast.error('삭제 실패: ' + error.message);
+      } else {
+        toast.success(`${selectedIds.length}개가 삭제되었습니다.`);
+        setIsSelectionMode(false);
+        setSelectedIds([]);
+      }
+    }
+  };
+
+  const handlePointerDown = (id: string) => {
+    if (isSelectionMode) return;
+    pressTimerRef.current = setTimeout(() => {
+      setIsSelectionMode(true);
+      setSelectedIds([id]);
+      if (navigator.vibrate) navigator.vibrate(50);
+    }, 500); // 500ms long press
+  };
+
+  const handlePointerUp = () => {
+    if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
+  };
+
+  const handleItemClick = (id: string, originalUrl: string, e: React.MouseEvent) => {
+    if (isSelectionMode) {
+      e.preventDefault();
+      e.stopPropagation();
+      setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+    } else {
+      // Normal click behavior (if any) - originally they could click to open links if memo has link
+    }
   };
 
   const handleDelete = async (id) => {
@@ -1176,7 +1216,22 @@ const handleEditMemo = (id, currentMemo) => {
                 <div className="flex-1 p-4 bg-slate-50/50 dark:bg-slate-900/30 overflow-visible lg:overflow-y-auto lg:custom-scrollbar">
                   <div className="space-y-3">
                     {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).map(item => (
-                      <div key={item.id} className="relative bg-white dark:bg-darkCard p-3 sm:p-4 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700/50 transition-all hover:shadow-sm flex items-center justify-between gap-3 group">
+                      <div 
+                      key={item.id} 
+                      onPointerDown={(e) => {
+                         // Only trigger long press if left click or touch
+                         if (e.pointerType === 'mouse' && e.button !== 0) return;
+                         handlePointerDown(item.id);
+                      }}
+                      onPointerUp={handlePointerUp}
+                      onPointerLeave={handlePointerUp}
+                      onClick={(e) => handleItemClick(item.id, '', e)}
+                      className={`relative p-3 sm:p-4 rounded-xl shadow-sm border transition-all flex items-center justify-between gap-3 group cursor-pointer ${
+                        selectedIds.includes(item.id) 
+                          ? 'bg-primary/10 border-primary ring-2 ring-primary/20 dark:bg-primary/20' 
+                          : 'bg-white dark:bg-darkCard border-slate-100 dark:border-slate-700/50 hover:shadow-md'
+                      }`}
+                    >
                         <div className="flex items-center gap-3 overflow-hidden flex-1">
                           <div className="h-8 w-8 shrink-0 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-primary flex items-center justify-center transition-transform group-hover:scale-105">
                             <IconBarcode size={20} />
@@ -1197,13 +1252,21 @@ const handleEditMemo = (id, currentMemo) => {
                         </div>
                         
                         <div className="shrink-0 relative">
-                          <button 
-                            onClick={() => setActiveActionMenu(activeActionMenu === item.id ? null : item.id)}
-                            className="p-2 text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                            title="작업 메뉴 열기"
-                          >
-                            <IconDotsVertical size={20} />
-                          </button>
+                          
+                          {isSelectionMode ? (
+                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.includes(item.id) ? 'bg-primary border-primary text-white' : 'border-slate-300 dark:border-slate-600'}`}>
+                              {selectedIds.includes(item.id) && <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>}
+                            </div>
+                          ) : (
+                            <button 
+                              onClick={(e) => { e.stopPropagation(); setActiveActionMenu(activeActionMenu === item.id ? null : item.id); }}
+                              className="p-2 text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                              title="작업 메뉴 열기"
+                            >
+                              <IconDotsVertical size={20} />
+                            </button>
+                          )}
+
                           
                           {activeActionMenu === item.id && (
                             <>
@@ -1368,7 +1431,25 @@ const handleEditMemo = (id, currentMemo) => {
           </div>
         )}
           </div>
-        </main>
+        
+      {/* 다중 선택 모드 플로팅 바 */}
+      {isSelectionMode && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-4 shadow-2xl z-50 flex items-center justify-between border border-slate-700 animate-in slide-in-from-bottom-5">
+          <span className="font-bold text-sm">
+            <span className="text-primary">{selectedIds.length}개</span> 선택됨
+          </span>
+          <div className="flex gap-2">
+            <button onClick={() => { setIsSelectionMode(false); setSelectedIds([]); }} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-medium transition-colors">
+              취소
+            </button>
+            <button onClick={handleMultiDelete} className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-xl text-sm font-bold shadow-glow-red transition-colors">
+              선택 삭제
+            </button>
+          </div>
+        </div>
+      )}
+
+      </main>
 
         {/* Modals */}
         {promptModal.isOpen && (
