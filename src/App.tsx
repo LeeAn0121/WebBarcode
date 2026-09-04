@@ -379,6 +379,16 @@ function App() {
 
   const startScanner = async (camIndexOverride?: number) => {
     try {
+      // 1. 기기/브라우저에 카메라 권한을 명시적으로 강력하게 요청 (OS 자체 권한 팝업 강제 호출)
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        // 스트림을 얻었다면 즉시 종료하여 락(Lock) 방지
+        stream.getTracks().forEach(track => track.stop());
+      } catch (permErr: any) {
+        // 권한이 없거나 차단된 경우 바로 에러 처리
+        throw permErr;
+      }
+
       if (!scannerRef.current) {
         scannerRef.current = new Html5Qrcode("reader", { formatsToSupport });
       }
@@ -461,8 +471,8 @@ function App() {
       const errMsgTxt = err.message || "";
       let toastMsg = `카메라 시작 실패 (${errName})`;
       
-      if (errName === 'NotAllowedError' || errMsgTxt.includes('Permission')) {
-        toastMsg = "카메라 권한이 차단되었습니다. 주소창 자물쇠 아이콘을 눌러 허용해주세요.";
+      if (errName === 'NotAllowedError' || errMsgTxt.includes('Permission') || errName === 'NotSupportedError') {
+        toastMsg = "카메라 권한이 거부/차단 상태입니다. 브라우저 주소창 왼쪽의 🔒자물쇠(또는 ⓘ 아이콘)를 눌러 카메라 권한을 '허용'으로 변경 후 새로고침 해주세요!";
       } else if (errName === 'NotReadableError' || errMsgTxt.includes('in use')) {
         toastMsg = "카메라가 이미 다른 앱이나 탭에서 사용 중입니다. 백그라운드 앱을 종료해주세요.";
       }
