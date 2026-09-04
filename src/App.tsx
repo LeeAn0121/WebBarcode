@@ -131,6 +131,7 @@ function App() {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [maxZoom, setMaxZoom] = useState(1);
   const [facingMode, setFacingMode] = useState<'environment'|'user'>('environment');
+  const [isSwitching, setIsSwitching] = useState(false);
   const [currentFolder, setCurrentFolder] = useState('전체');
   const [activeTab, setActiveTab] = useState('home');
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
@@ -379,7 +380,6 @@ function App() {
 
   const startScanner = async (camIndexOverride?: number) => {
     try {
-      // 1. 기기/브라우저에 카메라 권한을 명시적으로 강력하게 요청 (OS 자체 권한 팝업 강제 호출)
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
           const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -387,9 +387,8 @@ function App() {
         }
       } catch (permErr: any) {
         console.warn("명시적 권한 요청 실패 (무시하고 계속 진행):", permErr);
-        // 여기서 에러를 던지지 않고 그냥 넘어감 (Html5Qrcode가 자체적으로 한 번 더 시도하게 둠)
         if (permErr.name === 'NotAllowedError') {
-           throw permErr; // 확실한 권한 거부만 에러 처리
+           throw permErr;
         }
       }
 
@@ -420,8 +419,8 @@ function App() {
       let lastErr = null;
       let currentIdx = startIdx;
       
-      // Override가 있으면 해당 렌즈만, 아니면 최대 4개의 렌즈를 순차적으로 시도
-      const attempts = camIndexOverride !== undefined ? 1 : Math.min(4, currentDevices.length);
+      // Override 여부와 상관없이, 카메라 렌즈 수만큼 계속 다음 렌즈로 시도 (더미 센서 자동 스킵)
+      const attempts = Math.min(5, currentDevices.length);
       
       for (let i = 0; i < attempts; i++) {
         try {
@@ -444,7 +443,7 @@ function App() {
         } catch (err) {
           console.warn(`Camera index ${currentIdx} failed:`, err);
           lastErr = err;
-          // 실패 시 다음 카메라로 이동 (initial load 시에만)
+          // 실패 시 다음 카메라로 강제 이동하여 재시도
           currentIdx = (currentIdx + 1) % currentDevices.length;
         }
       }
@@ -471,8 +470,8 @@ function App() {
 
     } catch (err: any) {
       console.error(err);
-      const errName = err.name || "UnknownError";
-      const errMsgTxt = err.message || "";
+      const errName = err?.name || "UnknownError";
+      const errMsgTxt = err?.message || "";
       let toastMsg = `카메라 시작 실패 (${errName})`;
       
       if (errName === 'NotAllowedError' || errMsgTxt.includes('Permission') || errName === 'NotSupportedError') {
@@ -1084,19 +1083,29 @@ const handleEditMemo = (id, currentMemo) => {
                   
                   {isScanning && cameras.length > 1 && (
                     <button 
-                      onClick={() => {
-                        const currentIndex = parseInt(selectedCamera || "0");
-                        const nextIndex = (currentIndex + 1) % cameras.length;
-                        if (scannerRef.current) {
-                           scannerRef.current.stop()
-                             .then(() => new Promise(resolve => setTimeout(resolve, 300)))
-                             .then(() => startScanner(nextIndex))
-                             .catch(console.error);
+                      disabled={isSwitching}
+                      onClick={async () => {
+                        if (isSwitching) return;
+                        setIsSwitching(true);
+                        try {
+                          const currentIndex = parseInt(selectedCamera || "0");
+                          const nextIndex = (currentIndex + 1) % cameras.length;
+                          
+                          if (scannerRef.current) {
+                             try { await scannerRef.current.stop(); } catch(e) {}
+                          }
+                          
+                          // 하드웨어 락 해제를 위한 넉넉한 대기 시간
+                          await new Promise(resolve => setTimeout(resolve, 400));
+                          await startScanner(nextIndex);
+                        } finally {
+                          setIsSwitching(false);
                         }
                       }}
-                      className="mb-4 flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 transition-colors"
+                      className={`mb-4 flex items-center gap-2 ${isSwitching ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50'} px-4 py-2 rounded-xl text-sm font-bold shadow-sm transition-colors`}
                     >
-                      <IconRefresh size={18} /> 카메라(렌즈) 전환하기
+                      <IconRefresh size={18} className={isSwitching ? 'animate-spin' : ''} /> 
+                      {isSwitching ? '전환 중...' : '카메라(렌즈) 전환하기'}
                     </button>
                   )}
                   {maxZoom > 1 && isScanning && (
