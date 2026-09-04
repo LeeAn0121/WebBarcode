@@ -384,26 +384,11 @@ function App() {
       
       const devices = await Html5Qrcode.getCameras();
       if (devices && devices.length) {
-        // Filter out front cameras
-        const rearDevices = devices.filter(d => {
-          const lowerLabel = d.label.toLowerCase();
-          return !lowerLabel.includes('front') && !lowerLabel.includes('전면');
-        });
-        
-        // Use rear devices if found, otherwise fallback to all devices
-        const availableCameras = rearDevices.length > 0 ? rearDevices : devices;
-        setCameras(availableCameras);
-        
-        const rearCamera = availableCameras.find(d => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('후면'));
+        // 일부 기기(안드로이드 특정 모델 등)에서 라벨이 반대로 나오는 버그가 있으므로 필터링하지 않고 모든 기기를 제공
+        setCameras(devices);
         
         // 사용자가 명시적으로 선택하지 않은 경우, 후면 카메라를 우선시하는 객체를 사용
         const cameraConfig = selectedCamera ? selectedCamera : { facingMode: "environment" };
-        
-        if (!selectedCamera && rearCamera) {
-           setSelectedCamera(rearCamera.id);
-        } else if (!selectedCamera && availableCameras.length > 0) {
-           setSelectedCamera(availableCameras[0].id);
-        }
         
         try {
           await scannerRef.current.start(
@@ -1063,9 +1048,10 @@ const handleEditMemo = (id, currentMemo) => {
                     </button>
                   )}
 
-                  {cameras.length > 1 && isScanning && (
+                  {cameras.length > 0 && isScanning && (
                     <select value={selectedCamera} onChange={(e) => { setSelectedCamera(e.target.value); stopScanner(); setTimeout(startScanner, 100); }} className="mb-4 w-full max-w-xs p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium shadow-sm">
-                      {cameras.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                      <option value="">자동 감지 (후면 우선)</option>
+                      {cameras.map(c => <option key={c.id} value={c.id}>{c.label || '알 수 없는 카메라'}</option>)}
                     </select>
                   )}
 
