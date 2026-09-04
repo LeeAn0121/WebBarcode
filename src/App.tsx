@@ -377,43 +377,59 @@ function App() {
     }
   };
 
-  const startScanner = async (overrideCamera?: string) => {
+  const startScanner = async (camIndexOverride?: number) => {
     try {
       if (!scannerRef.current) {
         scannerRef.current = new Html5Qrcode("reader", { formatsToSupport });
       }
       
-      const devices = await Html5Qrcode.getCameras();
-      if (devices && devices.length) {
-        setCameras(devices);
-        
-        const targetCam = overrideCamera !== undefined ? overrideCamera : selectedCamera;
-        let cameraConfig: any = { facingMode: "environment" };
-        if (targetCam === 'force_rear') {
-           cameraConfig = { facingMode: { exact: "environment" } };
-        } else if (targetCam) {
-           cameraConfig = targetCam;
+      let currentDevices = cameras;
+      if (!currentDevices || currentDevices.length === 0) {
+        currentDevices = await Html5Qrcode.getCameras();
+        if (currentDevices && currentDevices.length > 0) {
+          setCameras(currentDevices);
+        } else {
+          toast.error("카메라를 찾을 수 없습니다.");
+          return;
         }
-        
-        try {
+      }
+      
+      // Determine index to use
+      let idx = 0;
+      if (camIndexOverride !== undefined) {
+         idx = camIndexOverride;
+      } else {
+         // initial load, try to find a back camera
+         const backIndex = currentDevices.findIndex((d: any) => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('후면'));
+         if (backIndex !== -1) idx = backIndex;
+      }
+      
+      // Ensure index is valid
+      if (idx < 0 || idx >= currentDevices.length) idx = 0;
+      
+      const targetDevice = currentDevices[idx];
+      setSelectedCamera(idx.toString()); // use selectedCamera state to store current index
+      
+      try {
+        await scannerRef.current.start(
+          targetDevice.id, // Exact hardware device ID
+          { 
+            fps: 10, 
+            qrbox: { width: window.innerWidth < 400 ? 300 : 350, height: 120 }
+          },
+          handleScan,
+          () => {}
+        );
+        setIsScanning(true);
+      } catch (err) {
+        console.warn("첫 번째 기기 시도 실패, 다음 렌즈로 시도합니다.", err);
+        // Fallback to the next available camera if the selected one fails
+        const fallbackIdx = (idx + 1) % currentDevices.length;
+        if (currentDevices.length > 1) {
+          const fallbackDevice = currentDevices[fallbackIdx];
+          setSelectedCamera(fallbackIdx.toString());
           await scannerRef.current.start(
-            cameraConfig,
-            { 
-              fps: 15, 
-              qrbox: { width: window.innerWidth < 400 ? 300 : 350, height: 120 },
-              videoConstraints: {
-                width: { min: 1280, ideal: 1920 },
-                height: { min: 720, ideal: 1080 },
-                advanced: [{ focusMode: "continuous" }]
-              }
-            },
-            handleScan,
-            () => {}
-          );
-        } catch (highResErr) {
-          console.warn("고해상도/초점 강제 설정 실패, 일반 모드로 재시도합니다:", highResErr);
-          await scannerRef.current.start(
-            cameraConfig,
+            fallbackDevice.id,
             { 
               fps: 10, 
               qrbox: { width: window.innerWidth < 400 ? 300 : 350, height: 120 }
@@ -421,45 +437,35 @@ function App() {
             handleScan,
             () => {}
           );
+          setIsScanning(true);
         }
-        setIsScanning(true);
-        
-        // Setup Zoom if available
-        setTimeout(() => {
-          const videoEl = document.querySelector('#reader video');
-          if (videoEl && videoEl.srcObject) {
-            const track = videoEl.srcObject.getVideoTracks()[0];
-            if (track) {
-              videoTrackRef.current = track;
-              const capabilities = track.getCapabilities ? track.getCapabilities() : null;
-              if (capabilities && capabilities.zoom) {
-                setMaxZoom(capabilities.zoom.max);
-                setZoomLevel(track.getSettings().zoom || 1);
-              }
+      }
+      
+      // Setup Zoom if available
+      setTimeout(() => {
+        const videoEl = document.querySelector('#reader video');
+        if (videoEl && videoEl.srcObject) {
+          const track = videoEl.srcObject.getVideoTracks()[0];
+          if (track) {
+            videoTrackRef.current = track;
+            const capabilities = track.getCapabilities ? track.getCapabilities() : null;
+            if (capabilities && capabilities.zoom) {
+              setMaxZoom(capabilities.zoom.max);
+              setZoomLevel(track.getSettings().zoom || 1);
             }
           }
-        }, 500);
+        }
+      }, 500);
 
-      } else {
-        toast.error("카메라를 찾을 수 없습니다.");
-      }
     } catch (err: any) {
       console.error(err);
-      let errMsg = "카메라를 시작할 수 없습니다. 브라우저 주소창 왼쪽의 자물쇠(🔒)를 눌러 권한을 재설정해주세요.";
-      
-      if (err.name === 'NotFoundError' || err.message?.includes('found')) {
-        errMsg = "PC에 연결된 웹캠(카메라) 장치를 찾을 수 없습니다.";
-      } else if (err.name === 'NotAllowedError' || err.message?.includes('Permission')) {
-        errMsg = "카메라 권한이 차단되었습니다. 주소창의 자물쇠 아이콘을 눌러 권한을 허용해주세요.";
-      } else if (!window.isSecureContext) {
-        errMsg = "안전한 연결(HTTPS)이 아니어서 브라우저가 카메라 접근을 차단했습니다.";
+      let errMsg = "카메라를 시작할 수 없습니다. 권한을 확인해주세요.";
+      if (err.name === 'NotAllowedError' || err.message?.includes('Permission')) {
+        errMsg = "카메라 권한이 차단되었습니다. 주소창 자물쇠 아이콘을 눌러 허용해주세요.";
       }
-      
-      const exactError = err.name ? `${err.name}: ${err.message}` : String(err);
-      toast.error(`${errMsg} (상세: ${exactError})`, { duration: 10000 });
+      toast.error(errMsg);
     }
   };
-
   const stopScanner = () => {
     if (scannerRef.current && isScanning) {
       scannerRef.current.stop().then(() => {
@@ -1056,18 +1062,18 @@ const handleEditMemo = (id, currentMemo) => {
                   
 
                   
-                  {isScanning && (
+                  {isScanning && cameras.length > 1 && (
                     <button 
                       onClick={() => {
-                        const newMode = facingMode === 'environment' ? 'user' : 'environment';
-                        setFacingMode(newMode);
+                        const currentIndex = parseInt(selectedCamera || "0");
+                        const nextIndex = (currentIndex + 1) % cameras.length;
                         if (scannerRef.current) {
-                           scannerRef.current.stop().then(() => startScanner(newMode)).catch(console.error);
+                           scannerRef.current.stop().then(() => startScanner(nextIndex)).catch(console.error);
                         }
                       }}
                       className="mb-4 flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-xl text-sm font-bold text-slate-700 dark:text-slate-200 shadow-sm hover:bg-slate-50 transition-colors"
                     >
-                      <IconRefresh size={18} /> 카메라 전환 (앞/뒤)
+                      <IconRefresh size={18} /> 카메라(렌즈) 전환하기
                     </button>
                   )}
                   {maxZoom > 1 && isScanning && (
