@@ -126,6 +126,7 @@ function App() {
   const [cameras, setCameras] = useState([]);
   const [selectedCamera, setSelectedCamera] = useState('');
   const [isScanning, setIsScanning] = useState(false);
+  const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [isBatchMode, setIsBatchMode] = useState(false);
   const lastScannedRef = useRef<{code: string, time: number} | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -961,7 +962,7 @@ const handleEditMemo = (id, currentMemo) => {
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 dark:bg-slate-900 overflow-hidden text-slate-800 dark:text-slate-100">
+    <div className="flex h-screen bg-slate-100 dark:bg-slate-950 overflow-hidden text-slate-800 dark:text-slate-100 justify-center">
       <Toaster position="bottom-center" theme={darkMode ? 'dark' : 'light'} />
       
       {/* Update Available Modal */}
@@ -1003,67 +1004,11 @@ const handleEditMemo = (id, currentMemo) => {
         </div>
       )}
       
-      {/* Desktop Sidebar (Left) */}
-      <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-darkCard border-r border-slate-200 dark:border-slate-800 z-50">
-        <div className="p-6 flex items-center gap-3">
-          <div className="bg-gradient-to-br from-primary to-purple-500 text-white p-2 rounded-lg shadow-glow">
-            <IconBarcode size={24} />
-          </div>
-          <div>
-            <button onClick={() => window.location.href = window.location.pathname} className="text-xl font-bold tracking-tight hover:text-primary transition-colors text-left">WebBarcode</button>
-            <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${packageJson.version}`} target="_blank" rel="noopener noreferrer" className="text-[10px] text-slate-500 hover:text-primary flex items-center gap-1 mt-0.5 transition-colors" title="릴리즈 노트 보기">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.03c3.18-.3 6.5-1.5 6.5-7.1 0-1.5-.5-2.8-1.4-3.8.1-.3.6-1.8-.1-3.8 0 0-1.2-.4-3.9 1.4a13 13 0 0 0-7 0C6 2.3 4.8 2.7 4.8 2.7.1 4.7.6 6.2.7 6.5.1 7.5-.4 8.8-.4 10.3c0 5.6 3.3 6.8 6.5 7.1-.8.8-1 2-1 3.2V22" /><path d="M9 22v-4a4.8 4.8 0 0 1 1-3.03" /></svg>
-              v{packageJson.version}
-            </a>
-          </div>
-        </div>
-        
-        <nav className="flex-1 px-4 flex flex-col gap-2 mt-2">
-          <button onClick={() => setActiveTab('home')} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'home' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-            <IconHome size={20} className={activeTab === 'home' ? 'animate-pulse' : ''} /> 스캐너 홈
-          </button>
-          <button onClick={() => setActiveTab('folders')} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'folders' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-            <IconFolder size={20} className={activeTab === 'folders' ? 'animate-pulse' : ''} /> 폴더 관리
-          </button>
-          <button onClick={() => setActiveTab('settings')} className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${activeTab === 'settings' ? 'bg-primary text-white shadow-md shadow-primary/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}>
-            <IconDatabase size={20} className={activeTab === 'settings' ? 'animate-pulse' : ''} /> 데이터 설정
-          </button>
-        </nav>
-
-        <div className="p-5 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-3">
-          <button onClick={() => setDarkMode(!darkMode)} className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors">
-            {darkMode ? <IconSun size={20}/> : <IconMoon size={20}/>}
-            <span>{darkMode ? '라이트 모드' : '다크 모드'}</span>
-          </button>
-          
-          {session?.user && (
-            <div className="bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-3 flex items-center justify-between shadow-sm mt-1">
-              <div className="flex items-center gap-3 overflow-hidden">
-                <img 
-                  src={session.user.user_metadata?.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp'} 
-                  alt="Profile" 
-                  className="w-8 h-8 rounded-full border border-slate-200 dark:border-slate-600 shrink-0 object-cover"
-                />
-                <div className="flex flex-col truncate">
-                  <span className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate leading-tight">
-                    {session.user.user_metadata?.full_name || session.user.user_metadata?.name || session.user.email?.split('@')[0]}
-                  </span>
-                  <span className="text-xs text-slate-500 truncate mt-0.5">{session.user.email}</span>
-                </div>
-              </div>
-              <button onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }} className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0 ml-2" title="로그아웃">
-                <IconExternalLink size={18} />
-              </button>
-            </div>
-          )}
-        </div>
-      </aside>
-
       {/* Mobile Layout Wrapper */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+      <div className="w-full max-w-md flex flex-col h-full overflow-hidden relative bg-white dark:bg-slate-900 shadow-2xl border-x border-slate-200 dark:border-slate-800">
         
         {/* Mobile Header (Top) */}
-        <header className="md:hidden bg-white/90 dark:bg-darkCard/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 sticky top-0 px-4 py-3 flex justify-between items-center shadow-sm">
+        <header className="bg-white/90 dark:bg-darkCard/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 shrink-0 px-4 py-3 flex justify-between items-center shadow-sm">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg shadow-glow overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
               <img src={`${import.meta.env.BASE_URL}icon.jpg`} alt="Logo" className="w-full h-full object-cover" />
@@ -1091,105 +1036,13 @@ const handleEditMemo = (id, currentMemo) => {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto p-3 sm:p-6 md:p-8 custom-scrollbar">
-          <div className="max-w-5xl mx-auto w-full min-h-full flex flex-col pb-32 md:pb-0">
-            {/* Tab: Home (Scanner & List) */}
+        <main className="flex-1 overflow-y-auto custom-scrollbar relative">
+          <div className="w-full min-h-full flex flex-col relative">
+            {/* Tab: Home (List) */}
         {activeTab === 'home' && (
-          <div className="flex flex-col lg:flex-row gap-6 w-full flex-1 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <section className="w-full lg:w-5/12 flex flex-col gap-4">
-              <div className="bg-slate-900 rounded-3xl shadow-soft border border-slate-100 dark:border-slate-800 overflow-hidden relative group">
-                
-                {/* 헤더 오버레이 */}
-                <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center bg-gradient-to-b from-black/50 to-transparent z-20 pointer-events-none">
-                  <h2 className="font-bold flex items-center gap-2 text-white/90 drop-shadow-md">
-                    <IconCamera size={18} /> 바코드 스캔
-                  </h2>
-                  <div className="flex gap-2 pointer-events-auto">
-                    <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="p-2 bg-black/30 backdrop-blur-sm text-white rounded-full hover:bg-black/50 transition-colors">
-                      {isSoundEnabled ? <IconVolume size={16} /> : <IconVolume3 size={16} />}
-                    </button>
-                  </div>
-                </div>
-                
-                {/* 메인 카메라 영역 (높이 고정 및 비율 최적화) */}
-                <div className="w-full relative h-[300px] sm:h-[350px] lg:h-[400px] bg-black">
-                  
-                  {/* html5-qrcode가 주입될 div */}
-                  <div 
-                    id="reader" 
-                    className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"
-                  ></div>
-                  
-                  {/* 스캔 타겟 가이드라인 (스캔 중일 때만 표시) */}
-                  {isScanning && (
-                    <div id="reader-overlay" className="absolute inset-x-8 inset-y-16 rounded-xl border-2 ring-4 ring-primary/30 border-dashed border-white/60 pointer-events-none transition-all duration-300"></div>
-                  )}
-                  
-                  {/* 비활성 상태 오버레이 */}
-                  {!isScanning && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-300 bg-slate-900/80 backdrop-blur-sm z-10">
-                      <button onClick={() => startScanner()} className="bg-primary hover:bg-primaryHover text-white p-5 rounded-full shadow-glow flex flex-col items-center justify-center gap-2 mb-4 font-semibold transition-transform hover:scale-105">
-                        <IconCamera size={32} />
-                      </button>
-                      <p className="text-sm font-medium">버튼을 눌러 카메라 켜기</p>
-                    </div>
-                  )}
-
-                  {/* 스캔 중 상태의 플로팅 컨트롤 */}
-                  {isScanning && (
-                    <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-3 z-20">
-                      
-                      {/* 줌 컨트롤 (우측 상단 등에 배치할 수도 있지만 접근성을 위해 하단 배치) */}
-                      {maxZoom > 1 && (
-                        <div className="w-full max-w-[200px] mx-auto flex items-center gap-3 bg-black/40 backdrop-blur-md px-4 py-2.5 rounded-2xl text-sm border border-white/10 shadow-lg">
-                          <IconSearch size={14} className="text-white/70" />
-                          <input type="range" min="1" max={maxZoom} step="0.1" value={zoomLevel} onChange={handleZoomChange} className="flex-1 accent-primary" />
-                        </div>
-                      )}
-
-                      {/* 하단 버튼 툴바 */}
-                      <div className="flex justify-center items-center gap-4">
-                        {/* 중지 버튼 */}
-                        <button onClick={stopScanner} className="bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white p-3 rounded-full shadow-lg transition-colors" title="스캐너 중지">
-                          <IconX size={24} />
-                        </button>
-                        
-                        {/* 카메라 전환 버튼 */}
-                        {cameras.length > 1 && (
-                          <button 
-                            disabled={isSwitching}
-                            onClick={async () => {
-                              if (isSwitching) return;
-                              setIsSwitching(true);
-                              try {
-                                const currentIndex = parseInt(selectedCamera || "0");
-                                const nextIndex = (currentIndex + 1) % cameras.length;
-                                if (scannerRef.current) {
-                                   try { await scannerRef.current.stop(); } catch(e) {}
-                                }
-                                await new Promise(resolve => setTimeout(resolve, 400));
-                                await startScanner(nextIndex);
-                              } finally {
-                                setIsSwitching(false);
-                              }
-                            }}
-                            className={`bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/20 text-white px-5 py-3 rounded-full shadow-lg transition-colors flex items-center gap-2 ${isSwitching ? 'opacity-50' : ''}`}
-                          >
-                            <IconRefresh size={20} className={isSwitching ? 'animate-spin' : ''} />
-                            <span className="text-sm font-semibold tracking-wide">{isSwitching ? '전환중' : '렌즈 전환'}</span>
-                          </button>
-                        )}
-                      </div>
-                      
-                    </div>
-                  )}
-                  
-                </div>
-              </div>
-            </section>
-
-            <section className="w-full lg:w-7/12 flex flex-col flex-1">
-              <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col lg:h-full lg:min-h-[500px]">
+          <div className="flex flex-col w-full flex-1 h-full animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <section className="w-full flex flex-col flex-1 pb-24">
+              <div className="flex flex-col h-full">
                 <div className="p-4 border-b border-slate-50 dark:border-slate-700/50">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
                     <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
@@ -1306,10 +1159,75 @@ const handleEditMemo = (id, currentMemo) => {
                 </div>
               </div>
             </section>
+            
+            {/* Floating Action Button for Scanner */}
+            {!isScannerModalOpen && (
+              <button 
+                onClick={() => { setIsScannerModalOpen(true); startScanner(); }}
+                className="absolute bottom-20 right-6 w-16 h-16 bg-gradient-to-tr from-primary to-purple-600 rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center text-white hover:scale-105 transition-transform z-40"
+              >
+                <IconCamera size={28} />
+              </button>
+            )}
           </div>
         )}
-            
-            {/* Tab: Folders */}
+        
+        {/* Full Screen Scanner Modal */}
+        {isScannerModalOpen && (
+          <div className="absolute inset-0 z-[100] bg-black flex flex-col animate-in fade-in duration-300">
+             <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-50">
+               <button onClick={() => { stopScanner(); setIsScannerModalOpen(false); }} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white">
+                 <IconX size={24} />
+               </button>
+               <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="w-10 h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white">
+                 {isSoundEnabled ? <IconVolume size={20} /> : <IconVolume3 size={20} />}
+               </button>
+             </div>
+             
+             <div className="flex-1 relative overflow-hidden">
+                <div id="reader" className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"></div>
+                {isScanning && (
+                  <div id="reader-overlay" className="absolute inset-x-8 inset-y-32 rounded-3xl border-2 ring-[1000px] ring-black/50 border-white/80 pointer-events-none transition-all duration-300"></div>
+                )}
+             </div>
+             
+             <div className="absolute bottom-0 left-0 right-0 p-8 pb-12 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col items-center gap-6 z-50">
+                {isScanning && cameras.length > 1 && (
+                  <button 
+                    disabled={isSwitching}
+                    onClick={async () => {
+                      if (isSwitching) return;
+                      setIsSwitching(true);
+                      try {
+                        const currentIndex = parseInt(selectedCamera || "0");
+                        const nextIndex = (currentIndex + 1) % cameras.length;
+                        if (scannerRef.current) { try { await scannerRef.current.stop(); } catch(e) {} }
+                        await new Promise(resolve => setTimeout(resolve, 400));
+                        await startScanner(nextIndex);
+                      } finally {
+                        setIsSwitching(false);
+                      }
+                    }}
+                    className="flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-6 py-3 rounded-full font-bold"
+                  >
+                    <IconRefresh size={20} className={isSwitching ? 'animate-spin' : ''} />
+                    {isSwitching ? '전환중...' : '렌즈 전환'}
+                  </button>
+                )}
+                
+                {maxZoom > 1 && isScanning && (
+                  <div className="w-full max-w-[250px] flex items-center gap-3 bg-white/10 backdrop-blur-md p-3 rounded-2xl">
+                    <IconSearch size={16} className="text-white/70" />
+                    <input type="range" min="1" max={maxZoom} step="0.1" value={zoomLevel} onChange={handleZoomChange} className="flex-1 accent-primary" />
+                  </div>
+                )}
+                
+                <p className="text-white/60 text-sm font-medium tracking-wide">바코드를 사각형 안에 비춰주세요</p>
+             </div>
+          </div>
+        )}
+        
+        {/* Tab: Folders */}
         {activeTab === 'folders' && (
           <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50 dark:bg-slate-900/30">
@@ -1604,7 +1522,7 @@ const handleEditMemo = (id, currentMemo) => {
         )}
 
         {/* Mobile Bottom Tab Bar */}
-        <nav className="md:hidden bg-white/95 dark:bg-darkCard/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 fixed bottom-0 left-0 right-0 z-50 pb-safe">
+        <nav className="bg-white/95 dark:bg-darkCard/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shrink-0 z-50 pb-safe">
           <div className="flex justify-around items-center px-1 pt-1.5 pb-1">
             <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center gap-0.5 p-1 w-14 transition-colors ${activeTab === 'home' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
               <div className={`p-1 rounded-full ${activeTab === 'home' ? 'bg-primary/10' : ''}`}><IconHome size={20} /></div>
