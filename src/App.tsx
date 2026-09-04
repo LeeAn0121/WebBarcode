@@ -381,12 +381,16 @@ function App() {
     try {
       // 1. 기기/브라우저에 카메라 권한을 명시적으로 강력하게 요청 (OS 자체 권한 팝업 강제 호출)
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        // 스트림을 얻었다면 즉시 종료하여 락(Lock) 방지
-        stream.getTracks().forEach(track => track.stop());
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          stream.getTracks().forEach(track => track.stop());
+        }
       } catch (permErr: any) {
-        // 권한이 없거나 차단된 경우 바로 에러 처리
-        throw permErr;
+        console.warn("명시적 권한 요청 실패 (무시하고 계속 진행):", permErr);
+        // 여기서 에러를 던지지 않고 그냥 넘어감 (Html5Qrcode가 자체적으로 한 번 더 시도하게 둠)
+        if (permErr.name === 'NotAllowedError') {
+           throw permErr; // 확실한 권한 거부만 에러 처리
+        }
       }
 
       if (!scannerRef.current) {
@@ -475,6 +479,8 @@ function App() {
         toastMsg = "카메라 권한이 거부/차단 상태입니다. 브라우저 주소창 왼쪽의 🔒자물쇠(또는 ⓘ 아이콘)를 눌러 카메라 권한을 '허용'으로 변경 후 새로고침 해주세요!";
       } else if (errName === 'NotReadableError' || errMsgTxt.includes('in use')) {
         toastMsg = "카메라가 이미 다른 앱이나 탭에서 사용 중입니다. 백그라운드 앱을 종료해주세요.";
+      } else if (errName === 'TypeError') {
+        toastMsg = `지원하지 않는 브라우저이거나 시스템 오류입니다. (${errMsgTxt})`;
       }
       
       toast.error(toastMsg);
