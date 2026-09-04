@@ -960,7 +960,7 @@ const handleEditMemo = (id, currentMemo) => {
   }
 
   return (
-    <div className="flex h-screen bg-slate-100 dark:bg-black overflow-hidden text-slate-800 dark:text-slate-100 justify-center">
+    <div className="flex h-screen bg-slate-100 dark:bg-[#050505] overflow-hidden text-slate-800 dark:text-slate-100 justify-center md:p-6 lg:p-8">
       <Toaster position="bottom-center" theme={darkMode ? 'dark' : 'light'} />
       
       {/* Update Available Modal */}
@@ -1003,7 +1003,7 @@ const handleEditMemo = (id, currentMemo) => {
       )}
       
       {/* Mobile Layout Wrapper */}
-      <div className="w-full max-w-md flex flex-col h-full overflow-hidden relative bg-white dark:bg-black shadow-2xl border-x border-slate-200 dark:border-slate-800">
+      <div className="w-full md:max-w-6xl max-w-md flex flex-col h-full overflow-hidden relative bg-white dark:bg-black md:shadow-2xl md:border border-x border-slate-200 dark:border-slate-800 md:rounded-3xl transition-all">
         
         {/* Mobile Header (Top) */}
         <header className="bg-white/90 dark:bg-darkCard/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 shrink-0 px-4 py-3 flex justify-between items-center shadow-sm">
@@ -1038,11 +1038,11 @@ const handleEditMemo = (id, currentMemo) => {
           <div className="w-full min-h-full flex flex-col relative">
             {/* Tab: Home (List) */}
         {activeTab === 'home' && (
-          <div className="flex flex-col w-full flex-1 h-full animate-in fade-in slide-in-from-bottom-4 duration-[2000ms] ease-out">
+          <div className="flex flex-col md:flex-row w-full flex-1 h-full animate-in fade-in slide-in-from-bottom-4 duration-[2000ms] ease-out">
             
       {/* Inline Scanner Area */}
       {isScannerModalOpen && (
-        <div className="w-full h-[50vh] shrink-0 bg-black relative z-40 shadow-2xl flex flex-col animate-in slide-in-from-top-4 duration-500 overflow-hidden rounded-b-3xl">
+        <div className="w-full h-[50vh] md:h-full md:w-[45%] shrink-0 bg-black relative z-40 shadow-2xl flex flex-col animate-in md:slide-in-from-left-4 slide-in-from-top-4 duration-500 overflow-hidden rounded-b-3xl md:rounded-none md:rounded-br-3xl">
            <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-50">
              <button onClick={() => { stopScanner(); setIsScannerModalOpen(false); }} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg">
                <IconX size={24} />
@@ -1093,7 +1093,7 @@ const handleEditMemo = (id, currentMemo) => {
         </div>
       )}
       
-      <section className="w-full flex flex-col flex-1 pb-24 overflow-y-auto relative custom-scrollbar">
+      <section className="w-full md:flex-1 md:w-[55%] flex flex-col flex-1 pb-24 overflow-y-auto relative custom-scrollbar">
 
               <div className="flex flex-col h-full">
                 <div className="p-4 border-b border-slate-50 dark:border-slate-700/50">
@@ -1217,7 +1217,7 @@ const handleEditMemo = (id, currentMemo) => {
             {!isScannerModalOpen && (
               <button 
                 onClick={() => { setIsScannerModalOpen(true); startScanner(); }}
-                className="absolute bottom-20 right-6 w-16 h-16 bg-gradient-to-tr from-primary to-purple-600 rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center text-white hover:scale-105 transition-transform z-40"
+                className="absolute bottom-20 right-6 md:right-10 w-16 h-16 bg-gradient-to-tr from-primary to-purple-600 rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center text-white hover:scale-105 transition-transform z-40"
               >
                 <IconCamera size={28} />
               </button>
