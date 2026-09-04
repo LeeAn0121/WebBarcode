@@ -376,7 +376,7 @@ function App() {
     }
   };
 
-  const startScanner = async () => {
+  const startScanner = async (overrideCamera?: string) => {
     try {
       if (!scannerRef.current) {
         scannerRef.current = new Html5Qrcode("reader", { formatsToSupport });
@@ -384,15 +384,14 @@ function App() {
       
       const devices = await Html5Qrcode.getCameras();
       if (devices && devices.length) {
-        // 일부 기기(안드로이드 특정 모델 등)에서 라벨이 반대로 나오는 버그가 있으므로 필터링하지 않고 모든 기기를 제공
         setCameras(devices);
         
-        // 사용자가 명시적으로 선택하지 않은 경우, 후면 카메라를 우선시하는 객체를 사용
+        const targetCam = overrideCamera !== undefined ? overrideCamera : selectedCamera;
         let cameraConfig: any = { facingMode: "environment" };
-        if (selectedCamera === 'force_rear') {
+        if (targetCam === 'force_rear') {
            cameraConfig = { facingMode: { exact: "environment" } };
-        } else if (selectedCamera) {
-           cameraConfig = selectedCamera;
+        } else if (targetCam) {
+           cameraConfig = targetCam;
         }
         
         try {
@@ -1054,7 +1053,17 @@ const handleEditMemo = (id, currentMemo) => {
                   )}
 
                   {cameras.length > 0 && isScanning && (
-                    <select value={selectedCamera} onChange={(e) => { setSelectedCamera(e.target.value); stopScanner(); setTimeout(startScanner, 100); }} className="mb-4 w-full max-w-xs p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium shadow-sm">
+                    <select value={selectedCamera} onChange={async (e) => {
+                      const newCam = e.target.value;
+                      setSelectedCamera(newCam);
+                      if (scannerRef.current && isScanning) {
+                        try {
+                          await scannerRef.current.stop();
+                        } catch(err) { console.error(err); }
+                        setIsScanning(false);
+                      }
+                      setTimeout(() => startScanner(newCam), 200);
+                    }} className="mb-4 w-full max-w-xs p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium shadow-sm">
                       <option value="">자동 감지 (후면 우선)</option>
                       <option value="force_rear">강제 후면 모드 (안될 때 선택)</option>
                       {cameras.map(c => <option key={c.id} value={c.id}>{c.label || '알 수 없는 카메라'}</option>)}
