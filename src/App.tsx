@@ -388,7 +388,12 @@ function App() {
         setCameras(devices);
         
         // 사용자가 명시적으로 선택하지 않은 경우, 후면 카메라를 우선시하는 객체를 사용
-        const cameraConfig = selectedCamera ? selectedCamera : { facingMode: "environment" };
+        let cameraConfig: any = { facingMode: "environment" };
+        if (selectedCamera === 'force_rear') {
+           cameraConfig = { facingMode: { exact: "environment" } };
+        } else if (selectedCamera) {
+           cameraConfig = selectedCamera;
+        }
         
         try {
           await scannerRef.current.start(
@@ -1051,6 +1056,7 @@ const handleEditMemo = (id, currentMemo) => {
                   {cameras.length > 0 && isScanning && (
                     <select value={selectedCamera} onChange={(e) => { setSelectedCamera(e.target.value); stopScanner(); setTimeout(startScanner, 100); }} className="mb-4 w-full max-w-xs p-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium shadow-sm">
                       <option value="">자동 감지 (후면 우선)</option>
+                      <option value="force_rear">강제 후면 모드 (안될 때 선택)</option>
                       {cameras.map(c => <option key={c.id} value={c.id}>{c.label || '알 수 없는 카메라'}</option>)}
                     </select>
                   )}
