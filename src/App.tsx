@@ -1092,10 +1092,10 @@ const handleEditMemo = (id, currentMemo) => {
 
         {/* Main Content Area */}
         <main className="flex-1 overflow-y-auto p-3 sm:p-6 md:p-8 custom-scrollbar">
-          <div className="max-w-5xl mx-auto w-full h-full pb-32 md:pb-0">
+          <div className="max-w-5xl mx-auto w-full min-h-full flex flex-col pb-32 md:pb-0">
             {/* Tab: Home (Scanner & List) */}
         {activeTab === 'home' && (
-          <div className="flex flex-col lg:flex-row gap-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="flex flex-col lg:flex-row gap-6 w-full flex-1 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <section className="w-full lg:w-5/12 flex flex-col gap-4">
               <div className="bg-slate-900 rounded-3xl shadow-soft border border-slate-100 dark:border-slate-800 overflow-hidden relative group">
                 
