@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <title>WebBarcode</title>
+    <script>
+      // GitHub Pages는 정적 호스팅이라 /admin 같은 하위 경로 직접 접속 시 404를 냄.
+      // 실제 경로를 쿼리스트링에 담아 index.html로 리다이렉트한 뒤, index.html에서 복원함.
+      var path = window.location.pathname + window.location.search + window.location.hash;
+      window.location.replace('/WebBarcode/?redirect=' + encodeURIComponent(path));
+    </script>
+  </head>
+  <body></body>
+</html>

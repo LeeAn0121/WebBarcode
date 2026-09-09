@@ -1,19 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { createClient } from '@supabase/supabase-js';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { Toaster, toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import packageJson from '../package.json';
-import { 
-  IconBarcode, IconMoon, IconSun, IconDownload, IconCamera, IconVolume, IconVolume3, 
+import {
+  IconBarcode, IconMoon, IconSun, IconDownload, IconCamera, IconVolume, IconVolume3,
   IconSearch, IconCopy, IconShare, IconMessagePlus, IconEdit, IconTrash, IconClock,
   IconFolder, IconFolderPlus, IconCloudUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink, IconLink
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
-
-const SUPABASE_URL = 'https://otxmccqqpfirmytlrchl.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90eG1jY3FxcGZpcm15dGxyY2hsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODgxOTIxNDUsImV4cCI6MjEwMzc2ODE0NX0.ZklBr-UroChsHlT9MggagEny_lRKE6yyWFb3RKVVKqY';
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+import { supabase, logDebug, getDebugSessionId } from './supabaseClient';
 
 function playSound(type = 'success', isSoundEnabled) {
   if (!isSoundEnabled) return;
@@ -241,15 +237,18 @@ function App() {
     let nativeInterval: any;
     if (isScanning && 'BarcodeDetector' in window) {
       try {
-        const detector = new (window as any).BarcodeDetector();
+        const detector = new (window as any).BarcodeDetector({
+          formats: ['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'itf'],
+        });
         let lastScannedTime = 0;
+        logDebug('info', 'Native BarcodeDetector 초기화 성공');
         nativeInterval = setInterval(async () => {
           // Prevent scanning if html5-qrcode is paused
           if (scannerRef.current && scannerRef.current.getState() !== 2) return;
-          
+
           const now = Date.now();
           if (now - lastScannedTime < 1000) return; // 1 second throttle
-          
+
           const video = document.querySelector('video');
           if (video && video.readyState >= 2) {
             try {
@@ -258,10 +257,14 @@ function App() {
                 lastScannedTime = now;
                 await handleScan(barcodes[0].rawValue);
               }
-            } catch(e) {}
+            } catch(e: any) {
+              logDebug('warn', 'Native BarcodeDetector detect 실패', { error: e?.message });
+            }
           }
         }, 150); // 150ms 마다 스캔 (매우 빠름)
-      } catch(e) {}
+      } catch(e: any) {
+        logDebug('warn', 'Native BarcodeDetector 초기화 실패', { error: e?.message });
+      }
     }
     return () => clearInterval(nativeInterval);
   }, [isScanning, barcodes]); // barcodes dependency needed so handleScan has latest state
@@ -298,7 +301,26 @@ function App() {
     };
   }, [session?.user?.id]);
 
-  
+  // 관리자 페이지(/admin)에서 실시간 접속자 파악용 presence
+  useEffect(() => {
+    const channel = supabase.channel('wb-presence', {
+      config: { presence: { key: getDebugSessionId() } },
+    });
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({
+          session_id: getDebugSessionId(),
+          user_agent: navigator.userAgent,
+          path: window.location.pathname,
+          email: session?.user?.email || null,
+          online_at: new Date().toISOString(),
+        });
+      }
+    });
+    return () => { supabase.removeChannel(channel); };
+  }, [session?.user?.email]);
+
+
   const fetchCollabFolders = async () => {
     if (!session?.user?.id) return;
     const { data } = await supabase.from('folder_guests').select('owner_id, folder_name').eq('guest_id', session.user.id);
@@ -313,6 +335,7 @@ function App() {
   const handleScan = async (decodedText) => {
     const cleanText = decodedText.trim();
     const now = Date.now();
+    logDebug('info', '스캔 디코딩 성공', { code: cleanText });
     
     // 쿨다운(Debounce): 같은 바코드는 3초, 다른 바코드라도 1초 쿨다운을 적용해 연속 스캔 폭주 방지
     const isSameCode = lastScannedRef.current.code === cleanText;
@@ -448,15 +471,17 @@ function App() {
           
           success = true;
           setIsScanning(true);
+          logDebug('info', '카메라 시작 성공', { deviceLabel: targetDevice.label, camIndex: currentIdx });
           break; // 성공 시 루프 탈출
-        } catch (err) {
+        } catch (err: any) {
           console.warn(`Camera index ${currentIdx} failed:`, err);
           lastErr = err;
+          logDebug('warn', '카메라 시작 실패, 다음 카메라 시도', { camIndex: currentIdx, error: err?.message, name: err?.name });
           // 실패 시 다음 카메라로 강제 이동하여 재시도
           currentIdx = (currentIdx + 1) % currentDevices.length;
         }
       }
-      
+
       if (!success) {
         throw lastErr;
       }
@@ -473,6 +498,13 @@ function App() {
               setMaxZoom(capabilities.zoom.max);
               setZoomLevel(track.getSettings().zoom || 1);
             }
+            const settings = track.getSettings ? track.getSettings() : {};
+            logDebug('info', '카메라 실제 트랙 설정', {
+              settings,
+              capabilities,
+              videoElWidth: videoEl.videoWidth,
+              videoElHeight: videoEl.videoHeight,
+            });
           }
         }
       }, 500);
@@ -492,6 +524,7 @@ function App() {
       }
       
       toast.error(toastMsg);
+      logDebug('error', '카메라 시작 최종 실패', { errName, errMsgTxt });
     }
   };
   const stopScanner = () => {

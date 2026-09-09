@@ -17,6 +17,16 @@
       <link rel="manifest" href="./manifest.json" /></head>
   <body>
     <div id="root"></div>
+    <script>
+      // 404.html이 담아 보낸 원래 경로(예: /WebBarcode/admin)를 복원
+      (function () {
+        var params = new URLSearchParams(window.location.search);
+        var redirect = params.get('redirect');
+        if (redirect) {
+          history.replaceState(null, '', redirect);
+        }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   
     <script>
