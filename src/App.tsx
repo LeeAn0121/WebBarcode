@@ -124,7 +124,7 @@ function App() {
   const [isScanning, setIsScanning] = useState(false);
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [isBatchMode, setIsBatchMode] = useState(false);
-  const lastScannedRef = useRef<{code: string, time: number} | null>(null);
+  const lastScannedRef = useRef<{code: string, time: number}>({ code: '', time: 0 });
   const [zoomLevel, setZoomLevel] = useState(1);
   const [maxZoom, setMaxZoom] = useState(1);
   const [facingMode, setFacingMode] = useState<'environment'|'user'>('environment');
@@ -299,10 +299,19 @@ function App() {
   };
 
   const handleScan = async (decodedText) => {
+    try {
+      await handleScanInner(decodedText);
+    } catch (e: any) {
+      console.error(e);
+      logDebug('error', 'handleScan 예외', { error: e?.message, stack: e?.stack });
+    }
+  };
+
+  const handleScanInner = async (decodedText) => {
     const cleanText = decodedText.trim();
     const now = Date.now();
     logDebug('info', '스캔 디코딩 성공', { code: cleanText });
-    
+
     // 쿨다운(Debounce): 같은 바코드는 3초, 다른 바코드라도 1초 쿨다운을 적용해 연속 스캔 폭주 방지
     const isSameCode = lastScannedRef.current.code === cleanText;
     const cooldownPeriod = isSameCode ? 3000 : 1000;
