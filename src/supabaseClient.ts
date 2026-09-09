@@ -5,8 +5,17 @@ export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// 관리자 이메일 (본인 계정만 /admin 접근 허용)
-export const ADMIN_EMAILS = ['koolsignpad@gmail.com', 'jggen0401@gmail.com'];
+// 관리자 여부는 Supabase의 admin_emails 테이블로 관리 (코드 수정 없이 DB에서 추가/삭제 가능)
+export async function isAdminEmail(email: string | null | undefined) {
+  if (!email) return false;
+  const { data, error } = await supabase
+    .from('admin_emails')
+    .select('email')
+    .eq('email', email)
+    .maybeSingle();
+  if (error) return false;
+  return !!data;
+}
 
 const SESSION_ID_KEY = 'wb_debug_session_id';
 export function getDebugSessionId() {

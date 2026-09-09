@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { supabase, ADMIN_EMAILS } from './supabaseClient';
+import { supabase, isAdminEmail } from './supabaseClient';
 import { Toaster, toast } from 'sonner';
 
 type LogRow = {
@@ -24,6 +24,8 @@ type PresenceInfo = {
 export default function AdminPage() {
   const [session, setSession] = useState<any>(null);
   const [checking, setChecking] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminChecked, setAdminChecked] = useState(false);
   const [logs, setLogs] = useState<LogRow[]>([]);
   const [visitors, setVisitors] = useState<PresenceInfo[]>([]);
   const [levelFilter, setLevelFilter] = useState<'all' | 'info' | 'warn' | 'error'>('all');
@@ -38,7 +40,12 @@ export default function AdminPage() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const isAdmin = !!session?.user?.email && ADMIN_EMAILS.includes(session.user.email);
+  useEffect(() => {
+    if (checking) return;
+    if (!session?.user?.email) { setIsAdmin(false); setAdminChecked(true); return; }
+    setAdminChecked(false);
+    isAdminEmail(session.user.email).then(v => { setIsAdmin(v); setAdminChecked(true); });
+  }, [session?.user?.email, checking]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -99,7 +106,7 @@ export default function AdminPage() {
     toast.success('로그 삭제됨');
   };
 
-  if (checking) {
+  if (checking || (session && !adminChecked)) {
     return <div style={{ padding: 24, fontFamily: 'monospace' }}>로딩중...</div>;
   }
 

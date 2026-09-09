@@ -1390,7 +1390,7 @@ const handleEditMemo = (id, currentMemo) => {
         
       {/* 다중 선택 모드 플로팅 바 */}
       {isSelectionMode && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-4 shadow-2xl z-50 flex items-center justify-between border border-slate-700 animate-in slide-in-from-bottom-5">
+        <div className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-4 shadow-2xl z-50 flex items-center justify-between border border-slate-700 animate-in slide-in-from-bottom-5">
           <span className="font-bold tracking-wide text-sm">
             <span className="text-primary">{selectedIds.length}개</span> 선택됨
           </span>
