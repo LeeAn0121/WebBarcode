@@ -118,7 +118,7 @@ const formatsToSupport = [
   Html5QrcodeSupportedFormats.ITF,
 ];
 function App() {
-  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches));
+  const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [barcodes, setBarcodes] = useState([]);
   const barcodesRef = useRef([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -431,9 +431,16 @@ function App() {
           
           await scannerRef.current.start(
             targetDevice.id,
-            { 
-              fps: 10, 
-              qrbox: { width: window.innerWidth < 400 ? 300 : 350, height: 120 }
+            {
+              fps: 15,
+              qrbox: { width: window.innerWidth < 400 ? 320 : 380, height: 160 },
+              disableFlip: true,
+              videoConstraints: {
+                deviceId: { exact: targetDevice.id },
+                width: { ideal: 1920 },
+                height: { ideal: 1080 },
+                advanced: [{ focusMode: 'continuous' } as any]
+              }
             },
             handleScan,
             () => {}
