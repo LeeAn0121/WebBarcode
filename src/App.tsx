@@ -183,6 +183,21 @@ function App() {
     }
   }, [darkMode]);
 
+  // ESC 키로 열려있는 모달/시트/선택모드 닫기 (키보드 접근성)
+  useEffect(() => {
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (promptModal.isOpen) setPromptModal(prev => ({ ...prev, isOpen: false }));
+      else if (shareConfig.isOpen) setShareConfig(prev => ({ ...prev, isOpen: false }));
+      else if (shareModal.isOpen) setShareModal({ isOpen: false, url: '', title: '', description: '', shareText: '' });
+      else if (moveModal.isOpen) setMoveModal(prev => ({ ...prev, isOpen: false }));
+      else if (activeActionMenu !== null) setActiveActionMenu(null);
+      else if (isSelectionMode) { setIsSelectionMode(false); setSelectedIds([]); }
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [promptModal.isOpen, shareConfig.isOpen, shareModal.isOpen, moveModal.isOpen, activeActionMenu, isSelectionMode]);
+
   // Supabase Realtime & Fetch
   useEffect(() => {
     const checkUpdate = async () => {
@@ -984,7 +999,7 @@ const handleEditMemo = (id, currentMemo) => {
       
       {/* Update Available Modal */}
       {updateInfo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="업데이트 알림">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-[2000ms] ease-out"></div>
           <div className="relative bg-white dark:bg-[#111111] rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 p-6 sm:p-8 max-w-sm w-full animate-in zoom-in-95 slide-in-from-bottom-4 duration-[2000ms] ease-out overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-purple-500 to-pink-500"></div>
@@ -1006,13 +1021,13 @@ const handleEditMemo = (id, currentMemo) => {
               </div>
 
               <div className="flex flex-col w-full gap-2 mt-2">
-                <button onClick={() => { window.location.href = window.location.pathname + '?v=' + updateInfo.version; }} className="w-full bg-primary hover:bg-primaryHover text-white font-bold tracking-wide py-3 rounded-lg text-sm transition-all shadow-md shadow-primary/20 flex items-center justify-center gap-2">
-                  <IconRefresh size={18} /> 지금 새로고침
+                <button onClick={() => { window.location.href = window.location.pathname + '?v=' + updateInfo.version; }} className="w-full bg-primary hover:bg-primaryHover text-white font-semibold py-3 rounded-lg text-sm transition-all shadow-md shadow-primary/20 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                  <IconRefresh size={18} aria-hidden="true" /> 지금 새로고침
                 </button>
-                <a href={updateInfo.url} target="_blank" rel="noopener noreferrer" className="w-full bg-slate-100 dark:bg-[#111111] hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold tracking-wide py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2">
-                  <IconExternalLink size={18} /> 릴리즈 노트 보기
+                <a href={updateInfo.url} target="_blank" rel="noopener noreferrer" className="w-full bg-slate-100 dark:bg-[#111111] hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                  <IconExternalLink size={18} aria-hidden="true" /> 릴리즈 노트 보기
                 </a>
-                <button onClick={() => setUpdateInfo(null)} className="w-full bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium py-2 rounded-lg text-sm transition-colors mt-1">
+                <button onClick={() => setUpdateInfo(null)} className="w-full bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium py-2 rounded-lg text-sm transition-colors mt-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                   나중에 하기
                 </button>
               </div>
@@ -1037,14 +1052,23 @@ const handleEditMemo = (id, currentMemo) => {
               <svg className="shrink-0" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.03c3.18-.3 6.5-1.5 6.5-7.1 0-1.5-.5-2.8-1.4-3.8.1-.3.6-1.8-.1-3.8 0 0-1.2-.4-3.9 1.4a13 13 0 0 0-7 0C6 2.3 4.8 2.7 4.8 2.7.1 4.7.6 6.2.7 6.5.1 7.5-.4 8.8-.4 10.3c0 5.6 3.3 6.8 6.5 7.1-.8.8-1 2-1 3.2V22" /><path d="M9 22v-4a4.8 4.8 0 0 1 1-3.03" /></svg>
               v{packageJson.version}
             </a>
-            <button onClick={() => setDarkMode(!darkMode)} className="text-slate-500 hover:text-primary transition-colors shrink-0">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              aria-label={darkMode ? '라이트 모드로 전환' : '다크 모드로 전환'}
+              className="text-slate-500 hover:text-primary transition-colors shrink-0 p-1.5 -m-1.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
               {darkMode ? <IconSun size={20}/> : <IconMoon size={20}/>}
             </button>
             {session?.user && (
-              <button onClick={async () => { if(window.confirm("로그아웃 하시겠습니까?")) { await supabase.auth.signOut(); window.location.reload(); } }} className="shrink-0 rounded-full border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm" title="로그아웃">
-                <img 
-                  src={session.user.user_metadata?.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp'} 
-                  alt="Profile" 
+              <button
+                onClick={async () => { if(window.confirm("로그아웃 하시겠습니까?")) { await supabase.auth.signOut(); window.location.reload(); } }}
+                className="shrink-0 rounded-full border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                aria-label="로그아웃"
+                title="로그아웃"
+              >
+                <img
+                  src={session.user.user_metadata?.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp'}
+                  alt=""
                   className="w-7 h-7 object-cover"
                 />
               </button>
@@ -1063,10 +1087,10 @@ const handleEditMemo = (id, currentMemo) => {
       {isScannerModalOpen && (
         <div className="w-full h-[50vh] md:h-full md:w-[45%] shrink-0 bg-black relative z-40 shadow-2xl flex flex-col animate-in md:slide-in-from-left-4 slide-in-from-top-4 duration-500 overflow-hidden rounded-b-3xl md:rounded-none md:rounded-br-3xl">
            <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-50">
-             <button onClick={() => { stopScanner(); setIsScannerModalOpen(false); }} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg">
+             <button onClick={() => { stopScanner(); setIsScannerModalOpen(false); }} aria-label="스캐너 닫기" className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
                <IconX size={24} />
              </button>
-             <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg">
+             <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} aria-label={isSoundEnabled ? '스캔 효과음 끄기' : '스캔 효과음 켜기'} aria-pressed={isSoundEnabled} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
                {isSoundEnabled ? <IconVolume size={20} /> : <IconVolume3 size={20} />}
              </button>
            </div>
@@ -1095,17 +1119,17 @@ const handleEditMemo = (id, currentMemo) => {
                       setIsSwitching(false);
                     }
                   }}
-                  className="flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-5 py-2.5 rounded-full font-bold shadow-lg"
+                  className="flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-5 py-2.5 rounded-full font-bold shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                 >
                   <IconRefresh size={18} className={isSwitching ? 'animate-spin' : ''} />
                   {isSwitching ? '전환중...' : '렌즈 전환'}
                 </button>
               )}
-              
+
               {maxZoom > 1 && isScanning && (
                 <div className="w-full max-w-[200px] flex items-center gap-3 bg-black/40 backdrop-blur-md p-2 rounded-2xl shadow-lg border border-white/10">
-                  <IconSearch size={14} className="text-white/70" />
-                  <input type="range" min="1" max={maxZoom} step="0.1" value={zoomLevel} onChange={handleZoomChange} className="flex-1 accent-primary" />
+                  <IconSearch size={14} className="text-white/70" aria-hidden="true" />
+                  <input type="range" min="1" max={maxZoom} step="0.1" value={zoomLevel} onChange={handleZoomChange} aria-label="카메라 줌 배율" className="flex-1 accent-primary" />
                 </div>
               )}
            </div>
@@ -1118,12 +1142,21 @@ const handleEditMemo = (id, currentMemo) => {
                 <div className="p-4 border-b border-slate-50 dark:border-slate-700/50">
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
                     <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
-                      <h2 className="font-bold tracking-wide flex items-center gap-2"><IconBarcode size={18}/> 스캔 기록</h2>
-                      <span className="bg-primary/10 text-primary text-xs font-bold tracking-wide px-2.5 py-1 rounded-full whitespace-nowrap">{barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length}건</span>
+                      <h2 className="font-bold flex items-center gap-2"><IconBarcode size={18}/> 스캔 기록</h2>
+                      <span className="bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">{barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length}건</span>
+                      {!isSelectionMode && filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length > 0 && (
+                        <button
+                          onClick={() => setIsSelectionMode(true)}
+                          className="ml-auto sm:ml-2 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-colors"
+                        >
+                          선택
+                        </button>
+                      )}
                     </div>
-                    
+
                     <div className="relative w-full sm:w-auto">
-                      <select value={currentFolder} onChange={(e) => setCurrentFolder(e.target.value)} className="w-full sm:w-[160px] appearance-none bg-slate-50 dark:bg-[#111111] border border-slate-200 dark:border-slate-700 text-sm font-bold tracking-wide px-4 py-2.5 pr-10 rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-black cursor-pointer shadow-sm">
+                      <label htmlFor="folder-filter" className="sr-only">폴더 필터</label>
+                      <select id="folder-filter" value={currentFolder} onChange={(e) => setCurrentFolder(e.target.value)} className="w-full sm:w-[160px] appearance-none bg-slate-50 dark:bg-[#111111] border border-slate-200 dark:border-slate-700 text-sm font-semibold px-4 py-2.5 pr-10 rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-black cursor-pointer shadow-sm">
                         <option value="전체">전체 (All)</option>
                         {folders.map(f => <option key={f} value={f}>{f}</option>)}
                       </select>
@@ -1133,8 +1166,9 @@ const handleEditMemo = (id, currentMemo) => {
                     </div>
                   </div>
                   <div className="relative">
-                    <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="바코드 번호 또는 메모 검색..." className="w-full bg-slate-50 dark:bg-black/50 border-0 ring-1 ring-slate-200 dark:ring-slate-700 rounded-xl pl-11 p-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-shadow" />
+                    <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
+                    <label htmlFor="barcode-search" className="sr-only">바코드 번호 또는 메모 검색</label>
+                    <input id="barcode-search" type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="바코드 번호 또는 메모 검색..." className="w-full bg-slate-50 dark:bg-black/50 border-0 ring-1 ring-slate-200 dark:ring-slate-700 rounded-xl pl-11 p-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-shadow" />
                   </div>
                 </div>
                 
@@ -1163,10 +1197,15 @@ const handleEditMemo = (id, currentMemo) => {
                           </div>
                           <div className="flex flex-col flex-1 overflow-hidden">
                             <div className="flex items-center gap-2 truncate">
-                              <span className="font-mono font-bold tracking-wide text-base text-slate-800 dark:text-slate-100 truncate">{renderFormattedCode(item.code)}</span>
+                              <span className="font-mono font-bold text-base text-slate-800 dark:text-slate-100 truncate">{renderFormattedCode(item.code)}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-xs mt-0.5">
-                              <span className="text-slate-400 flex items-center gap-1 shrink-0"><IconClock size={10}/> {format(new Date(item.created_at), 'HH:mm:ss')}</span>
+                            <div className="flex items-center gap-2 text-xs mt-0.5 flex-wrap">
+                              <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1 shrink-0"><IconClock size={10} aria-hidden="true"/> {format(new Date(item.created_at), 'HH:mm:ss')}</span>
+                              {currentFolder === '전체' && (
+                                <span className="flex items-center gap-1 shrink-0 text-primary bg-primary/10 px-1.5 py-0.5 rounded font-medium">
+                                  <IconFolder size={10} aria-hidden="true"/> {item.folder || '기본폴더'}
+                                </span>
+                              )}
                               {item.memo && (
                                 <span className="truncate text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-[#111111]/50 px-1.5 py-0.5 rounded border border-slate-100 dark:border-slate-700/50">
                                   {item.memo}
@@ -1183,10 +1222,12 @@ const handleEditMemo = (id, currentMemo) => {
                               {selectedIds.includes(item.id) && <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>}
                             </div>
                           ) : (
-                            <button 
+                            <button
                               onClick={(e) => { e.stopPropagation(); setActiveActionMenu(activeActionMenu === item.id ? null : item.id); }}
-                              className="p-2 text-slate-400 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                              title="작업 메뉴 열기"
+                              className="p-2.5 -m-0.5 text-slate-500 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                              aria-label={`${item.code} 작업 메뉴 열기`}
+                              aria-haspopup="menu"
+                              aria-expanded={activeActionMenu === item.id}
                             >
                               <IconDotsVertical size={20} />
                             </button>
@@ -1196,23 +1237,23 @@ const handleEditMemo = (id, currentMemo) => {
                           {activeActionMenu === item.id && (
                             <>
                               {/* Mobile-friendly Bottom Sheet / Desktop Modal */}
-                              <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 transition-all" onClick={() => setActiveActionMenu(null)}>
+                              <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 transition-all" onClick={() => setActiveActionMenu(null)} role="dialog" aria-modal="true" aria-label={`${item.code} 작업 메뉴`}>
                                 <div className="bg-white dark:bg-[#111111] w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                                   <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto my-3 sm:hidden"></div>
                                   <div className="px-6 pb-2 pt-2 border-b border-slate-100 dark:border-slate-700 flex flex-col">
-                                    <span className="font-mono font-bold tracking-wide text-lg text-slate-800 dark:text-slate-100 truncate">{item.code}</span>
+                                    <span className="font-mono font-bold text-lg text-slate-800 dark:text-slate-100 truncate">{item.code}</span>
                                     <span className="text-xs text-slate-500 mb-2">{item.folder || '기본폴더'}</span>
                                   </div>
-                                  <div className="flex flex-col p-2 max-h-[70vh] overflow-y-auto">
-                                    <button onClick={() => { navigator.clipboard.writeText(item.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconCopy size={20} className="text-primary"/> 복사하기</button>
-                                    <button onClick={() => handleShare(item)} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconShare size={20} className="text-primary"/> 외부로 공유</button>
+                                  <div className="flex flex-col p-2 max-h-[70vh] overflow-y-auto" role="menu">
+                                    <button role="menuitem" onClick={() => { navigator.clipboard.writeText(item.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><IconCopy size={20} className="text-primary" aria-hidden="true"/> 복사하기</button>
+                                    <button role="menuitem" onClick={() => handleShare(item)} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><IconShare size={20} className="text-primary" aria-hidden="true"/> 외부로 공유</button>
                                     <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2"></div>
-                                    <button onClick={() => { handleEditMemo(item.id, item.memo); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconMessagePlus size={20} className="text-blue-500"/> 메모 추가/수정</button>
-                                    <button onClick={() => { setMoveModal({ isOpen: true, ids: [item.id], targetFolder: item.folder || '기본폴더' }); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconFolder size={20} className="text-emerald-500"/> 다른 폴더로 이동</button>
-                                    <button onClick={() => handleClone(item)} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconCopy size={20} className="text-amber-500"/> 이 바코드 복제하기</button>
-                                    <button onClick={() => { handleEditCode(item.id, item.code); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconEdit size={20} className="text-slate-500"/> 바코드 번호 수정</button>
+                                    <button role="menuitem" onClick={() => { handleEditMemo(item.id, item.memo); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><IconMessagePlus size={20} className="text-blue-500" aria-hidden="true"/> 메모 추가/수정</button>
+                                    <button role="menuitem" onClick={() => { setMoveModal({ isOpen: true, ids: [item.id], targetFolder: item.folder || '기본폴더' }); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><IconFolder size={20} className="text-emerald-500" aria-hidden="true"/> 다른 폴더로 이동</button>
+                                    <button role="menuitem" onClick={() => handleClone(item)} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><IconCopy size={20} className="text-amber-500" aria-hidden="true"/> 이 바코드 복제하기</button>
+                                    <button role="menuitem" onClick={() => { handleEditCode(item.id, item.code); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><IconEdit size={20} className="text-slate-500" aria-hidden="true"/> 바코드 번호 수정</button>
                                     <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2"></div>
-                                    <button onClick={() => { handleDelete(item.id); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-bold tracking-wide text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"><IconTrash size={20}/> 삭제하기</button>
+                                    <button role="menuitem" onClick={() => { handleDelete(item.id); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"><IconTrash size={20} aria-hidden="true"/> 삭제하기</button>
                                   </div>
                                 </div>
                               </div>
@@ -1223,8 +1264,14 @@ const handleEditMemo = (id, currentMemo) => {
                     ))}
                     
                     {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length === 0 && (
-                      <div className="h-40 flex flex-col items-center justify-center text-slate-400">
-                        <p className="text-sm">기록이 없습니다.</p>
+                      <div className="h-56 flex flex-col items-center justify-center text-slate-400 gap-2 text-center px-6">
+                        <IconBarcode size={32} className="text-slate-300 dark:text-slate-600" aria-hidden="true" />
+                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                          {searchQuery ? '검색 결과가 없습니다.' : '기록이 없습니다.'}
+                        </p>
+                        {!searchQuery && (
+                          <p className="text-xs text-slate-400">우측 하단 카메라 버튼으로 첫 바코드를 스캔해보세요</p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -1234,9 +1281,10 @@ const handleEditMemo = (id, currentMemo) => {
             
             {/* Floating Action Button for Scanner */}
             {!isScannerModalOpen && (
-              <button 
+              <button
                 onClick={() => { setIsScannerModalOpen(true); startScanner(); }}
-                className="absolute bottom-20 right-6 md:right-10 w-16 h-16 bg-gradient-to-tr from-primary to-purple-600 rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center text-white hover:scale-105 transition-transform z-40"
+                aria-label="바코드 스캐너 열기"
+                className="absolute bottom-20 right-6 md:right-10 w-16 h-16 bg-gradient-to-tr from-primary to-purple-600 rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center text-white hover:scale-105 transition-transform z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
               >
                 <IconCamera size={28} />
               </button>
@@ -1248,9 +1296,9 @@ const handleEditMemo = (id, currentMemo) => {
         {activeTab === 'folders' && (
           <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-[2000ms] ease-out">
             <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50 dark:bg-black/30">
-              <h2 className="font-bold tracking-wide flex items-center gap-2 text-xl"><IconFolder className="text-primary" size={24} /> 폴더 트리 관리</h2>
-              <button onClick={handleAddFolder} className="w-full sm:w-auto bg-primary hover:bg-primaryHover text-white px-4 py-2 rounded-lg text-sm text-sm font-bold tracking-wide flex items-center justify-center gap-2 shadow-sm shadow-primary/20 transition-colors">
-                <IconFolderPlus size={18}/> 새 폴더 생성하기
+              <h2 className="font-bold flex items-center gap-2 text-xl"><IconFolder className="text-primary" size={24} aria-hidden="true" /> 폴더 트리 관리</h2>
+              <button onClick={handleAddFolder} className="w-full sm:w-auto bg-primary hover:bg-primaryHover text-white px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 shadow-sm shadow-primary/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                <IconFolderPlus size={18} aria-hidden="true"/> 새 폴더 생성하기
               </button>
             </div>
             
@@ -1266,19 +1314,19 @@ const handleEditMemo = (id, currentMemo) => {
                   return (
                     <div key={f} className="flex justify-between items-center hover:bg-white dark:hover:bg-darkCard p-2.5 rounded-lg text-sm transition-all shadow-sm border border-transparent hover:border-slate-200 dark:hover:border-slate-700 group" style={{ marginLeft: `${depth * 16}px` }}>
                       <div className="flex items-center gap-3 overflow-hidden">
-                        <IconFolder size={18} className="text-slate-400 shrink-0" />
+                        <IconFolder size={18} className="text-slate-500 shrink-0" aria-hidden="true" />
                         <span className="font-medium text-slate-700 dark:text-slate-200 truncate" title={f}>{name} {collabFolders.some(c => c.folder_name === f) && <span className="text-[10px] bg-emerald-100 text-emerald-600 px-1 py-0.5 rounded ml-1">협업중</span>}</span>
-                        <span className="text-xs bg-indigo-50 dark:bg-indigo-900/30 text-primary font-bold tracking-wide px-2.5 py-1 rounded-lg whitespace-nowrap">{barcodeCount}개</span>
+                        <span className="text-xs bg-indigo-50 dark:bg-indigo-900/30 text-primary font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap">{barcodeCount}개</span>
                       </div>
                       <div className="flex gap-1 shrink-0">
-                        <button onClick={() => handleCreateInvite(f)} className="text-slate-400 hover:text-emerald-500 bg-slate-100 hover:bg-emerald-50 dark:bg-[#111111] dark:hover:bg-emerald-900/30 p-2 rounded-lg transition-colors" title="실시간 방 초대 (같이 스캔하기)">
+                        <button onClick={() => handleCreateInvite(f)} className="text-slate-500 hover:text-emerald-500 bg-slate-100 hover:bg-emerald-50 dark:bg-[#111111] dark:hover:bg-emerald-900/30 p-2.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500" aria-label={`${name} 폴더 실시간 협업 초대`} title="실시간 방 초대 (같이 스캔하기)">
                           <IconShare size={16}/>
                         </button>
-                        <button onClick={() => handleShareFolder(f)} className="text-slate-400 hover:text-blue-500 bg-slate-100 hover:bg-blue-50 dark:bg-[#111111] dark:hover:bg-blue-900/30 p-2 rounded-lg transition-colors" title="폴더 복사본 보내기">
+                        <button onClick={() => handleShareFolder(f)} className="text-slate-500 hover:text-blue-500 bg-slate-100 hover:bg-blue-50 dark:bg-[#111111] dark:hover:bg-blue-900/30 p-2.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500" aria-label={`${name} 폴더 복사본 공유`} title="폴더 복사본 보내기">
                           <IconCopy size={16}/>
                         </button>
                         {f !== '기본폴더' && (
-                          <button onClick={() => handleDeleteFolder(f)} className="text-slate-400 hover:text-red-500 bg-slate-100 hover:bg-red-50 dark:bg-[#111111] dark:hover:bg-red-900/30 p-2 rounded-lg transition-colors" title="폴더 삭제">
+                          <button onClick={() => handleDeleteFolder(f)} className="text-slate-500 hover:text-red-500 bg-slate-100 hover:bg-red-50 dark:bg-[#111111] dark:hover:bg-red-900/30 p-2.5 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500" aria-label={`${name} 폴더 삭제`} title="폴더 삭제">
                             <IconTrash size={16}/>
                           </button>
                         )}
@@ -1295,54 +1343,54 @@ const handleEditMemo = (id, currentMemo) => {
         {activeTab === 'settings' && (
           <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-[2000ms] ease-out">
             <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-black/30">
-              <h2 className="font-bold tracking-wide flex items-center gap-2 text-xl"><IconDatabase className="text-primary" size={24} /> 데이터 및 시스템 설정</h2>
+              <h2 className="font-bold flex items-center gap-2 text-xl"><IconDatabase className="text-primary" size={24} aria-hidden="true" /> 데이터 및 시스템 설정</h2>
             </div>
             
             <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full flex flex-col gap-10">
               
               {/* 내보내기 영역 */}
               <section className="space-y-4">
-                <h3 className="text-sm font-bold tracking-wide text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">데이터 백업 및 복원</h3>
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">데이터 백업 및 복원</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-slate-50 dark:bg-black/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 flex flex-col gap-4 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-3 text-blue-500">
                       <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
-                        <IconCloudDownload size={24} />
+                        <IconCloudDownload size={24} aria-hidden="true" />
                       </div>
-                      <h4 className="font-bold tracking-wide text-lg text-slate-800 dark:text-slate-100">JSON 백업</h4>
+                      <h4 className="font-bold text-lg text-slate-800 dark:text-slate-100">JSON 백업</h4>
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 flex-1 leading-relaxed">현재 앱에 저장된 모든 바코드 데이터를 JSON 파일로 안전하게 다운로드합니다.</p>
-                    <button onClick={handleBackup} className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold tracking-wide py-2 rounded-lg text-sm transition-colors shadow-sm">백업 파일 다운로드</button>
+                    <button onClick={handleBackup} className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">백업 파일 다운로드</button>
                   </div>
 
                   <div className="bg-slate-50 dark:bg-black/50 p-5 rounded-2xl border border-slate-100 dark:border-slate-700 flex flex-col gap-4 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center gap-3 text-indigo-500">
                       <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-lg">
-                        <IconCloudUpload size={24} />
+                        <IconCloudUpload size={24} aria-hidden="true" />
                       </div>
-                      <h4 className="font-bold tracking-wide text-lg text-slate-800 dark:text-slate-100">JSON 복원</h4>
+                      <h4 className="font-bold text-lg text-slate-800 dark:text-slate-100">JSON 복원</h4>
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 flex-1 leading-relaxed">이전에 백업해 둔 JSON 파일을 업로드하여 데이터를 덮어쓰기 없이 복구합니다.</p>
-                    <button onClick={() => fileInputRef.current?.click()} className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold tracking-wide py-2 rounded-lg text-sm transition-colors shadow-sm">백업 파일 업로드</button>
-                    <input type="file" ref={fileInputRef} onChange={handleRestore} accept=".json" className="hidden" />
+                    <button onClick={() => fileInputRef.current?.click()} className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2">백업 파일 업로드</button>
+                    <input type="file" ref={fileInputRef} onChange={handleRestore} accept=".json" className="hidden" aria-label="JSON 백업 파일 선택" />
                   </div>
                 </div>
               </section>
 
               {/* 엑셀 영역 */}
               <section className="space-y-4">
-                <h3 className="text-sm font-bold tracking-wide text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">엑셀 출력</h3>
+                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">엑셀 출력</h3>
                 <div className="bg-green-50 dark:bg-green-900/10 p-5 rounded-2xl border border-green-100 dark:border-green-800/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm">
                   <div className="flex items-start gap-4">
                     <div className="bg-green-100 dark:bg-green-900/30 p-2.5 rounded-lg text-sm text-green-600 dark:text-green-400 shrink-0">
-                      <IconDownload size={24}/>
+                      <IconDownload size={24} aria-hidden="true"/>
                     </div>
                     <div>
-                      <h4 className="font-bold tracking-wide text-green-700 dark:text-green-400 text-lg">Excel (.xlsx) 변환</h4>
+                      <h4 className="font-bold text-green-700 dark:text-green-400 text-lg">Excel (.xlsx) 변환</h4>
                       <p className="text-sm text-green-600/80 dark:text-green-400/80 mt-1 leading-relaxed">스캔된 모든 기록을 엑셀 형식으로 추출합니다.</p>
                     </div>
                   </div>
-                  <button onClick={exportExcel} className="w-full sm:w-auto shrink-0 bg-green-500 hover:bg-green-600 text-white font-bold tracking-wide py-3 px-6 rounded-xl transition-colors shadow-sm">
+                  <button onClick={exportExcel} className="w-full sm:w-auto shrink-0 bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-xl transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-green-500 focus-visible:ring-offset-2">
                     엑셀 파일로 추출
                   </button>
                 </div>
@@ -1350,13 +1398,13 @@ const handleEditMemo = (id, currentMemo) => {
 
               {/* 위험 구역 */}
               <section className="space-y-4 pt-4">
-                <h3 className="text-sm font-bold tracking-wide text-red-500 uppercase tracking-widest border-b border-red-100 dark:border-red-900/30 pb-2 flex items-center gap-2"><IconAlertTriangle size={16}/> 위험 구역</h3>
+                <h3 className="text-sm font-semibold text-red-500 uppercase tracking-widest border-b border-red-100 dark:border-red-900/30 pb-2 flex items-center gap-2"><IconAlertTriangle size={16} aria-hidden="true"/> 위험 구역</h3>
                 <div className="bg-red-50 dark:bg-red-900/10 p-5 sm:p-6 rounded-2xl border border-red-200 dark:border-red-800/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm">
                   <div>
-                    <h4 className="font-bold tracking-wide text-red-600 dark:text-red-400 text-lg">모든 데이터 삭제</h4>
+                    <h4 className="font-bold text-red-600 dark:text-red-400 text-lg">모든 데이터 삭제</h4>
                     <p className="text-sm text-red-500/80 dark:text-red-400/80 mt-1 leading-relaxed">이 작업은 되돌릴 수 없습니다. 서버의 모든 데이터가 영구 삭제됩니다.</p>
                   </div>
-                  <button onClick={handleDeleteAll} className="w-full sm:w-auto shrink-0 bg-white dark:bg-[#111111] border-2 border-red-500 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white font-bold tracking-wide py-3 px-6 rounded-xl transition-colors">
+                  <button onClick={handleDeleteAll} className="w-full sm:w-auto shrink-0 bg-white dark:bg-[#111111] border-2 border-red-500 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white font-semibold py-3 px-6 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2">
                     영구 삭제 진행
                   </button>
                 </div>
@@ -1369,18 +1417,18 @@ const handleEditMemo = (id, currentMemo) => {
         
       {/* 다중 선택 모드 플로팅 바 */}
       {isSelectionMode && (
-        <div className="fixed top-[calc(1rem+env(safe-area-inset-top))] left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-4 shadow-2xl z-50 flex items-center justify-between border border-slate-700 animate-in slide-in-from-top-5">
-          <span className="font-bold tracking-wide text-sm">
+        <div role="toolbar" aria-label="다중 선택 도구" className="fixed top-[calc(1rem+env(safe-area-inset-top))] left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-4 shadow-2xl z-50 flex items-center justify-between border border-slate-700 animate-in slide-in-from-top-5">
+          <span className="font-bold text-sm" aria-live="polite">
             <span className="text-primary">{selectedIds.length}개</span> 선택됨
           </span>
           <div className="flex gap-2">
-            <button onClick={() => { setIsSelectionMode(false); setSelectedIds([]); }} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-medium transition-colors">
+            <button onClick={() => { setIsSelectionMode(false); setSelectedIds([]); }} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
               취소
             </button>
-            <button onClick={() => setMoveModal({ isOpen: true, ids: selectedIds, targetFolder: currentFolder === '전체' ? '기본폴더' : currentFolder })} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-sm font-bold tracking-wide transition-colors">
+            <button onClick={() => setMoveModal({ isOpen: true, ids: selectedIds, targetFolder: currentFolder === '전체' ? '기본폴더' : currentFolder })} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
               이동
             </button>
-            <button onClick={handleMultiDelete} className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-xl text-sm font-bold tracking-wide shadow-glow-red transition-colors">
+            <button onClick={handleMultiDelete} className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-xl text-sm font-semibold shadow-glow-red transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
               선택 삭제
             </button>
           </div>
@@ -1391,9 +1439,9 @@ const handleEditMemo = (id, currentMemo) => {
 
         {/* Modals */}
         {promptModal.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setPromptModal({ ...promptModal, isOpen: false })}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setPromptModal({ ...promptModal, isOpen: false })} role="dialog" aria-modal="true" aria-label={promptModal.title}>
             <div className="bg-white dark:bg-[#111111] w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-              <h3 className="text-xl font-bold tracking-wide text-slate-800 dark:text-slate-100 mb-2">{promptModal.title}</h3>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{promptModal.title}</h3>
               {promptModal.description && <p className="text-sm text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">{promptModal.description}</p>}
               <input 
                 type={promptModal.type} 
@@ -1410,8 +1458,8 @@ const handleEditMemo = (id, currentMemo) => {
                 placeholder={promptModal.placeholder}
               />
               <div className="flex gap-3">
-                <button onClick={() => setPromptModal({ ...promptModal, isOpen: false })} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold tracking-wide rounded-xl transition-colors">취소</button>
-                <button onClick={() => { promptModal.onConfirm(promptModal.value); setPromptModal({ ...promptModal, isOpen: false }); }} className="flex-1 py-3 bg-primary hover:bg-primaryHover text-white font-bold tracking-wide rounded-xl shadow-md transition-all">{promptModal.confirmText}</button>
+                <button onClick={() => setPromptModal({ ...promptModal, isOpen: false })} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">취소</button>
+                <button onClick={() => { promptModal.onConfirm(promptModal.value); setPromptModal({ ...promptModal, isOpen: false }); }} className="flex-1 py-3 bg-primary hover:bg-primaryHover text-white font-semibold rounded-xl shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">{promptModal.confirmText}</button>
               </div>
             </div>
           </div>
@@ -1420,15 +1468,17 @@ const handleEditMemo = (id, currentMemo) => {
         
         
         {shareConfig.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareConfig({ ...shareConfig, isOpen: false })}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareConfig({ ...shareConfig, isOpen: false })} role="dialog" aria-modal="true" aria-label={shareConfig.type === 'invite' ? '협업 방 초대' : '공유 링크 생성'}>
             <div className="bg-white dark:bg-[#111111] w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-              <h3 className="text-xl font-bold tracking-wide text-slate-800 dark:text-slate-100 mb-2">
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">
                 {shareConfig.type === 'invite' ? '협업 방 초대' : '공유 링크 생성'}
               </h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">생성될 링크와 QR코드의 만료 시간을 선택하세요. 시간이 지나면 링크가 자동으로 비활성화됩니다.</p>
-              
+
               <div className="relative mb-6">
-                <select 
+                <label htmlFor="share-expire" className="sr-only">만료 시간</label>
+                <select
+                  id="share-expire"
                   value={shareConfig.expireHours}
                   onChange={(e) => setShareConfig({ ...shareConfig, expireHours: Number(e.target.value) })}
                   className="w-full appearance-none bg-slate-50 dark:bg-black border border-slate-200 dark:border-slate-700 rounded-xl p-3 pr-10 text-sm font-medium focus:ring-2 focus:ring-primary outline-none text-slate-700 dark:text-slate-200"
@@ -1441,14 +1491,14 @@ const handleEditMemo = (id, currentMemo) => {
                   <option value={48}>48시간 후 만료</option>
                 </select>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                  <IconClock size={18} />
+                  <IconClock size={18} aria-hidden="true" />
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <button onClick={() => setShareConfig({ ...shareConfig, isOpen: false })} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold tracking-wide rounded-xl transition-colors">취소</button>
-                <button onClick={processShareConfig} disabled={loadingShare} className="flex-1 py-3 bg-primary hover:bg-primaryHover text-white font-bold tracking-wide rounded-xl shadow-md transition-all flex items-center justify-center">
-                  {loadingShare ? <IconRefresh className="animate-spin" size={20}/> : '링크 만들기'}
+                <button onClick={() => setShareConfig({ ...shareConfig, isOpen: false })} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">취소</button>
+                <button onClick={processShareConfig} disabled={loadingShare} className="flex-1 py-3 bg-primary hover:bg-primaryHover text-white font-semibold rounded-xl shadow-md transition-all flex items-center justify-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
+                  {loadingShare ? <IconRefresh className="animate-spin" size={20} aria-hidden="true"/> : '링크 만들기'}
                 </button>
               </div>
             </div>
@@ -1456,9 +1506,9 @@ const handleEditMemo = (id, currentMemo) => {
         )}
 
         {shareModal.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareModal({ isOpen: false, url: '', title: '', description: '', shareText: '' })}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareModal({ isOpen: false, url: '', title: '', description: '', shareText: '' })} role="dialog" aria-modal="true" aria-label={shareModal.title}>
             <div className="bg-white dark:bg-[#111111] w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 text-center" onClick={e => e.stopPropagation()}>
-              <h3 className="text-xl font-bold tracking-wide text-slate-800 dark:text-slate-100 mb-1">{shareModal.title}</h3>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">{shareModal.title}</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">{shareModal.description}</p>
               
               <div className="bg-white p-3 rounded-2xl mx-auto w-fit mb-5 shadow-inner border border-slate-100">
@@ -1467,8 +1517,9 @@ const handleEditMemo = (id, currentMemo) => {
               <p className="text-xs text-slate-400 mb-4">위 QR코드를 WebBarcode 앱의 카메라로 스캔하거나,<br/>아래 링크를 복사하여 공유하세요.</p>
               
               <div className="flex gap-2 mb-6">
-                <input type="text" readOnly value={shareModal.url} className="w-full bg-slate-50 dark:bg-black border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-600 dark:text-slate-300 outline-none" />
-                <button onClick={() => { navigator.clipboard.writeText(shareModal.url); toast.success('링크 복사됨!'); }} className="bg-primary hover:bg-primaryHover text-white p-3 rounded-xl transition-colors shrink-0" title="링크 복사">
+                <label htmlFor="share-url" className="sr-only">공유 링크</label>
+                <input id="share-url" type="text" readOnly value={shareModal.url} className="w-full bg-slate-50 dark:bg-black border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-600 dark:text-slate-300 outline-none" />
+                <button onClick={() => { navigator.clipboard.writeText(shareModal.url); toast.success('링크 복사됨!'); }} className="bg-primary hover:bg-primaryHover text-white p-3 rounded-xl transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" aria-label="링크 복사" title="링크 복사">
                   <IconCopy size={18} />
                 </button>
                 <button onClick={async () => {
@@ -1502,24 +1553,26 @@ const handleEditMemo = (id, currentMemo) => {
                   } catch(e) {
                     toast.error('공유 처리에 실패했습니다.');
                   }
-                }} className="bg-emerald-500 hover:bg-emerald-600 text-white p-3 rounded-xl transition-colors shrink-0" title="시스템 앱으로 공유">
+                }} className="bg-emerald-500 hover:bg-emerald-600 text-white p-3 rounded-xl transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2" aria-label="시스템 앱으로 공유" title="시스템 앱으로 공유">
                   <IconShare size={18} />
                 </button>
               </div>
 
-              <button onClick={() => setShareModal({ isOpen: false, url: '', title: '', description: '', shareText: '' })} className="w-full py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold tracking-wide rounded-xl transition-colors">닫기</button>
+              <button onClick={() => setShareModal({ isOpen: false, url: '', title: '', description: '', shareText: '' })} className="w-full py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">닫기</button>
             </div>
           </div>
         )}
 
         {moveModal.isOpen && moveModal.ids.length > 0 && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setMoveModal({ ...moveModal, isOpen: false })}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setMoveModal({ ...moveModal, isOpen: false })} role="dialog" aria-modal="true" aria-label="폴더 이동">
             <div className="bg-white dark:bg-[#111111] w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-              <h3 className="text-xl font-bold tracking-wide text-slate-800 dark:text-slate-100 mb-2">폴더 이동</h3>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">폴더 이동</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">선택한 바코드 {moveModal.ids.length}개를 이동할 폴더를 선택하세요.</p>
-              
+
               <div className="relative mb-6">
-                <select 
+                <label htmlFor="move-target-folder" className="sr-only">이동할 폴더</label>
+                <select
+                  id="move-target-folder"
                   value={moveModal.targetFolder}
                   onChange={(e) => setMoveModal({ ...moveModal, targetFolder: e.target.value })}
                   className="w-full appearance-none bg-slate-50 dark:bg-black border border-slate-200 dark:border-slate-700 rounded-xl p-3 pr-10 text-sm font-medium focus:ring-2 focus:ring-primary outline-none text-slate-700 dark:text-slate-200"
@@ -1529,32 +1582,32 @@ const handleEditMemo = (id, currentMemo) => {
                   ))}
                 </select>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                  <IconFolder size={18} />
+                  <IconFolder size={18} aria-hidden="true" />
                 </div>
               </div>
 
               <div className="flex gap-3">
-                <button onClick={() => setMoveModal({ ...moveModal, isOpen: false })} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-bold tracking-wide rounded-xl transition-colors">취소</button>
-                <button onClick={handleMoveFolderSubmit} className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold tracking-wide rounded-xl shadow-md transition-all">이동하기</button>
+                <button onClick={() => setMoveModal({ ...moveModal, isOpen: false })} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">취소</button>
+                <button onClick={handleMoveFolderSubmit} className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2">이동하기</button>
               </div>
             </div>
           </div>
         )}
 
         {/* Mobile Bottom Tab Bar */}
-        <nav className="bg-white/95 dark:bg-darkCard/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shrink-0 z-50 pb-safe">
+        <nav className="bg-white/95 dark:bg-darkCard/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shrink-0 z-50 pb-safe" aria-label="주 메뉴">
           <div className="flex justify-around items-center px-1 pt-1.5 pb-1">
-            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center gap-0.5 p-1 w-14 transition-colors ${activeTab === 'home' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-              <div className={`p-1 rounded-full ${activeTab === 'home' ? 'bg-primary/10' : ''}`}><IconHome size={20} /></div>
-              <span className="text-[10px] font-medium leading-none">홈</span>
+            <button onClick={() => setActiveTab('home')} aria-current={activeTab === 'home' ? 'page' : undefined} className={`flex flex-col items-center justify-center gap-0.5 py-1.5 w-16 min-h-[48px] rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${activeTab === 'home' ? 'text-primary' : 'text-slate-500 dark:text-slate-400'}`}>
+              <div className={`p-1 rounded-full ${activeTab === 'home' ? 'bg-primary/10' : ''}`}><IconHome size={20} aria-hidden="true" /></div>
+              <span className="text-[11px] font-semibold leading-none">홈</span>
             </button>
-            <button onClick={() => setActiveTab('folders')} className={`flex flex-col items-center gap-0.5 p-1 w-14 transition-colors ${activeTab === 'folders' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-              <div className={`p-1 rounded-full ${activeTab === 'folders' ? 'bg-primary/10' : ''}`}><IconFolder size={20} /></div>
-              <span className="text-[10px] font-medium leading-none">폴더</span>
+            <button onClick={() => setActiveTab('folders')} aria-current={activeTab === 'folders' ? 'page' : undefined} className={`flex flex-col items-center justify-center gap-0.5 py-1.5 w-16 min-h-[48px] rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${activeTab === 'folders' ? 'text-primary' : 'text-slate-500 dark:text-slate-400'}`}>
+              <div className={`p-1 rounded-full ${activeTab === 'folders' ? 'bg-primary/10' : ''}`}><IconFolder size={20} aria-hidden="true" /></div>
+              <span className="text-[11px] font-semibold leading-none">폴더</span>
             </button>
-            <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-0.5 p-1 w-14 transition-colors ${activeTab === 'settings' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-              <div className={`p-1 rounded-full ${activeTab === 'settings' ? 'bg-primary/10' : ''}`}><IconDatabase size={20} /></div>
-              <span className="text-[10px] font-medium leading-none">설정</span>
+            <button onClick={() => setActiveTab('settings')} aria-current={activeTab === 'settings' ? 'page' : undefined} className={`flex flex-col items-center justify-center gap-0.5 py-1.5 w-16 min-h-[48px] rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${activeTab === 'settings' ? 'text-primary' : 'text-slate-500 dark:text-slate-400'}`}>
+              <div className={`p-1 rounded-full ${activeTab === 'settings' ? 'bg-primary/10' : ''}`}><IconDatabase size={20} aria-hidden="true" /></div>
+              <span className="text-[11px] font-semibold leading-none">설정</span>
             </button>
           </div>
         </nav>

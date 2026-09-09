@@ -22,6 +22,7 @@ export default {
         'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
         'glow': '0 0 20px rgba(99, 102, 241, 0.5)',
         'glimmer-shadow': '0 20px 40px -10px rgba(0,0,0,1)',
+        'glow-red': '0 0 20px rgba(239, 68, 68, 0.5)',
       }
     },
   },
