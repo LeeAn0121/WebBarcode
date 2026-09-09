@@ -979,7 +979,7 @@ const handleEditMemo = (id, currentMemo) => {
   }
 
   return (
-    <div className="flex h-[100dvh] bg-slate-100 dark:bg-[#050505] overflow-hidden text-slate-800 dark:text-slate-100 justify-center md:p-6 lg:p-8">
+    <div className="flex h-[100svh] bg-slate-100 dark:bg-[#050505] overflow-hidden text-slate-800 dark:text-slate-100 justify-center md:p-6 lg:p-8">
       <Toaster position="bottom-center" theme={darkMode ? 'dark' : 'light'} />
       
       {/* Update Available Modal */}
