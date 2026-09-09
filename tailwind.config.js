@@ -15,8 +15,8 @@ export default {
         primary: '#6366f1',
         primaryHover: '#4f46e5',
         secondary: '#10b981',
-        darkBg: '#000000',
-        darkCard: '#000000'
+        darkBg: '#07070b',
+        darkCard: '#0c0c12'
       },
       boxShadow: {
         'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
@@ -26,5 +26,5 @@ export default {
       }
     },
   },
-  plugins: [],
+  plugins: [require('tailwindcss-animate')],
 }

@@ -65,7 +65,7 @@ const Auth = ({ supabase }: { supabase: any }) => {
   };
 
   return (
-    <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-black px-4 animate-in fade-in zoom-in-95 duration-[2000ms] ease-out">
+    <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-black px-4 animate-in fade-in zoom-in-95 duration-500 ease-out">
       <div className="w-full max-w-sm bg-white dark:bg-[#111111] rounded-3xl shadow-xl p-8 border border-slate-100 dark:border-slate-700 text-center relative overflow-hidden">
         {/* 장식용 배경 요소 */}
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none"></div>
@@ -102,6 +102,30 @@ const Auth = ({ supabase }: { supabase: any }) => {
 };
 
 
+
+const Splash = ({ fadingOut }: { fadingOut: boolean }) => {
+  return (
+    <div
+      className={`fixed inset-0 z-[200] flex flex-col items-center justify-center gap-5 bg-[#07070b] transition-opacity duration-300 ease-out ${fadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+      aria-hidden="true"
+    >
+      {/* 바코드 스트라이프 배경 (장식용) */}
+      <div
+        className="absolute inset-0 opacity-[0.07]"
+        style={{
+          backgroundImage: 'repeating-linear-gradient(90deg, #fff 0px, #fff 2px, transparent 2px, transparent 6px, #fff 6px, #fff 7px, transparent 7px, transparent 12px)',
+        }}
+      ></div>
+
+      <div className="relative w-20 h-20 rounded-2xl overflow-hidden shadow-glow border border-slate-800">
+        <img src={`${import.meta.env.BASE_URL}icon.jpg`} alt="" className="w-full h-full object-cover" />
+        <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent shadow-glow motion-safe:animate-scan-laser motion-reduce:top-1/2"></div>
+      </div>
+
+      <h1 className="relative text-xl font-bold text-white tracking-wide">WebBarcode</h1>
+    </div>
+  );
+};
 
 const formatsToSupport = [
   Html5QrcodeSupportedFormats.QR_CODE,
@@ -143,12 +167,26 @@ function App() {
   const [loadingShare, setLoadingShare] = useState(false);
   const [promptModal, setPromptModal] = useState({ isOpen: false, title: '', placeholder: '', value: '', type: 'text', description: '', confirmText: '확인', onConfirm: (val: string) => {} });
   const [session, setSession] = useState<any>(null);
-  
+  const [authChecked, setAuthChecked] = useState(false);
+  const [splashVisible, setSplashVisible] = useState(true);
+  const [splashFadingOut, setSplashFadingOut] = useState(false);
+
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setAuthChecked(true);
+    });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
     return () => subscription.unsubscribe();
   }, []);
+
+  // 스플래시: 인증 확인 완료 시 최소 노출시간(스캔 연출) 확보 후 페이드아웃 & 언마운트
+  useEffect(() => {
+    if (!authChecked) return;
+    const fadeTimer = setTimeout(() => setSplashFadingOut(true), 400);
+    const hideTimer = setTimeout(() => setSplashVisible(false), 700);
+    return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
+  }, [authChecked]);
   const [updateInfo, setUpdateInfo] = useState(null);
   
   const [localFolders, setLocalFolders] = useState(() => {
@@ -988,6 +1026,7 @@ const handleEditMemo = (id, currentMemo) => {
     return (
       <>
         <Toaster position="top-center" richColors />
+        {splashVisible && <Splash fadingOut={splashFadingOut} />}
         <Auth supabase={supabase} />
       </>
     );
@@ -995,13 +1034,14 @@ const handleEditMemo = (id, currentMemo) => {
 
   return (
     <div className="flex h-[100svh] bg-slate-100 dark:bg-[#050505] overflow-hidden text-slate-800 dark:text-slate-100 justify-center md:p-6 lg:p-8">
+      {splashVisible && <Splash fadingOut={splashFadingOut} />}
       <Toaster position="bottom-center" theme={darkMode ? 'dark' : 'light'} />
       
       {/* Update Available Modal */}
       {updateInfo && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="업데이트 알림">
-          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-[2000ms] ease-out"></div>
-          <div className="relative bg-white dark:bg-[#111111] rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 p-6 sm:p-8 max-w-sm w-full animate-in zoom-in-95 slide-in-from-bottom-4 duration-[2000ms] ease-out overflow-hidden">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 ease-out"></div>
+          <div className="relative bg-white dark:bg-[#111111] rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 p-6 sm:p-8 max-w-sm w-full animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-purple-500 to-pink-500"></div>
             
             <div className="flex flex-col items-center text-center gap-4">
@@ -1040,14 +1080,19 @@ const handleEditMemo = (id, currentMemo) => {
       <div className="w-full md:max-w-6xl max-w-md flex flex-col h-full overflow-hidden relative bg-white dark:bg-black md:shadow-2xl md:border border-x border-slate-200 dark:border-slate-800 md:rounded-3xl transition-all">
         
         {/* Mobile Header (Top) */}
-        <header className="bg-white/90 dark:bg-darkCard/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 shrink-0 px-4 py-3 flex justify-between items-center shadow-sm">
-          <div className="flex items-center gap-2.5">
+        <header className="relative bg-white/90 dark:bg-darkCard/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 shrink-0 px-4 py-3 flex justify-between items-center shadow-sm overflow-hidden">
+          <div
+            className="absolute inset-0 opacity-[0.04] dark:opacity-[0.06] pointer-events-none"
+            style={{ backgroundImage: 'repeating-linear-gradient(90deg, currentColor 0px, currentColor 2px, transparent 2px, transparent 6px, currentColor 6px, currentColor 7px, transparent 7px, transparent 12px)' }}
+            aria-hidden="true"
+          ></div>
+          <div className="relative flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg shadow-glow overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
               <img src={`${import.meta.env.BASE_URL}icon.jpg`} alt="Logo" className="w-full h-full object-cover" />
             </div>
-            <h1 className="font-bold tracking-wide text-lg tracking-tight">WebBarcode</h1>
+            <h1 className="font-bold text-lg tracking-tight">WebBarcode</h1>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="relative flex items-center gap-4">
             <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${packageJson.version}`} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-primary transition-colors shrink-0 flex items-center gap-1.5 font-mono text-xs bg-slate-100 dark:bg-[#111111] px-2 py-1 rounded-md">
               <svg className="shrink-0" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.03c3.18-.3 6.5-1.5 6.5-7.1 0-1.5-.5-2.8-1.4-3.8.1-.3.6-1.8-.1-3.8 0 0-1.2-.4-3.9 1.4a13 13 0 0 0-7 0C6 2.3 4.8 2.7 4.8 2.7.1 4.7.6 6.2.7 6.5.1 7.5-.4 8.8-.4 10.3c0 5.6 3.3 6.8 6.5 7.1-.8.8-1 2-1 3.2V22" /><path d="M9 22v-4a4.8 4.8 0 0 1 1-3.03" /></svg>
               v{packageJson.version}
@@ -1081,7 +1126,7 @@ const handleEditMemo = (id, currentMemo) => {
           <div className="w-full min-h-full flex flex-col relative">
             {/* Tab: Home (List) */}
         {activeTab === 'home' && (
-          <div className="flex flex-col md:flex-row w-full flex-1 h-full animate-in fade-in slide-in-from-bottom-4 duration-[2000ms] ease-out">
+          <div className="flex flex-col md:flex-row w-full flex-1 h-full animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
             
       {/* Inline Scanner Area */}
       {isScannerModalOpen && (
@@ -1098,7 +1143,9 @@ const handleEditMemo = (id, currentMemo) => {
            <div className="flex-1 relative overflow-hidden">
               <div id="reader" className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"></div>
               {isScanning && (
-                <div id="reader-overlay" className="absolute inset-x-8 inset-y-12 rounded-3xl border-2 ring-[1000px] ring-black/50 border-white/80 pointer-events-none transition-all duration-[2000ms] ease-out"></div>
+                <div id="reader-overlay" className="absolute inset-x-8 inset-y-12 rounded-3xl border-2 ring-[1000px] ring-black/50 border-white/80 pointer-events-none transition-all duration-300 ease-out overflow-hidden">
+                  <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent shadow-glow motion-safe:animate-scan-laser motion-reduce:hidden" aria-hidden="true"></div>
+                </div>
               )}
            </div>
            
@@ -1174,9 +1221,9 @@ const handleEditMemo = (id, currentMemo) => {
                 
                 <div className="flex-1 p-4 bg-slate-50/50 dark:bg-black/30 overflow-y-auto custom-scrollbar max-h-[55vh] lg:max-h-none lg:h-full">
                   <div className="space-y-3">
-                    {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).map(item => (
-                      <div 
-                      key={item.id} 
+                    {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).map((item, idx) => (
+                      <div
+                      key={item.id}
                       onPointerDown={(e) => {
                          // Only trigger long press if left click or touch
                          if (e.pointerType === 'mouse' && e.button !== 0) return;
@@ -1185,9 +1232,10 @@ const handleEditMemo = (id, currentMemo) => {
                       onPointerUp={handlePointerUp}
                       onPointerLeave={handlePointerUp}
                       onClick={(e) => handleItemClick(item.id, '', e)}
-                      className={`relative p-3 sm:p-4 rounded-xl shadow-sm border transition-all flex items-center justify-between gap-3 group cursor-pointer ${
-                        selectedIds.includes(item.id) 
-                          ? 'bg-primary/10 border-primary ring-2 ring-primary/20 dark:bg-primary/20' 
+                      style={idx < 8 ? { animationDelay: `${idx * 30}ms`, animationFillMode: 'backwards' } : undefined}
+                      className={`relative p-3 sm:p-4 rounded-xl shadow-sm border transition-all flex items-center justify-between gap-3 group cursor-pointer ${idx < 8 ? 'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 duration-300 ease-out' : ''} ${
+                        selectedIds.includes(item.id)
+                          ? 'bg-primary/10 border-primary ring-2 ring-primary/20 dark:bg-primary/20'
                           : 'bg-white dark:bg-darkCard border-slate-100 dark:border-slate-700/50 hover:shadow-md'
                       }`}
                     >
@@ -1281,20 +1329,25 @@ const handleEditMemo = (id, currentMemo) => {
             
             {/* Floating Action Button for Scanner */}
             {!isScannerModalOpen && (
-              <button
-                onClick={() => { setIsScannerModalOpen(true); startScanner(); }}
-                aria-label="바코드 스캐너 열기"
-                className="absolute bottom-20 right-6 md:right-10 w-16 h-16 bg-gradient-to-tr from-primary to-purple-600 rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center text-white hover:scale-105 transition-transform z-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
-              >
-                <IconCamera size={28} />
-              </button>
+              <div className="absolute bottom-20 right-6 md:right-10 z-40">
+                {barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length === 0 && (
+                  <span className="absolute inset-0 rounded-full bg-primary/50 motion-safe:animate-ping motion-reduce:hidden" aria-hidden="true"></span>
+                )}
+                <button
+                  onClick={() => { setIsScannerModalOpen(true); startScanner(); }}
+                  aria-label="바코드 스캐너 열기"
+                  className="relative w-16 h-16 bg-gradient-to-tr from-primary to-purple-600 rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center text-white hover:scale-105 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
+                >
+                  <IconCamera size={28} />
+                </button>
+              </div>
             )}
           </div>
         )}
         
         {/* Tab: Folders */}
         {activeTab === 'folders' && (
-          <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-[2000ms] ease-out">
+          <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden flex flex-col min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
             <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-slate-50/50 dark:bg-black/30">
               <h2 className="font-bold flex items-center gap-2 text-xl"><IconFolder className="text-primary" size={24} aria-hidden="true" /> 폴더 트리 관리</h2>
               <button onClick={handleAddFolder} className="w-full sm:w-auto bg-primary hover:bg-primaryHover text-white px-4 py-2.5 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 shadow-sm shadow-primary/20 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
@@ -1341,7 +1394,7 @@ const handleEditMemo = (id, currentMemo) => {
             
             {/* Tab: Settings */}
         {activeTab === 'settings' && (
-          <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-[2000ms] ease-out">
+          <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
             <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-black/30">
               <h2 className="font-bold flex items-center gap-2 text-xl"><IconDatabase className="text-primary" size={24} aria-hidden="true" /> 데이터 및 시스템 설정</h2>
             </div>
@@ -1598,15 +1651,15 @@ const handleEditMemo = (id, currentMemo) => {
         <nav className="bg-white/95 dark:bg-darkCard/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shrink-0 z-50 pb-safe" aria-label="주 메뉴">
           <div className="flex justify-around items-center px-1 pt-1.5 pb-1">
             <button onClick={() => setActiveTab('home')} aria-current={activeTab === 'home' ? 'page' : undefined} className={`flex flex-col items-center justify-center gap-0.5 py-1.5 w-16 min-h-[48px] rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${activeTab === 'home' ? 'text-primary' : 'text-slate-500 dark:text-slate-400'}`}>
-              <div className={`p-1 rounded-full ${activeTab === 'home' ? 'bg-primary/10' : ''}`}><IconHome size={20} aria-hidden="true" /></div>
+              <div className={`p-1 rounded-full transition-colors duration-200 ${activeTab === 'home' ? 'bg-primary/10' : ''}`}><IconHome size={20} aria-hidden="true" /></div>
               <span className="text-[11px] font-semibold leading-none">홈</span>
             </button>
             <button onClick={() => setActiveTab('folders')} aria-current={activeTab === 'folders' ? 'page' : undefined} className={`flex flex-col items-center justify-center gap-0.5 py-1.5 w-16 min-h-[48px] rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${activeTab === 'folders' ? 'text-primary' : 'text-slate-500 dark:text-slate-400'}`}>
-              <div className={`p-1 rounded-full ${activeTab === 'folders' ? 'bg-primary/10' : ''}`}><IconFolder size={20} aria-hidden="true" /></div>
+              <div className={`p-1 rounded-full transition-colors duration-200 ${activeTab === 'folders' ? 'bg-primary/10' : ''}`}><IconFolder size={20} aria-hidden="true" /></div>
               <span className="text-[11px] font-semibold leading-none">폴더</span>
             </button>
             <button onClick={() => setActiveTab('settings')} aria-current={activeTab === 'settings' ? 'page' : undefined} className={`flex flex-col items-center justify-center gap-0.5 py-1.5 w-16 min-h-[48px] rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${activeTab === 'settings' ? 'text-primary' : 'text-slate-500 dark:text-slate-400'}`}>
-              <div className={`p-1 rounded-full ${activeTab === 'settings' ? 'bg-primary/10' : ''}`}><IconDatabase size={20} aria-hidden="true" /></div>
+              <div className={`p-1 rounded-full transition-colors duration-200 ${activeTab === 'settings' ? 'bg-primary/10' : ''}`}><IconDatabase size={20} aria-hidden="true" /></div>
               <span className="text-[11px] font-semibold leading-none">설정</span>
             </button>
           </div>
