@@ -136,7 +136,7 @@ function App() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const pressTimerRef = useRef<any>(null);
-  const [moveModal, setMoveModal] = useState({ isOpen: false, item: null as any, targetFolder: '기본폴더' });
+  const [moveModal, setMoveModal] = useState({ isOpen: false, ids: [] as string[], targetFolder: '기본폴더' });
   const [shareModal, setShareModal] = useState({ isOpen: false, url: '', title: '', description: '', shareText: '' });
   const [shareConfig, setShareConfig] = useState({ isOpen: false, type: '', folderName: '', item: null as any, expireHours: 1 });
   const [collabFolders, setCollabFolders] = useState<{owner_id: string, folder_name: string}[]>([]);
@@ -798,14 +798,16 @@ function App() {
   };
 
   const handleMoveFolderSubmit = async () => {
-    if (!moveModal.item) return;
+    if (moveModal.ids.length === 0) return;
     try {
-      const { error } = await supabase.from('barcodes').update({ folder: moveModal.targetFolder }).eq('id', moveModal.item.id);
+      const { error } = await supabase.from('barcodes').update({ folder: moveModal.targetFolder }).in('id', moveModal.ids);
       if (error) throw error;
-      setBarcodes(prev => prev.map(b => b.id === moveModal.item.id ? { ...b, folder: moveModal.targetFolder } : b));
-      toast.success('폴더 이동 완료!');
-      setMoveModal({ isOpen: false, item: null, targetFolder: '기본폴더' });
+      setBarcodes(prev => prev.map(b => moveModal.ids.includes(b.id) ? { ...b, folder: moveModal.targetFolder } : b));
+      toast.success(`${moveModal.ids.length}개 폴더 이동 완료!`);
+      setMoveModal({ isOpen: false, ids: [], targetFolder: '기본폴더' });
       setActiveActionMenu(null);
+      setIsSelectionMode(false);
+      setSelectedIds([]);
     } catch(e) {
       console.error(e);
       toast.error('폴더 이동에 실패했습니다.');
@@ -977,7 +979,7 @@ const handleEditMemo = (id, currentMemo) => {
   }
 
   return (
-    <div className="flex h-screen bg-slate-100 dark:bg-[#050505] overflow-hidden text-slate-800 dark:text-slate-100 justify-center md:p-6 lg:p-8">
+    <div className="flex h-[100dvh] bg-slate-100 dark:bg-[#050505] overflow-hidden text-slate-800 dark:text-slate-100 justify-center md:p-6 lg:p-8">
       <Toaster position="bottom-center" theme={darkMode ? 'dark' : 'light'} />
       
       {/* Update Available Modal */}
@@ -1206,7 +1208,7 @@ const handleEditMemo = (id, currentMemo) => {
                                     <button onClick={() => handleShare(item)} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconShare size={20} className="text-primary"/> 외부로 공유</button>
                                     <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2"></div>
                                     <button onClick={() => { handleEditMemo(item.id, item.memo); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconMessagePlus size={20} className="text-blue-500"/> 메모 추가/수정</button>
-                                    <button onClick={() => { setMoveModal({ isOpen: true, item, targetFolder: item.folder || '기본폴더' }); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconFolder size={20} className="text-emerald-500"/> 다른 폴더로 이동</button>
+                                    <button onClick={() => { setMoveModal({ isOpen: true, ids: [item.id], targetFolder: item.folder || '기본폴더' }); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconFolder size={20} className="text-emerald-500"/> 다른 폴더로 이동</button>
                                     <button onClick={() => handleClone(item)} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconCopy size={20} className="text-amber-500"/> 이 바코드 복제하기</button>
                                     <button onClick={() => { handleEditCode(item.id, item.code); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors"><IconEdit size={20} className="text-slate-500"/> 바코드 번호 수정</button>
                                     <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2"></div>
@@ -1375,6 +1377,9 @@ const handleEditMemo = (id, currentMemo) => {
             <button onClick={() => { setIsSelectionMode(false); setSelectedIds([]); }} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-medium transition-colors">
               취소
             </button>
+            <button onClick={() => setMoveModal({ isOpen: true, ids: selectedIds, targetFolder: currentFolder === '전체' ? '기본폴더' : currentFolder })} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-sm font-bold tracking-wide transition-colors">
+              이동
+            </button>
             <button onClick={handleMultiDelete} className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-xl text-sm font-bold tracking-wide shadow-glow-red transition-colors">
               선택 삭제
             </button>
@@ -1507,11 +1512,11 @@ const handleEditMemo = (id, currentMemo) => {
           </div>
         )}
 
-        {moveModal.isOpen && moveModal.item && (
+        {moveModal.isOpen && moveModal.ids.length > 0 && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setMoveModal({ ...moveModal, isOpen: false })}>
             <div className="bg-white dark:bg-[#111111] w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
               <h3 className="text-xl font-bold tracking-wide text-slate-800 dark:text-slate-100 mb-2">폴더 이동</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">선택한 바코드를 이동할 폴더를 선택하세요.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">선택한 바코드 {moveModal.ids.length}개를 이동할 폴더를 선택하세요.</p>
               
               <div className="relative mb-6">
                 <select 
