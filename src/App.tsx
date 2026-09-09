@@ -232,42 +232,8 @@ function App() {
     const intervalId = setInterval(checkUpdate, 300000); // Check every 5 minutes
     return () => clearInterval(intervalId);
   }, []);
-  // 네이티브 스캐닝 엔진 보조 (초고속 하드웨어 가속)
-  useEffect(() => {
-    let nativeInterval: any;
-    if (isScanning && 'BarcodeDetector' in window) {
-      try {
-        const detector = new (window as any).BarcodeDetector({
-          formats: ['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e', 'itf'],
-        });
-        let lastScannedTime = 0;
-        logDebug('info', 'Native BarcodeDetector 초기화 성공');
-        nativeInterval = setInterval(async () => {
-          // Prevent scanning if html5-qrcode is paused
-          if (scannerRef.current && scannerRef.current.getState() !== 2) return;
-
-          const now = Date.now();
-          if (now - lastScannedTime < 1000) return; // 1 second throttle
-
-          const video = document.querySelector('video');
-          if (video && video.readyState >= 2) {
-            try {
-              const barcodes = await detector.detect(video);
-              if (barcodes && barcodes.length > 0) {
-                lastScannedTime = now;
-                await handleScan(barcodes[0].rawValue);
-              }
-            } catch(e: any) {
-              logDebug('warn', 'Native BarcodeDetector detect 실패', { error: e?.message });
-            }
-          }
-        }, 150); // 150ms 마다 스캔 (매우 빠름)
-      } catch(e: any) {
-        logDebug('warn', 'Native BarcodeDetector 초기화 실패', { error: e?.message });
-      }
-    }
-    return () => clearInterval(nativeInterval);
-  }, [isScanning, barcodes]); // barcodes dependency needed so handleScan has latest state
+  // html5-qrcode가 이미 안정적으로 디코딩하므로 중복 디코딩을 유발하던
+  // native BarcodeDetector 병행 실행은 제거함 (에러 노이즈 + 중복 handleScan 원인)
 
 
   useEffect(() => {

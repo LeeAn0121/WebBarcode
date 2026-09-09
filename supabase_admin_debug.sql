@@ -28,5 +28,12 @@ create policy "debug_logs_select_authenticated"
   to authenticated
   using (true);
 
+-- 로그인한 사용자는 로그 삭제 가능 (관리자 페이지 '전체삭제' 버튼용)
+drop policy if exists "debug_logs_delete_authenticated" on public.debug_logs;
+create policy "debug_logs_delete_authenticated"
+  on public.debug_logs for delete
+  to authenticated
+  using (true);
+
 -- 오래된 로그 자동 정리를 원하면 아래처럼 주기적으로 실행 (선택)
 -- delete from public.debug_logs where created_at < now() - interval '14 days';
