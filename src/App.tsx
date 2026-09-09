@@ -386,10 +386,11 @@ function App() {
       }, 300);
     }
 
-    const { error } = await supabase.from('barcodes').insert([{ code: cleanText, folder: targetFolder }]);
-    
+    const { error } = await supabase.from('barcodes').insert([{ code: cleanText, folder: targetFolder, user_id: session?.user?.id }]);
+
     if (error) {
       console.error(error);
+      logDebug('error', '바코드 저장 실패', { code: cleanText, errorCode: error.code, errorMsg: error.message });
       if (error.code === '42703' || (error.message && error.message.includes('folder'))) {
         toast.error("데이터베이스에 'folder' 컬럼이 없습니다. Supabase 설정을 확인해주세요!");
       } else {
@@ -397,6 +398,7 @@ function App() {
       }
       pendingInsertsRef.current.delete(cleanText);
     } else {
+      logDebug('info', '바코드 저장 성공', { code: cleanText });
       setTimeout(() => pendingInsertsRef.current.delete(cleanText), 3000);
     }
 
