@@ -7,7 +7,7 @@ import {
   IconBarcode, IconMoon, IconSun, IconDownload, IconCamera, IconVolume, IconVolume3,
   IconSearch, IconCopy, IconShare, IconMessagePlus, IconEdit, IconTrash, IconClock,
   IconFolder, IconFolderPlus, IconCloudUpload, IconFileExport, IconFileImport, IconUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink, IconLink
-} from '@tabler/icons-react';
+, IconArrowUp, IconFolderOpen } from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { supabase, logDebug, getDebugSessionId } from './supabaseClient';
 
@@ -223,6 +223,7 @@ function App() {
   const [collabFolders, setCollabFolders] = useState<{owner_id: string, folder_name: string}[]>([]);
   const [loadingShare, setLoadingShare] = useState(false);
   const [folderActionModal, setFolderActionModal] = useState<string | null>(null);
+  const [explorerPath, setExplorerPath] = useState<string>('');
   const [promptModal, setPromptModal] = useState({ isOpen: false, title: '', placeholder: '', value: '', type: 'text', description: '', confirmText: '확인', onConfirm: (val: string) => {} });
   const [session, setSession] = useState<any>(null);
   const [authChecked, setAuthChecked] = useState(false);
