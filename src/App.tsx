@@ -1642,7 +1642,7 @@ const handleEditMemo = (id, currentMemo) => {
             </div>
           );
         })()}
-\n        {moveModal.isOpen && moveModal.ids.length > 0 && (
+{moveModal.isOpen && moveModal.ids.length > 0 && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setMoveModal({ ...moveModal, isOpen: false })} role="dialog" aria-modal="true" aria-label="폴더 이동">
             <div className="bg-white dark:bg-[#111111] w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
               <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">폴더 이동</h3>
