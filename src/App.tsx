@@ -226,6 +226,7 @@ function App() {
   const [shareConfig, setShareConfig] = useState({ isOpen: false, type: '', folderName: '', item: null as any, expireHours: 1 });
   const [collabFolders, setCollabFolders] = useState<{owner_id: string, folder_name: string}[]>([]);
   const [loadingShare, setLoadingShare] = useState(false);
+  const [folderActionModal, setFolderActionModal] = useState<string | null>(null);
   const [promptModal, setPromptModal] = useState({ isOpen: false, title: '', placeholder: '', value: '', type: 'text', description: '', confirmText: '확인', onConfirm: (val: string) => {} });
   const [session, setSession] = useState<any>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -1623,6 +1624,55 @@ const handleEditMemo = (id, currentMemo) => {
       </main>
 
         {/* Modals */}
+        {/* Folder Action Modal */}
+        {folderActionModal && (
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setFolderActionModal(null)}>
+            <div className="bg-white/80 dark:bg-[#111111]/80 backdrop-blur-2xl border border-white/50 dark:border-white/10 w-full max-w-sm rounded-[2.5rem] shadow-2xl p-6 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+              <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
+              <h3 className="text-xl font-bold text-center text-black dark:text-white mb-6">'{folderActionModal.split('/').pop()}' 관리</h3>
+              
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <button onClick={() => {
+                  const listToExport = barcodes.filter(b => (b.folder || '기본폴더') === folderActionModal);
+                  if (listToExport.length === 0) return toast.warning('데이터가 없습니다.');
+                  const data = listToExport.map(item => ({ '바코드': item.code, '메모': item.memo || '', '스캔시간': item.created_at, '폴더': item.folder || '기본폴더' }));
+                  const ws = XLSX.utils.json_to_sheet(data);
+                  const wb = XLSX.utils.book_new();
+                  XLSX.utils.book_append_sheet(wb, ws, 'Scans');
+                  XLSX.writeFile(wb, `${folderActionModal.replace(/\//g, '_')}_barcodes.xlsx`);
+                  toast.success(`'${folderActionModal}' 엑셀 추출 완료!`);
+                  setFolderActionModal(null);
+                }} className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-green-50 dark:hover:bg-green-900/30 text-slate-600 hover:text-green-600 dark:text-slate-400 fluid-spring">
+                  <IconFileExport size={28} />
+                  <span className="font-bold text-sm">엑셀 추출</span>
+                </button>
+
+                <button onClick={() => { handleShareFolder(folderActionModal); setFolderActionModal(null); }} className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-600 hover:text-blue-600 dark:text-slate-400 fluid-spring">
+                  <IconCopy size={28} />
+                  <span className="font-bold text-sm">공유 링크</span>
+                </button>
+
+                <button onClick={() => { handleCreateInvite(folderActionModal); setFolderActionModal(null); }} className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-slate-600 hover:text-emerald-600 dark:text-slate-400 fluid-spring">
+                  <IconShare size={28} />
+                  <span className="font-bold text-sm">팀 협업</span>
+                </button>
+
+                {folderActionModal !== '기본폴더' && (
+                  <button onClick={() => { handleRenameFolder(folderActionModal); setFolderActionModal(null); }} className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 fluid-spring">
+                    <IconEdit size={28} />
+                    <span className="font-bold text-sm">이름 변경</span>
+                  </button>
+                )}
+              </div>
+              
+              {folderActionModal !== '기본폴더' && (
+                <button onClick={() => { handleDeleteFolder(folderActionModal); setFolderActionModal(null); }} className="w-full bg-red-50 dark:bg-red-900/20 text-red-500 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-100 transition-colors">
+                  <IconTrash size={20} /> 폴더 삭제
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         {promptModal.isOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setPromptModal({ ...promptModal, isOpen: false })} role="dialog" aria-modal="true" aria-label={promptModal.title}>
             <div className="bg-white dark:bg-[#111111] w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
