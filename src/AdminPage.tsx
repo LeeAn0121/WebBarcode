@@ -19,16 +19,55 @@ export default function AdminPage() {
   const [notices, setNotices] = useState<{id: string, message: string, created_at: string}[]>([]);
   const [editingNotice, setEditingNotice] = useState<{id: string, message: string} | null>(null);
   
+  
+  const fetchNotices = async () => {
+    const { data, error } = await supabase.from('notices').select('*').order('created_at', { ascending: false });
+    if (error) {
+      if (error.code === '42P01') toast.error("'notices' 테이블이 없습니다. Supabase에서 테이블을 생성해주세요.");
+    } else if (data) {
+      setNotices(data);
+    }
+  };
+
   const sendNotice = async () => {
     if (!noticeText.trim()) return;
-    if (!adminChannelRef.current) return toast.error('서버와 연결 중입니다. 잠시 후 다시 시도해주세요.');
-    adminChannelRef.current.send({
-      type: 'broadcast',
-      event: 'admin_command',
-      payload: { type: 'system_notice', message: noticeText }
-    });
-    toast.success('공지사항 전송됨');
+    
+    // 1. DB에 저장
+    const { data, error } = await supabase.from('notices').insert([{ message: noticeText.trim() }]).select();
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    
+    // 2. 현재 접속자에게 실시간 전송 (선택)
+    if (adminChannelRef.current && data && data.length > 0) {
+      adminChannelRef.current.send({
+        type: 'broadcast',
+        event: 'admin_command',
+        payload: { type: 'system_notice', message: noticeText.trim(), id: data[0].id, date: data[0].created_at }
+      });
+    }
+    
+    toast.success('공지사항이 등록 및 전송되었습니다.');
     setNoticeText('');
+    fetchNotices();
+  };
+
+  const updateNotice = async () => {
+    if (!editingNotice || !editingNotice.message.trim()) return;
+    const { error } = await supabase.from('notices').update({ message: editingNotice.message.trim() }).eq('id', editingNotice.id);
+    if (error) return toast.error(error.message);
+    toast.success('공지사항이 수정되었습니다.');
+    setEditingNotice(null);
+    fetchNotices();
+  };
+
+  const deleteNotice = async (id: string) => {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    const { error } = await supabase.from('notices').delete().eq('id', id);
+    if (error) return toast.error(error.message);
+    toast.success('공지사항이 삭제되었습니다.');
+    fetchNotices();
   };
   
   const forceKick = (email: string) => {
@@ -75,6 +114,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (!isAdmin) return;
     let mounted = true;
+    fetchNotices();
     supabase.from('debug_logs').select('*').order('created_at', { ascending: false }).limit(200)
       .then(({ data, error }) => {
         if (!mounted) return;
