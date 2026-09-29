@@ -7,7 +7,7 @@ import {
   IconBarcode, IconMoon, IconSun, IconDownload, IconCamera, IconVolume, IconVolume3,
   IconSearch, IconCopy, IconShare, IconMessagePlus, IconEdit, IconTrash, IconClock,
   IconFolder, IconFolderPlus, IconCloudUpload, IconFileExport, IconFileImport, IconUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink, IconLink
-, IconArrowUp, IconFolderOpen } from '@tabler/icons-react';
+, IconArrowUp, IconBell, IconBellX, IconFolderOpen } from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { supabase, logDebug, getDebugSessionId } from './supabaseClient';
 
