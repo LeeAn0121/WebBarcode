@@ -1251,31 +1251,7 @@ const handleEditMemo = (id, currentMemo) => {
                           )}
 
                           
-                          {activeActionMenu === item.id && (
-                            <>
-                              {/* Mobile-friendly Bottom Sheet / Desktop Modal */}
-                              <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 transition-all" onClick={() => setActiveActionMenu(null)} role="dialog" aria-modal="true" aria-label={`${item.code} 작업 메뉴`}>
-                                <div className="bg-white dark:bg-[#111111] w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-                                  <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto my-3 sm:hidden"></div>
-                                  <div className="px-6 pb-2 pt-2 border-b border-slate-100 dark:border-slate-700 flex flex-col">
-                                    <span className="font-mono font-bold text-lg text-slate-800 dark:text-slate-100 truncate">{item.code}</span>
-                                    <span className="text-xs text-slate-500 mb-2">{item.folder || '기본폴더'}</span>
-                                  </div>
-                                  <div className="flex flex-col p-2 max-h-[70vh] overflow-y-auto" role="menu">
-                                    <button role="menuitem" onClick={() => { navigator.clipboard.writeText(item.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><IconCopy size={20} className="text-primary" aria-hidden="true"/> 복사하기</button>
-                                    <button role="menuitem" onClick={() => handleShare(item)} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><IconShare size={20} className="text-primary" aria-hidden="true"/> 외부로 공유</button>
-                                    <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2"></div>
-                                    <button role="menuitem" onClick={() => { handleEditMemo(item.id, item.memo); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><IconMessagePlus size={20} className="text-blue-500" aria-hidden="true"/> 메모 추가/수정</button>
-                                    <button role="menuitem" onClick={() => { setMoveModal({ isOpen: true, ids: [item.id], targetFolder: item.folder || '기본폴더' }); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><IconFolder size={20} className="text-emerald-500" aria-hidden="true"/> 다른 폴더로 이동</button>
-                                    <button role="menuitem" onClick={() => handleClone(item)} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><IconCopy size={20} className="text-amber-500" aria-hidden="true"/> 이 바코드 복제하기</button>
-                                    <button role="menuitem" onClick={() => { handleEditCode(item.id, item.code); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"><IconEdit size={20} className="text-slate-500" aria-hidden="true"/> 바코드 번호 수정</button>
-                                    <div className="h-px bg-slate-100 dark:bg-slate-700 my-1 mx-2"></div>
-                                    <button role="menuitem" onClick={() => { handleDelete(item.id); setActiveActionMenu(null); }} className="flex items-center gap-3 w-full p-3.5 text-base sm:text-sm font-semibold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"><IconTrash size={20} aria-hidden="true"/> 삭제하기</button>
-                                  </div>
-                                </div>
-                              </div>
-                            </>
-                          )}
+                          
                         </div>
                       </div>
                     ))}
@@ -1585,7 +1561,32 @@ const handleEditMemo = (id, currentMemo) => {
           </div>
         )}
 
-        {moveModal.isOpen && moveModal.ids.length > 0 && (
+        
+        {/* Global Action Menu Popup */}
+        {activeActionMenu && barcodes.find(b => b.id === activeActionMenu) && (() => {
+          const item = barcodes.find(b => b.id === activeActionMenu)!;
+          return (
+            <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 transition-all" onClick={() => setActiveActionMenu(null)} role="dialog" aria-modal="true" aria-label={`${item.code} 작업 메뉴`}>
+              <div className="bg-white dark:bg-[#1c1c1e] w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+                <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto my-3 sm:hidden"></div>
+                <div className="px-6 pb-4 pt-2 flex flex-col">
+                  <span className="font-mono font-bold text-xl text-black dark:text-white truncate">{item.code}</span>
+                  <span className="text-sm font-bold text-slate-500 mt-1">{item.folder || '기본폴더'}</span>
+                </div>
+                <div className="flex flex-col p-3 pb-8 sm:pb-3" role="menu">
+                  <button role="menuitem" onClick={() => { navigator.clipboard.writeText(item.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-black dark:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-colors"><IconCopy size={24} className="text-black dark:text-white" /> 복사하기</button>
+                  <button role="menuitem" onClick={() => { handleShare(item); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-black dark:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-colors"><IconShare size={24} className="text-black dark:text-white" /> 외부로 공유</button>
+                  <button role="menuitem" onClick={() => { handleEditMemo(item.id, item.memo); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-2xl transition-colors"><IconMessagePlus size={24} /> 메모 추가/수정</button>
+                  <button role="menuitem" onClick={() => { setMoveModal({ isOpen: true, ids: [item.id], targetFolder: item.folder || '기본폴더' }); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-2xl transition-colors"><IconFolder size={24} /> 다른 폴더로 이동</button>
+                  <button role="menuitem" onClick={() => { handleClone(item); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-2xl transition-colors"><IconCopy size={24} /> 이 바코드 복제하기</button>
+                  <button role="menuitem" onClick={() => { handleEditCode(item.id, item.code); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10 rounded-2xl transition-colors"><IconEdit size={24} /> 바코드 번호 수정</button>
+                  <button role="menuitem" onClick={() => { handleDelete(item.id); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition-colors"><IconTrash size={24} /> 삭제하기</button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+\n        {moveModal.isOpen && moveModal.ids.length > 0 && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setMoveModal({ ...moveModal, isOpen: false })} role="dialog" aria-modal="true" aria-label="폴더 이동">
             <div className="bg-white dark:bg-[#111111] w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
               <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">폴더 이동</h3>
