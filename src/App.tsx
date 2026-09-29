@@ -138,6 +138,31 @@ const formatsToSupport = [
   Html5QrcodeSupportedFormats.ITF,
 ];
 function App() {
+  const [enableSound, setEnableSound] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('enableSound') || 'true'); } catch { return true; }
+  });
+  useEffect(() => { localStorage.setItem('enableSound', JSON.stringify(enableSound)); }, [enableSound]);
+  
+  const [genModal, setGenModal] = useState({ isOpen: false, text: '' });
+  
+  const playBeep = () => {
+    if (!enableSound) return;
+    try {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      const ctx = new AudioContext();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800, ctx.currentTime);
+      gain.gain.setValueAtTime(0.1, ctx.currentTime);
+      osc.start();
+      gain.gain.exponentialRampToValueAtTime(0.00001, ctx.currentTime + 0.1);
+      osc.stop(ctx.currentTime + 0.1);
+    } catch(e) {}
+  };
+  
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
   const [barcodes, setBarcodes] = useState([]);
   const barcodesRef = useRef([]);
@@ -1177,7 +1202,22 @@ const handleEditMemo = (id, currentMemo) => {
                       <span className="bg-primary/10 text-primary text-xs font-bold px-2 py-0.5 rounded-full">{barcodes.length}</span>
                     </div>
                     {isSelectionMode ? (
-                       <button onClick={() => { setIsSelectionMode(false); setSelectedIds([]); }} className="text-sm font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-full transition-colors">취소</button>
+                       <div className="flex gap-2">
+      {selectedIds.length > 0 && (
+        <button onClick={async () => {
+          if (!window.confirm(`선택한 ${selectedIds.length}개의 바코드를 삭제하시겠습니까?`)) return;
+          try {
+            const { error } = await supabase.from('scans').delete().in('id', selectedIds);
+            if (error) throw error;
+            setBarcodes(prev => prev.filter(b => !selectedIds.includes(b.id)));
+            setSelectedIds([]);
+            setIsSelectionMode(false);
+            toast.success('삭제 완료');
+          } catch(e) { toast.error('삭제 실패'); }
+        }} className="text-sm font-bold text-white bg-red-500 px-3 py-1.5 rounded-full transition-colors">삭제 ({selectedIds.length})</button>
+      )}
+      <button onClick={() => { setIsSelectionMode(false); setSelectedIds([]); }} className="text-sm font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-full transition-colors">취소</button>
+   </div>
                     ) : (
                        <button onClick={() => setIsSelectionMode(true)} className="text-sm font-bold text-slate-500 bg-slate-100 dark:bg-white/10 px-3 py-1.5 rounded-full transition-colors">다중 선택</button>
                     )}
@@ -1503,6 +1543,22 @@ const handleEditMemo = (id, currentMemo) => {
           </div>
         )}
 
+        {genModal.isOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setGenModal({ ...genModal, isOpen: false })}>
+            <div className="bg-[#f2f2f7] dark:bg-black w-full max-w-sm rounded-[2rem] shadow-2xl p-6 animate-in zoom-in-95 duration-200 text-center" onClick={e => e.stopPropagation()}>
+              <h3 className="text-xl font-bold text-black dark:text-white mb-4">QR/바코드 생성</h3>
+              <input type="text" value={genModal.text} onChange={e => setGenModal({...genModal, text: e.target.value})} placeholder="텍스트나 URL을 입력하세요" className="w-full bg-white dark:bg-[#1c1c1e] border-none rounded-2xl p-4 text-base font-medium focus:ring-2 focus:ring-primary outline-none mb-6 shadow-sm" />
+              
+              {genModal.text && (
+                <div className="bg-white p-4 rounded-3xl mx-auto w-fit mb-6 shadow-sm">
+                  <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(genModal.text)}`} alt="Generated QR" className="w-48 h-48 mx-auto rounded-xl" />
+                </div>
+              )}
+              
+              <button onClick={() => setGenModal({ ...genModal, isOpen: false })} className="w-full py-4 bg-slate-200 dark:bg-[#1c1c1e] hover:bg-slate-300 text-black dark:text-white font-bold rounded-2xl transition-colors">닫기</button>
+            </div>
+          </div>
+        )}
         {shareModal.isOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareModal({ isOpen: false, url: '', title: '', description: '', shareText: '' })} role="dialog" aria-modal="true" aria-label={shareModal.title}>
             <div className="bg-white dark:bg-[#111111] w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 text-center" onClick={e => e.stopPropagation()}>
