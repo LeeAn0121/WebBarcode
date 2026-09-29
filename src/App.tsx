@@ -1267,9 +1267,23 @@ const handleEditMemo = (id, currentMemo) => {
               <div className="flex flex-col h-full">
                 <div className="px-6 py-4 flex flex-col gap-4">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight">전체 스캔</h2>
-                      <span className="bg-primary/10 text-primary text-xs font-bold px-2 py-0.5 rounded-full">{barcodes.length}</span>
+                    
+                    <div className="flex items-center gap-1 relative group">
+                      <select
+                        value={currentFolder}
+                        onChange={(e) => setCurrentFolder(e.target.value)}
+                        className="text-xl font-bold text-black dark:text-white tracking-tight bg-transparent border-none focus:ring-0 outline-none appearance-none cursor-pointer pr-6 hover:opacity-80 transition-opacity"
+                        style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
+                      >
+                        <option value="전체">모든 바코드</option>
+                        {folders.map(f => <option key={f} value={f}>{f}</option>)}
+                      </select>
+                      <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity">
+                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+                      </div>
+                      <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full ml-1 shadow-sm">
+                        {barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length}
+                      </span>
                     </div>
                     {isSelectionMode ? (
                        <div className="flex gap-2">
@@ -1440,12 +1454,25 @@ const handleEditMemo = (id, currentMemo) => {
                         </div>
                       </div>
                     </div>
+                    
                     <div className="flex gap-2 w-full pt-2 border-t border-slate-100 dark:border-white/5">
-                      <button onClick={() => handleCreateInvite(f)} className="flex-1 py-2.5 bg-[#f2f2f7] hover:bg-emerald-50 dark:bg-black dark:hover:bg-emerald-900/20 text-slate-600 hover:text-emerald-600 dark:text-slate-400 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm">
-                        <IconShare size={16} /> 협업
+                      <button onClick={() => {
+                        const listToExport = barcodes.filter(b => (b.folder || '기본폴더') === f);
+                        if (listToExport.length === 0) return toast.warning('데이터가 없습니다.');
+                        const data = listToExport.map(item => ({ '바코드': item.code, '메모': item.memo || '', '스캔시간': item.created_at, '폴더': item.folder || '기본폴더' }));
+                        const ws = XLSX.utils.json_to_sheet(data);
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, 'Scans');
+                        XLSX.writeFile(wb, `${f.replace(/\//g, '_')}_barcodes.xlsx`);
+                        toast.success(`'${f}' 엑셀 추출 완료!`);
+                      }} className="flex-1 py-2.5 bg-[#f2f2f7] hover:bg-green-50 dark:bg-black dark:hover:bg-green-900/20 text-slate-600 hover:text-green-600 dark:text-slate-400 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm">
+                        <IconFileExport size={16} /> 엑셀
                       </button>
                       <button onClick={() => handleShareFolder(f)} className="flex-1 py-2.5 bg-[#f2f2f7] hover:bg-blue-50 dark:bg-black dark:hover:bg-blue-900/20 text-slate-600 hover:text-blue-600 dark:text-slate-400 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm">
                         <IconCopy size={16} /> 공유
+                      </button>
+                      <button onClick={() => handleCreateInvite(f)} className="flex-1 py-2.5 bg-[#f2f2f7] hover:bg-emerald-50 dark:bg-black dark:hover:bg-emerald-900/20 text-slate-600 hover:text-emerald-600 dark:text-slate-400 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm">
+                        <IconShare size={16} /> 협업
                       </button>
                       {f !== '기본폴더' && (
                         <button onClick={() => handleRenameFolder(f)} className="flex-1 py-2.5 bg-[#f2f2f7] hover:bg-slate-200 dark:bg-black dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 font-bold rounded-xl transition-colors flex items-center justify-center gap-2 text-sm">
