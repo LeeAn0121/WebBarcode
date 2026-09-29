@@ -1180,10 +1180,19 @@ const handleEditMemo = (id, currentMemo) => {
       )}
       
       {/* Mobile Layout Wrapper */}
-      <div className="w-full md:max-w-6xl max-w-md flex flex-col h-full overflow-hidden relative bg-[#f2f2f7] dark:bg-black md:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] md:border border-white/5 md:rounded-[3rem] transition-all">
+      
+      {/* 🌌 오로라(Mesh) 그라데이션 배경 (공간 UI) */}
+      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-[#f8f9fa] dark:bg-[#050505]">
+        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-purple-400/30 dark:bg-purple-900/40 blur-[100px] animate-blob mix-blend-multiply dark:mix-blend-screen"></div>
+        <div className="absolute top-[20%] right-[-10%] w-[40%] h-[60%] rounded-full bg-blue-400/30 dark:bg-blue-900/40 blur-[100px] animate-blob animation-delay-2000 mix-blend-multiply dark:mix-blend-screen"></div>
+        <div className="absolute bottom-[-20%] left-[20%] w-[60%] h-[50%] rounded-full bg-emerald-400/20 dark:bg-emerald-900/30 blur-[100px] animate-blob animation-delay-4000 mix-blend-multiply dark:mix-blend-screen"></div>
+      </div>
+
+      {/* Mobile Layout Wrapper - Glassmorphism */}
+      <div className="w-full md:max-w-6xl max-w-md flex flex-col h-full overflow-hidden relative bg-white/60 dark:bg-black/60 backdrop-blur-3xl md:shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)] md:border border-white/40 dark:border-white/10 md:rounded-[3rem] transition-all z-10">
         
         {/* Mobile Header (Top) - Toss/Wallet Style */}
-        <header className="bg-[#f2f2f7] dark:bg-black z-40 shrink-0 px-6 pt-12 pb-4 flex justify-between items-end border-none">
+        <header className="bg-white/30 dark:bg-black/30 backdrop-blur-md z-40 shrink-0 px-6 pt-12 pb-4 flex justify-between items-end border-b border-white/20 dark:border-white/5">
           <div>
             <h1 className="font-bold text-3xl tracking-tight text-black dark:text-white mb-1">
               {activeTab === 'home' && '내 바코드'}
@@ -1301,13 +1310,13 @@ const handleEditMemo = (id, currentMemo) => {
                   </div>
                   <div className="relative">
                     <IconSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
-                    <input id="barcode-search" type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="바코드 번호 또는 메모 검색..." className="w-full bg-white dark:bg-[#1c1c1e] border-0 rounded-2xl pl-12 p-4 text-base font-medium focus:ring-2 focus:ring-primary outline-none transition-shadow shadow-sm" />
+                    <input id="barcode-search" type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="바코드 번호 또는 메모 검색..." className="w-full bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-2xl pl-12 p-4 text-base font-bold focus:ring-4 focus:ring-primary/30 outline-none fluid-spring shadow-[0_8px_30px_rgb(0,0,0,0.04)]" />
                   </div>
   {/* 폴더 탭 영역 (가로 스크롤) */}
   <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2 px-1">
-    <button onClick={() => setCurrentFolder('전체')} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${currentFolder === '전체' ? 'bg-black dark:bg-white text-white dark:text-black shadow-md' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 shadow-sm hover:bg-slate-50'}`}>전체보기</button>
+    <button onClick={() => setCurrentFolder('전체')} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${currentFolder === '전체' ? 'bg-black dark:bg-white text-white dark:text-black fluid-spring scale-105 shadow-[0_8px_20px_rgba(0,0,0,0.15)]' : 'bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 text-slate-600 dark:text-slate-400 fluid-spring hover:scale-105 shadow-sm'}`}>전체보기</button>
     {folders.map(f => (
-      <button key={f} onClick={() => setCurrentFolder(f)} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${currentFolder === f ? 'bg-black dark:bg-white text-white dark:text-black shadow-md' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 shadow-sm hover:bg-slate-50'}`}>{f}</button>
+      <button key={f} onClick={() => setCurrentFolder(f)} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${currentFolder === f ? 'bg-black dark:bg-white text-white dark:text-black fluid-spring scale-105 shadow-[0_8px_20px_rgba(0,0,0,0.15)]' : 'bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 text-slate-600 dark:text-slate-400 fluid-spring hover:scale-105 shadow-sm'}`}>{f}</button>
     ))}
   </div>
 </div>
@@ -1328,7 +1337,7 @@ const handleEditMemo = (id, currentMemo) => {
                       className={`relative p-5 rounded-[1.5rem] transition-all duration-300 flex items-center justify-between gap-4 group cursor-pointer ${idx < 8 ? 'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 duration-300 ease-out' : ''} ${
     selectedIds.includes(item.id)
       ? 'bg-primary/5 ring-2 ring-primary dark:bg-primary/20'
-      : 'bg-white dark:bg-[#1c1c1e] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:scale-[0.98]'
+      : 'bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] fluid-spring hover:scale-[0.98] hover:shadow-[0_10px_40px_rgb(0,0,0,0.08)]'
   }`}
                     >
                         <div className="flex items-center gap-3 overflow-hidden flex-1">
@@ -1404,7 +1413,7 @@ const handleEditMemo = (id, currentMemo) => {
                 <button
                   onClick={() => { setIsScannerModalOpen(true); startScanner(); }}
                   aria-label="바코드 스캐너 열기"
-                  className="relative w-16 h-16 bg-gradient-to-tr from-primary to-purple-600 rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center text-white hover:scale-105 transition-transform focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2"
+                  className="relative w-16 h-16 bg-gradient-to-tr from-primary to-purple-500 rounded-[1.5rem] shadow-[0_10px_40px_rgba(99,102,241,0.5)] flex items-center justify-center text-white fluid-spring hover:scale-110 active:scale-90 hover:rounded-full focus-visible:outline-none"
                 >
                   <IconCamera size={28} />
                 </button>
@@ -1435,7 +1444,7 @@ const handleEditMemo = (id, currentMemo) => {
                 const name = parts[parts.length - 1];
                 const barcodeCount = barcodes.filter(b => (b.folder || '기본폴더') === f).length;
                 return (
-                  <div key={f} className="bg-white dark:bg-[#1c1c1e] p-4 rounded-[1.5rem] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:scale-[0.98] transition-transform duration-300 flex flex-col gap-4 border border-transparent dark:border-white/5" style={{ marginLeft: `${depth * 1.5}rem` }}>
+                  <div key={f} className="bg-white/70 dark:bg-white/5 backdrop-blur-xl p-4 rounded-[1.5rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] fluid-spring hover:scale-[0.98] flex flex-col gap-4 border border-white/50 dark:border-white/10" style={{ marginLeft: `${depth * 1.5}rem` }}>
                     <div className="flex items-center justify-between gap-4">
                       <div className="flex items-center gap-3 overflow-hidden">
                         <div className="w-12 h-12 bg-[#f2f2f7] dark:bg-[#2c2c2e] rounded-2xl flex items-center justify-center shrink-0">
@@ -1652,7 +1661,7 @@ const handleEditMemo = (id, currentMemo) => {
 
         {genModal.isOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setGenModal({ ...genModal, isOpen: false })}>
-            <div className="bg-[#f2f2f7] dark:bg-black w-full max-w-sm rounded-[2rem] shadow-2xl p-6 animate-in zoom-in-95 duration-200 text-center" onClick={e => e.stopPropagation()}>
+            <div className="bg-white/60 dark:bg-black/40 backdrop-blur-md border border-white/40 dark:border-white/5 w-full max-w-sm rounded-[2rem] shadow-2xl p-6 animate-in zoom-in-95 duration-200 text-center" onClick={e => e.stopPropagation()}>
               <h3 className="text-xl font-bold text-black dark:text-white mb-4">QR/바코드 생성</h3>
               <input type="text" value={genModal.text} onChange={e => setGenModal({...genModal, text: e.target.value})} placeholder="텍스트나 URL을 입력하세요" className="w-full bg-white dark:bg-[#1c1c1e] border-none rounded-2xl p-4 text-base font-medium focus:ring-2 focus:ring-primary outline-none mb-6 shadow-sm" />
               
@@ -1781,7 +1790,7 @@ const handleEditMemo = (id, currentMemo) => {
         )}
 
         {/* Mobile Bottom Tab Bar */}
-        <nav className="bg-[#f2f2f7] dark:bg-black shrink-0 z-50 pb-safe pt-2" aria-label="주 메뉴">
+        <nav className="bg-white/60 dark:bg-black/40 backdrop-blur-md border border-white/40 dark:border-white/5 shrink-0 z-50 pb-safe pt-2" aria-label="주 메뉴">
           <div className="flex justify-around items-center px-4 pb-2">
             <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-colors ${activeTab === 'home' ? 'text-black dark:text-white' : 'text-slate-400'}`}>
               <IconHome size={26} stroke={activeTab === 'home' ? 2.5 : 1.5} />

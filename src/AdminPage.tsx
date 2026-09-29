@@ -156,7 +156,7 @@ export default function AdminPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1 flex flex-col gap-8">
-            <section className="bg-white dark:bg-[#1c1c1e] rounded-[2rem] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+            <section className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] fluid-spring hover:scale-[0.99]">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-bold">접속자 현황</h3>
                 <span className="text-4xl font-bold text-blue-500">{visitors.length}</span>
@@ -181,7 +181,7 @@ export default function AdminPage() {
               </div>
             </section>
             
-            <section className="bg-white dark:bg-[#1c1c1e] rounded-[2rem] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
+            <section className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] fluid-spring hover:scale-[0.99]">
               <h3 className="text-xl font-bold mb-4">전체 시스템 공지</h3>
               <div className="flex flex-col gap-3">
                 <textarea value={noticeText} onChange={e => setNoticeText(e.target.value)} placeholder="접속 중인 모든 사용자에게 알림을 보냅니다." className="w-full bg-[#f2f2f7] dark:bg-black rounded-xl p-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary resize-none h-24" />
@@ -191,7 +191,7 @@ export default function AdminPage() {
           </div>
 
           <div className="lg:col-span-2 flex flex-col gap-8">
-            <section className="bg-white dark:bg-[#1c1c1e] rounded-[2rem] p-8 shadow-[0_4px_20px_rgba(0,0,0,0.03)] flex flex-col h-[700px]">
+            <section className="bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-[2rem] p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] fluid-spring hover:scale-[0.99] flex flex-col h-[700px]">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div className="flex items-center gap-3">
                   <h3 className="text-xl font-bold">시스템 로그</h3>
