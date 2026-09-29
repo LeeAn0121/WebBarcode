@@ -217,6 +217,8 @@ function App() {
   const [isSwitching, setIsSwitching] = useState(false);
   const [currentFolder, setCurrentFolder] = useState('전체');
   const [activeTab, setActiveTab] = useState('home');
+  const ADMIN_EMAILS = ['leean0121@naver.com', 'leean0121@gmail.com'];
+  const isAdmin = session?.user?.email && ADMIN_EMAILS.includes(session.user.email);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeActionMenu, setActiveActionMenu] = useState<any>(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
