@@ -253,6 +253,7 @@ function App() {
   const [folderActionModal, setFolderActionModal] = useState<string | null>(null);
   const [explorerPath, setExplorerPath] = useState<string>('');
   const [folderViewMode, setFolderViewMode] = useState<'grid' | 'list'>('grid');
+  const [folderOrder, setFolderOrder] = useState<string[]>(JSON.parse(localStorage.getItem('folderOrder') || '[]'));
   const [promptModal, setPromptModal] = useState({ isOpen: false, title: '', placeholder: '', value: '', type: 'text', description: '', confirmText: '확인', onConfirm: (val: string) => {} });
   const [session, setSession] = useState<any>(null);
   const [authChecked, setAuthChecked] = useState(false);
@@ -340,7 +341,15 @@ function App() {
   const currentFolderRef = useRef('전체');
 
   // Derived unique folders from barcodes and local
-  const folders = Array.from(new Set(['기본폴더', ...localFolders, ...barcodes.map(b => b.folder).filter(Boolean)])).sort();
+  const folders = Array.from(new Set(['기본폴더', ...localFolders, ...barcodes.map(b => b.folder).filter(Boolean)]));
+  folders.sort((a, b) => {
+    const idxA = folderOrder.indexOf(a);
+    const idxB = folderOrder.indexOf(b);
+    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+    if (idxA !== -1) return -1;
+    if (idxB !== -1) return 1;
+    return a.localeCompare(b);
+  });
 
   // Sync state to ref for callbacks
   useEffect(() => {
@@ -1043,6 +1052,26 @@ const handleEditMemo = (id, currentMemo) => {
   };
 
   
+  const handleMoveOrder = (folder: string, direction: 'up' | 'down') => {
+    setFolderOrder(prev => {
+      // Initialize if empty
+      let currentOrder = [...prev];
+      if (currentOrder.length === 0) currentOrder = [...folders];
+      
+      const idx = currentOrder.indexOf(folder);
+      if (idx === -1) return currentOrder;
+      
+      if (direction === 'up' && idx > 0) {
+        [currentOrder[idx - 1], currentOrder[idx]] = [currentOrder[idx], currentOrder[idx - 1]];
+      } else if (direction === 'down' && idx < currentOrder.length - 1) {
+        [currentOrder[idx + 1], currentOrder[idx]] = [currentOrder[idx], currentOrder[idx + 1]];
+      }
+      
+      localStorage.setItem('folderOrder', JSON.stringify(currentOrder));
+      return currentOrder;
+    });
+  };
+
   const handleRenameFolder = async (oldName: string) => {
     if (oldName === '기본폴더') return toast.error('기본 폴더는 이름 변경이 불가능합니다.');
     const newName = prompt(`'${oldName}' 폴더의 새 이름을 입력하세요:\n(경로 변경 시 '상위폴더/새이름' 형태로 입력)`, oldName);
@@ -1887,10 +1916,21 @@ const handleEditMemo = (id, currentMemo) => {
                 {folderActionModal !== '기본폴더' && (
                   <button onClick={() => { handleRenameFolder(folderActionModal); setFolderActionModal(null); }} className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 fluid-spring">
                     <IconEdit size={28} />
-                    <span className="font-bold text-sm">이름 변경</span>
+                    <span className="font-bold text-sm">계층/이름 변경</span>
                   </button>
                 )}
               </div>
+
+              {folderActionModal !== '기본폴더' && (
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <button onClick={() => handleMoveOrder(folderActionModal, 'up')} className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-2xl p-3 flex items-center justify-center gap-2 hover:bg-orange-50 dark:hover:bg-orange-900/30 text-slate-600 dark:text-slate-400 fluid-spring">
+                    <span className="font-bold text-sm">⬆️ 앞으로 (위로)</span>
+                  </button>
+                  <button onClick={() => handleMoveOrder(folderActionModal, 'down')} className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-2xl p-3 flex items-center justify-center gap-2 hover:bg-orange-50 dark:hover:bg-orange-900/30 text-slate-600 dark:text-slate-400 fluid-spring">
+                    <span className="font-bold text-sm">⬇️ 뒤로 (아래로)</span>
+                  </button>
+                </div>
+              )}
               
               {folderActionModal !== '기본폴더' && (
                 <button onClick={() => { handleDeleteFolder(folderActionModal); setFolderActionModal(null); }} className="w-full bg-red-50 dark:bg-red-900/20 text-red-500 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-100 transition-colors">
