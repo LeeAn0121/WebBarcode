@@ -18,7 +18,8 @@ export default function AdminPage() {
   
   const sendNotice = async () => {
     if (!noticeText.trim()) return;
-    supabase.channel('wb-admin-actions').send({
+    if (!adminChannelRef.current) return toast.error('서버와 연결 중입니다. 잠시 후 다시 시도해주세요.');
+    adminChannelRef.current.send({
       type: 'broadcast',
       event: 'admin_command',
       payload: { type: 'system_notice', message: noticeText }
@@ -29,7 +30,8 @@ export default function AdminPage() {
   
   const forceKick = (email: string) => {
     if (!window.confirm(`${email} 사용자를 강제 로그아웃 시킬까요?`)) return;
-    supabase.channel('wb-admin-actions').send({
+    if (!adminChannelRef.current) return toast.error('서버와 연결 중입니다. 잠시 후 다시 시도해주세요.');
+    adminChannelRef.current.send({
       type: 'broadcast',
       event: 'admin_command',
       payload: { type: 'force_kick', target_email: email }
@@ -38,11 +40,27 @@ export default function AdminPage() {
   };
   const logsRef = useRef<LogRow[]>([]);
 
+  
+  const adminChannelRef = useRef<any>(null);
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => { setSession(session); setChecking(false); });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => subscription.unsubscribe();
+    
+    // Admin 채널 구독 유지
+    const channel = supabase.channel('wb-admin-actions');
+    channel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        adminChannelRef.current = channel;
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+      supabase.removeChannel(channel);
+    };
   }, []);
+
 
   useEffect(() => {
     if (checking) return;

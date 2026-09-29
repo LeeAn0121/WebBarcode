@@ -144,6 +144,8 @@ function App() {
   });
   useEffect(() => { localStorage.setItem('autoRules', JSON.stringify(autoRules)); }, [autoRules]);
 
+  
+  const [systemNotice, setSystemNotice] = useState<{isOpen: boolean, message: string}>({isOpen: false, message: ''});
   const [smartFilter, setSmartFilter] = useState<'all' | 'today' | 'yesterday' | 'hasMemo'>('all');
   
   // PC 단축키
