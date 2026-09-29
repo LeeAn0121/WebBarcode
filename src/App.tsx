@@ -143,6 +143,29 @@ function App() {
   useEffect(() => { localStorage.setItem('noticeHistory', JSON.stringify(noticeHistory)); }, [noticeHistory]);
   const unreadNoticeCount = noticeHistory.filter(n => !n.read).length;
   const [isNoticeHistoryOpen, setIsNoticeHistoryOpen] = useState(false);
+
+  // Fetch Notices on load
+  useEffect(() => {
+    const fetchGlobalNotices = async () => {
+      const { data, error } = await supabase.from('notices').select('*').order('created_at', { ascending: false }).limit(50);
+      if (!error && data) {
+        setNoticeHistory(prev => {
+          const prevMap = new Map(prev.map(p => [p.id, p]));
+          return data.map(dbNotice => {
+            const existing = prevMap.get(dbNotice.id);
+            return {
+              id: dbNotice.id,
+              message: dbNotice.message,
+              date: dbNotice.created_at,
+              read: existing ? existing.read : false
+            };
+          });
+        });
+      }
+    };
+    fetchGlobalNotices();
+  }, []);
+
   const [smartFilter, setSmartFilter] = useState<'all' | 'today' | 'yesterday' | 'hasMemo'>('all');
   
   // PC 단축키
@@ -248,11 +271,11 @@ function App() {
     }
 
     const adminChannel = supabase.channel('wb-admin-actions').on('broadcast', { event: 'admin_command' }, async (payload) => {
-      const { type, target_email, message } = payload.payload;
+      const { type, target_email, message, id: noticeId, date: noticeDate } = payload.payload;
       if (type === 'system_notice') {
         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
         // setSystemNotice({ isOpen: true, message }); // Removed modal popup
-        setNoticeHistory(prev => [{id: Math.random().toString(36).substring(2, 9), message, date: new Date().toISOString(), read: false}, ...prev].slice(0, 50));
+        setNoticeHistory(prev => [{id: noticeId || Math.random().toString(36).substring(2, 9), message, date: noticeDate || new Date().toISOString(), read: false}, ...prev].slice(0, 50));
         playSound('success', true);
         
         // 백그라운드이거나 최소화 상태일 때 시스템 알림 띄우기
