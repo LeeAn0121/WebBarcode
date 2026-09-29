@@ -6,7 +6,7 @@ import packageJson from '../package.json';
 import {
   IconBarcode, IconMoon, IconSun, IconDownload, IconCamera, IconVolume, IconVolume3,
   IconSearch, IconCopy, IconShare, IconMessagePlus, IconEdit, IconTrash, IconClock,
-  IconFolder, IconFolderPlus, IconCloudUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink, IconLink
+  IconFolder, IconFolderPlus, IconCloudUpload, IconFileExport, IconFileImport, IconUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink, IconLink
 } from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { supabase, logDebug, getDebugSessionId } from './supabaseClient';
@@ -138,6 +138,44 @@ const formatsToSupport = [
   Html5QrcodeSupportedFormats.ITF,
 ];
 function App() {
+  
+  const [autoRules, setAutoRules] = useState<{startsWith: string, targetFolder: string}[]>(() => {
+    try { return JSON.parse(localStorage.getItem('autoRules') || '[]'); } catch { return []; }
+  });
+  useEffect(() => { localStorage.setItem('autoRules', JSON.stringify(autoRules)); }, [autoRules]);
+
+  const [smartFilter, setSmartFilter] = useState<'all' | 'today' | 'yesterday' | 'hasMemo'>('all');
+  
+  // PC 단축키
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 입력창에 포커스가 있을 때는 단축키 무시
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+        if (e.key === 'Escape') (document.activeElement as HTMLElement).blur();
+        return;
+      }
+      
+      if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+        e.preventDefault();
+        setActiveTab('home');
+        setTimeout(() => document.getElementById('barcode-search')?.focus(), 100);
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
+        e.preventDefault();
+        setActiveTab('folders');
+        setTimeout(() => {
+           // prompt is blocking, so just call the function if it was accessible, but since handleAddFolder is in scope, we can't easily trigger it unless we dispatch an event or bind it.
+           // Actually, we can just dispatch a custom event.
+           window.dispatchEvent(new CustomEvent('cmd-n-trigger'));
+        }, 100);
+      } else if (e.code === 'Space') {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('cmd-space-trigger'));
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const [enableSound, setEnableSound] = useState(() => {
     try { return JSON.parse(localStorage.getItem('enableSound') || 'true'); } catch { return true; }
   });
@@ -1258,9 +1296,15 @@ const handleEditMemo = (id, currentMemo) => {
                     <IconSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
                     <input id="barcode-search" type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="바코드 번호 또는 메모 검색..." className="w-full bg-white dark:bg-[#1c1c1e] border-0 rounded-2xl pl-12 p-4 text-base font-medium focus:ring-2 focus:ring-primary outline-none transition-shadow shadow-sm" />
                   </div>
-                </div>
-                
-                <div className="flex-1 px-6 pb-6 overflow-y-auto custom-scrollbar max-h-[55vh] lg:max-h-none lg:h-full">
+  {/* 스마트 필터 영역 */}
+  <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1">
+    <button onClick={() => setSmartFilter('all')} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${smartFilter === 'all' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 shadow-sm'}`}>전체 보기</button>
+    <button onClick={() => setSmartFilter('today')} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${smartFilter === 'today' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 shadow-sm'}`}>오늘 스캔</button>
+    <button onClick={() => setSmartFilter('yesterday')} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${smartFilter === 'yesterday' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 shadow-sm'}`}>어제 스캔</button>
+    <button onClick={() => setSmartFilter('hasMemo')} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${smartFilter === 'hasMemo' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 shadow-sm'}`}>📝 메모 있음</button>
+  </div>
+</div>
+<div className="flex-1 px-6 pb-6 overflow-y-auto custom-scrollbar max-h-[55vh] lg:max-h-none lg:h-full">
                   <div className="space-y-4">
                     {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).map((item, idx) => (
                       <div
