@@ -1269,7 +1269,7 @@ const handleEditMemo = (id, currentMemo) => {
             <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${latestVersion}`} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-primary transition-colors font-mono text-[10px] bg-slate-200/50 dark:bg-white/10 px-2 py-1 rounded-full font-bold tracking-widest">
               V{latestVersion}
             </a>
-            <button onClick={() => { setIsNoticeHistoryOpen(true); }} className="relative w-10 h-10 bg-white dark:bg-[#1c1c1e] text-slate-500 hover:text-primary flex items-center justify-center rounded-full shadow-sm transition-all border border-transparent dark:border-white/5" title="알림">
+            <button onClick={() => { setIsNoticeHistoryOpen(true); }} className="relative w-10 h-10 bg-white dark:bg-[#1c1c1e] text-slate-500 hover:text-primary flex items-center justify-center rounded-full shadow-sm transition-all border border-transparent dark:border-white/5" title="공지사항">
               <IconBell size={18} />
               {unreadNoticeCount > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-[#f2f2f7] dark:border-black rounded-full"></span>}
             </button>
@@ -1804,7 +1804,7 @@ const handleEditMemo = (id, currentMemo) => {
               <div className="p-5 bg-white dark:bg-[#1c1c1e] border-b border-slate-100 dark:border-white/5 flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-2">
                   <h3 className="text-xl font-bold text-black dark:text-white flex items-center gap-2">
-                    <IconBell size={24} className="text-primary" /> 알림 내역
+                    <IconBell size={24} className="text-primary" /> 공지사항
                   </h3>
                   {unreadNoticeCount > 0 && (
                     <span className="bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 text-xs font-bold px-2 py-0.5 rounded-full">{unreadNoticeCount}</span>
@@ -1825,7 +1825,7 @@ const handleEditMemo = (id, currentMemo) => {
                 {noticeHistory.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-40 text-slate-400 gap-3">
                     <IconBellX size={40} className="text-slate-300 dark:text-slate-600" />
-                    <span className="text-sm font-medium">새로운 알림이 없습니다.</span>
+                    <span className="text-sm font-medium">새로운 공지사항이 없습니다.</span>
                   </div>
                 ) : (
                   noticeHistory.map((notice) => (
