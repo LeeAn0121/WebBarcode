@@ -1048,7 +1048,7 @@ const handleEditMemo = (id, currentMemo) => {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto custom-scrollbar relative">
+        <main className="flex-1 overflow-y-auto custom-scrollbar relative pb-32">
           <div className="w-full min-h-full flex flex-col relative">
             {/* Tab: Home (List) */}
         {activeTab === 'home' && (
