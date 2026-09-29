@@ -1270,20 +1270,11 @@ const handleEditMemo = (id, currentMemo) => {
                 <div className="px-6 py-4 flex flex-col gap-4">
                   <div className="flex items-center justify-between">
                     
-                    <div className="flex items-center gap-1 relative group">
-                      <select
-                        value={currentFolder}
-                        onChange={(e) => setCurrentFolder(e.target.value)}
-                        className="text-xl font-bold text-black dark:text-white tracking-tight bg-transparent border-none focus:ring-0 outline-none appearance-none cursor-pointer pr-6 hover:opacity-80 transition-opacity"
-                        style={{ WebkitAppearance: 'none', MozAppearance: 'none' }}
-                      >
-                        <option value="전체">모든 바코드</option>
-                        {folders.map(f => <option key={f} value={f}>{f}</option>)}
-                      </select>
-                      <div className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none opacity-50 group-hover:opacity-100 transition-opacity">
-                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6"/></svg>
-                      </div>
-                      <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full ml-1 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-bold text-black dark:text-white tracking-tight">
+                        {currentFolder === '전체' ? '모든 바코드' : currentFolder}
+                      </h2>
+                      <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
                         {barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length}
                       </span>
                     </div>
@@ -1312,12 +1303,12 @@ const handleEditMemo = (id, currentMemo) => {
                     <IconSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
                     <input id="barcode-search" type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="바코드 번호 또는 메모 검색..." className="w-full bg-white dark:bg-[#1c1c1e] border-0 rounded-2xl pl-12 p-4 text-base font-medium focus:ring-2 focus:ring-primary outline-none transition-shadow shadow-sm" />
                   </div>
-  {/* 스마트 필터 영역 */}
-  <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1">
-    <button onClick={() => setSmartFilter('all')} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${smartFilter === 'all' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 shadow-sm'}`}>전체 보기</button>
-    <button onClick={() => setSmartFilter('today')} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${smartFilter === 'today' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 shadow-sm'}`}>오늘 스캔</button>
-    <button onClick={() => setSmartFilter('yesterday')} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${smartFilter === 'yesterday' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 shadow-sm'}`}>어제 스캔</button>
-    <button onClick={() => setSmartFilter('hasMemo')} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${smartFilter === 'hasMemo' ? 'bg-black dark:bg-white text-white dark:text-black' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 shadow-sm'}`}>📝 메모 있음</button>
+  {/* 폴더 탭 영역 (가로 스크롤) */}
+  <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2 px-1">
+    <button onClick={() => setCurrentFolder('전체')} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${currentFolder === '전체' ? 'bg-black dark:bg-white text-white dark:text-black shadow-md' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 shadow-sm hover:bg-slate-50'}`}>전체보기</button>
+    {folders.map(f => (
+      <button key={f} onClick={() => setCurrentFolder(f)} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${currentFolder === f ? 'bg-black dark:bg-white text-white dark:text-black shadow-md' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 shadow-sm hover:bg-slate-50'}`}>{f}</button>
+    ))}
   </div>
 </div>
 <div className="flex-1 px-6 pb-6 overflow-y-auto custom-scrollbar max-h-[55vh] lg:max-h-none lg:h-full">
