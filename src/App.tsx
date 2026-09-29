@@ -1683,7 +1683,7 @@ const handleEditMemo = (id, currentMemo) => {
         {activeTab === 'settings' && (
           <div className="bg-white dark:bg-darkCard rounded-3xl shadow-soft border border-slate-100 dark:border-slate-700 overflow-hidden min-h-[500px] animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
             <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-black/30">
-              <h2 className="font-bold flex items-center gap-2 text-xl"><IconDatabase className="text-primary" size={24} aria-hidden="true" /> 데이터 및 시스템 설정</h2>
+              <h2 className="font-bold flex items-center gap-2 text-xl"><IconSettings className="text-primary" size={24} aria-hidden="true" /> 설정</h2>
             </div>
             
             <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full flex flex-col gap-10">
@@ -2109,7 +2109,7 @@ const handleEditMemo = (id, currentMemo) => {
               <span className="text-[10px] font-bold">폴더</span>
             </button>
             <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-colors ${activeTab === 'settings' ? 'text-black dark:text-white' : 'text-slate-400'}`}>
-              <IconDatabase size={26} stroke={activeTab === 'settings' ? 2.5 : 1.5} />
+              <IconSettings size={26} stroke={activeTab === 'settings' ? 2.5 : 1.5} />
               <span className="text-[10px] font-bold">설정</span>
             </button>
           </div>
