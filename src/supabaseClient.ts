@@ -13,7 +13,10 @@ export async function isAdminEmail(email: string | null | undefined) {
     .select('email')
     .eq('email', email)
     .maybeSingle();
-  if (error) return false;
+  if (error) {
+    console.error("isAdminEmail Check Error:", error);
+    return false;
+  }
   return !!data;
 }
 
