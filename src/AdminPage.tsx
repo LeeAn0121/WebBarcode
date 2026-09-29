@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { supabase, isAdminEmail } from './supabaseClient';
 import { Toaster, toast } from 'sonner';
-import { IconShieldLock, IconBrandGoogle, IconLogout, IconUsers, IconBug, IconTrash, IconFilter } from '@tabler/icons-react';
+import { IconRocket, IconEdit, IconShieldLock, IconBrandGoogle, IconLogout, IconUsers, IconBug, IconTrash, IconFilter } from '@tabler/icons-react';
 
 type LogRow = { id: number; created_at: string; level: string; message: string; meta: any; session_id: string; user_agent: string; path: string; };
 type PresenceInfo = { session_id: string; user_agent: string; path: string; email: string | null; online_at: string; };
