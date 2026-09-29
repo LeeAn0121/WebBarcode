@@ -1,0 +1,28 @@
+# StyleSeed — Design Lock
+<!-- Selections persist here. This file cannot waive StyleSeed core invariants. -->
+- App domain: productivity
+- Surface: mobile-app
+- Surface adapter: product-ui
+- Page type: dashboard
+- Output grammar: technical-instrument
+- Grammar path: built-in:engine/RULESETS.md
+- Grammar fallback: technical-instrument
+- Reference confidence: n/a
+- Brand recipe: native-mobile
+- Palette recipe: cobalt-instrument
+- Key color: #6366F1
+- Palette character: deep
+- Palette mode: dark
+- Palette harmony: auto
+- Surface temperature: cool
+- Aesthetic profile: none
+- Skin: custom
+- Primary action: #6366F1
+- Font: Pretendard
+- Radius: soft
+- Elevation: restrained-shadow
+- Density: comfortable
+- Motion: snap standard
+- Imagery/data role: technical data and precision focus
+- Signature move: full-screen modal camera with floating translucent controls
+- Locked: 2026-09-04

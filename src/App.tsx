@@ -260,7 +260,7 @@ function App() {
               }
             } catch(e) {}
           }
-        }, 150); // 150ms 마다 스캔 (매우 빠름)
+        }, 100); // 100ms 마다 스캔 (매우 빠름)
       } catch(e) {}
     }
     return () => clearInterval(nativeInterval);
@@ -432,7 +432,7 @@ function App() {
           await scannerRef.current.start(
             targetDevice.id,
             { 
-              fps: 10, 
+              fps: 30, 
               qrbox: { width: window.innerWidth < 400 ? 300 : 350, height: 120 }
             },
             handleScan,
@@ -506,17 +506,20 @@ function App() {
   };
 
   const exportExcel = () => {
-    if (barcodes.length === 0) return toast.warning('내보낼 데이터가 없습니다.');
-    const data = barcodes.map(item => ({
+    const filteredBarcodes = currentFolder === '전체' ? barcodes : barcodes.filter(b => (b.folder || '기본폴더') === currentFolder);
+    if (filteredBarcodes.length === 0) return toast.warning('내보낼 데이터가 없습니다.');
+    const data = filteredBarcodes.map(item => ({
       '바코드': item.code,
       '메모': item.memo || '',
-      '스캔시간': format(new Date(item.created_at || Date.now()), 'yyyy-MM-dd HH:mm:ss')
+      '스캔시간': format(new Date(item.created_at || Date.now()), 'yyyy-MM-dd HH:mm:ss'),
+      '폴더': item.folder || '기본폴더'
     }));
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    ws['!cols'] = [{wch:25}, {wch:30}, {wch:25}];
+    ws['!cols'] = [{wch:25}, {wch:30}, {wch:25}, {wch:20}];
     XLSX.utils.book_append_sheet(wb, ws, "Scans");
-    XLSX.writeFile(wb, `WebBarcode_${format(new Date(), 'yyyyMMdd')}.xlsx`);
+    const fileName = currentFolder === '전체' ? `WebBarcode_전체_${format(new Date(), 'yyyyMMdd')}.xlsx` : `WebBarcode_${currentFolder}_${format(new Date(), 'yyyyMMdd')}.xlsx`;
+    XLSX.writeFile(wb, fileName);
   };
 
   const handleMultiDelete = async () => {
@@ -960,7 +963,14 @@ const handleEditMemo = (id, currentMemo) => {
   }
 
   return (
-    <div className="flex h-screen bg-slate-100 dark:bg-[#050505] overflow-hidden text-slate-800 dark:text-slate-100 justify-center md:p-6 lg:p-8">
+    <div className="flex h-screen bg-slate-50 dark:bg-[#09090b] overflow-hidden text-slate-800 dark:text-slate-100 justify-center md:p-6 lg:p-8 relative">
+      {/* 2026 Mesh Gradient Background */}
+      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none opacity-60 dark:opacity-30">
+        <div className="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] rounded-full bg-blue-400/40 blur-[120px] mix-blend-multiply dark:mix-blend-screen"></div>
+        <div className="absolute top-[10%] -right-[10%] w-[60%] h-[60%] rounded-full bg-purple-400/40 blur-[120px] mix-blend-multiply dark:mix-blend-screen"></div>
+        <div className="absolute -bottom-[20%] left-[20%] w-[80%] h-[80%] rounded-full bg-pink-400/30 blur-[120px] mix-blend-multiply dark:mix-blend-screen"></div>
+      </div>
+      
       <Toaster position="bottom-center" theme={darkMode ? 'dark' : 'light'} />
       
       {/* Update Available Modal */}
@@ -1003,10 +1013,10 @@ const handleEditMemo = (id, currentMemo) => {
       )}
       
       {/* Mobile Layout Wrapper */}
-      <div className="w-full md:max-w-6xl max-w-md flex flex-col h-full overflow-hidden relative bg-white dark:bg-black md:shadow-2xl md:border border-x border-slate-200 dark:border-slate-800 md:rounded-3xl transition-all">
+      <div className="w-full md:max-w-6xl max-w-md flex flex-col h-full overflow-hidden relative bg-white/70 dark:bg-black/60 backdrop-blur-2xl md:shadow-[0_8px_32px_rgba(0,0,0,0.08)] md:border border-x border-white/40 dark:border-white/10 md:rounded-[2.5rem] transition-all z-10">
         
         {/* Mobile Header (Top) */}
-        <header className="bg-white/90 dark:bg-darkCard/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 shrink-0 px-4 py-3 flex justify-between items-center shadow-sm">
+        <header className="bg-transparent border-b border-white/30 dark:border-white/10 z-40 shrink-0 px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg shadow-glow overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
               <img src={`${import.meta.env.BASE_URL}icon.jpg`} alt="Logo" className="w-full h-full object-cover" />
@@ -1040,19 +1050,19 @@ const handleEditMemo = (id, currentMemo) => {
         {activeTab === 'home' && (
           <div className="flex flex-col md:flex-row w-full flex-1 h-full animate-in fade-in slide-in-from-bottom-4 duration-[2000ms] ease-out">
             
-      {/* Inline Scanner Area */}
+      {/* Immersive Scanner Area */}
       {isScannerModalOpen && (
-        <div className="w-full h-[50vh] md:h-full md:w-[45%] shrink-0 bg-black relative z-40 shadow-2xl flex flex-col animate-in md:slide-in-from-left-4 slide-in-from-top-4 duration-500 overflow-hidden rounded-b-3xl md:rounded-none md:rounded-br-3xl">
-           <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-50">
-             <button onClick={() => { stopScanner(); setIsScannerModalOpen(false); }} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg">
-               <IconX size={24} />
+        <div className="absolute inset-0 z-[100] bg-black/90 backdrop-blur-xl flex flex-col animate-in slide-in-from-bottom-full duration-500 overflow-hidden">
+           <div className="absolute top-6 left-6 right-6 flex justify-between items-center z-50">
+             <button onClick={() => { stopScanner(); setIsScannerModalOpen(false); }} className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-2xl hover:bg-white/20 transition-all">
+               <IconX size={26} />
              </button>
-             <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg">
-               {isSoundEnabled ? <IconVolume size={20} /> : <IconVolume3 size={20} />}
+             <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} className="w-12 h-12 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-2xl hover:bg-white/20 transition-all">
+               {isSoundEnabled ? <IconVolume size={24} /> : <IconVolume3 size={24} />}
              </button>
            </div>
            
-           <div className="flex-1 relative overflow-hidden">
+           <div className="flex-1 relative overflow-hidden flex items-center justify-center">
               <div id="reader" className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"></div>
               {isScanning && (
                 <div id="reader-overlay" className="absolute inset-x-8 inset-y-12 rounded-3xl border-2 ring-[1000px] ring-black/50 border-white/80 pointer-events-none transition-all duration-[2000ms] ease-out"></div>
@@ -1095,31 +1105,52 @@ const handleEditMemo = (id, currentMemo) => {
       
       <section className="w-full md:flex-1 md:w-[55%] flex flex-col flex-1 pb-24 overflow-y-auto relative custom-scrollbar">
 
-              <div className="flex flex-col h-full">
-                <div className="p-4 border-b border-slate-50 dark:border-slate-700/50">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
-                    <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
-                      <h2 className="font-bold tracking-wide flex items-center gap-2"><IconBarcode size={18}/> 스캔 기록</h2>
-                      <span className="bg-primary/10 text-primary text-xs font-bold tracking-wide px-2.5 py-1 rounded-full whitespace-nowrap">{barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length}건</span>
+              <div className="flex flex-col h-full bg-white/20 dark:bg-black/20 backdrop-blur-3xl">
+                <div className="p-4 border-b border-white/20 dark:border-white/5 space-y-4">
+                  {/* Bento Box Dashboard */}
+                  <div className="grid grid-cols-2 gap-3 mb-2">
+                    <div className="bg-white/60 dark:bg-[#111]/60 backdrop-blur-xl p-4 rounded-3xl border border-white/40 dark:border-white/10 flex flex-col justify-between shadow-[0_4px_24px_rgba(0,0,0,0.04)]">
+                      <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 mb-1">
+                        <IconBarcode size={16} /> <span className="text-xs font-bold">전체 스캔</span>
+                      </div>
+                      <div className="text-3xl font-black text-slate-800 dark:text-white tracking-tighter">
+                        {barcodes.length}<span className="text-sm font-medium text-slate-400 ml-1">건</span>
+                      </div>
                     </div>
-                    
-                    <div className="relative w-full sm:w-auto">
-                      <select value={currentFolder} onChange={(e) => setCurrentFolder(e.target.value)} className="w-full sm:w-[160px] appearance-none bg-slate-50 dark:bg-[#111111] border border-slate-200 dark:border-slate-700 text-sm font-bold tracking-wide px-4 py-2.5 pr-10 rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-black cursor-pointer shadow-sm">
-                        <option value="전체">전체 (All)</option>
-                        {folders.map(f => <option key={f} value={f}>{f}</option>)}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                    <div className="bg-gradient-to-br from-primary/90 to-purple-600/90 backdrop-blur-xl p-4 rounded-3xl border border-white/20 dark:border-white/10 flex flex-col justify-between text-white shadow-[0_4px_24px_rgba(0,0,0,0.1)]">
+                      <div className="flex items-center gap-2 text-white/80 mb-1">
+                        <IconFolder size={16} /> <span className="text-xs font-bold">선택된 폴더</span>
+                      </div>
+                      <div className="text-xl font-black tracking-tight truncate">
+                        {currentFolder}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Controls */}
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                      <button onClick={() => { setIsSelectionMode(!isSelectionMode); if (isSelectionMode) setSelectedIds([]); }} className={`px-4 py-2.5 rounded-2xl text-xs font-bold tracking-wide transition-all ${isSelectionMode ? 'bg-primary text-white shadow-lg shadow-primary/30' : 'bg-white/50 hover:bg-white/80 dark:bg-black/40 dark:hover:bg-black/60 text-slate-700 dark:text-slate-300 border border-white/40 dark:border-white/10 backdrop-blur-md'}`}>
+                        {isSelectionMode ? '선택 취소' : '다중 선택'}
+                      </button>
+                      <div className="relative flex-1 sm:w-auto">
+                        <select value={currentFolder} onChange={(e) => setCurrentFolder(e.target.value)} className="w-full sm:w-[160px] appearance-none bg-white/50 dark:bg-black/40 border border-white/40 dark:border-white/10 text-sm font-bold tracking-wide px-4 py-2.5 pr-10 rounded-2xl text-primary focus:outline-none focus:ring-2 focus:ring-primary backdrop-blur-md cursor-pointer shadow-sm transition-all">
+                          <option value="전체">전체 (All)</option>
+                          {folders.map(f => <option key={f} value={f}>{f}</option>)}
+                        </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-primary">
+                          <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                        </div>
                       </div>
                     </div>
                   </div>
                   <div className="relative">
-                    <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="바코드 번호 또는 메모 검색..." className="w-full bg-slate-50 dark:bg-black/50 border-0 ring-1 ring-slate-200 dark:ring-slate-700 rounded-xl pl-11 p-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-shadow" />
+                    <IconSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="바코드 번호 또는 메모 검색..." className="w-full bg-white/60 dark:bg-black/40 border border-white/40 dark:border-white/10 backdrop-blur-md rounded-2xl pl-12 p-3.5 text-sm focus:ring-2 focus:ring-primary outline-none transition-all shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]" />
                   </div>
                 </div>
                 
-                <div className="flex-1 p-4 bg-slate-50/50 dark:bg-black/30 overflow-y-auto custom-scrollbar max-h-[55vh] lg:max-h-none lg:h-full">
+                <div className="flex-1 p-4 overflow-y-auto custom-scrollbar max-h-[55vh] lg:max-h-none lg:h-full pb-32">
                   <div className="space-y-3">
                     {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).map(item => (
                       <div 
@@ -1131,11 +1162,20 @@ const handleEditMemo = (id, currentMemo) => {
                       }}
                       onPointerUp={handlePointerUp}
                       onPointerLeave={handlePointerUp}
-                      onClick={(e) => handleItemClick(item.id, '', e)}
-                      className={`relative p-3 sm:p-4 rounded-xl shadow-sm border transition-all flex items-center justify-between gap-3 group cursor-pointer ${
+                      onClick={(e) => {
+                         if (!isSelectionMode && (e.ctrlKey || e.metaKey || e.shiftKey)) {
+                           setIsSelectionMode(true);
+                           setSelectedIds([item.id]);
+                           e.preventDefault();
+                           e.stopPropagation();
+                           return;
+                         }
+                         handleItemClick(item.id, '', e);
+                      }}
+                      className={`relative p-3 sm:p-4 rounded-[1.25rem] transition-all duration-300 flex items-center justify-between gap-3 group cursor-pointer ${
                         selectedIds.includes(item.id) 
-                          ? 'bg-primary/10 border-primary ring-2 ring-primary/20 dark:bg-primary/20' 
-                          : 'bg-white dark:bg-darkCard border-slate-100 dark:border-slate-700/50 hover:shadow-md'
+                          ? 'bg-primary/10 border-primary ring-2 ring-primary/30 dark:bg-primary/20 shadow-[0_8px_32px_rgba(var(--color-primary-rgb),0.15)]' 
+                          : 'bg-white/60 dark:bg-black/40 backdrop-blur-md border border-white/40 dark:border-white/10 hover:shadow-[0_8px_24px_rgba(0,0,0,0.06)] hover:bg-white/80 dark:hover:bg-black/60 hover:-translate-y-0.5'
                       }`}
                     >
                         <div className="flex items-center gap-3 overflow-hidden flex-1">
@@ -1217,9 +1257,10 @@ const handleEditMemo = (id, currentMemo) => {
             {!isScannerModalOpen && (
               <button 
                 onClick={() => { setIsScannerModalOpen(true); startScanner(); }}
-                className="absolute bottom-20 right-6 md:right-10 w-16 h-16 bg-gradient-to-tr from-primary to-purple-600 rounded-full shadow-2xl shadow-primary/40 flex items-center justify-center text-white hover:scale-105 transition-transform z-40"
+                className="absolute bottom-28 right-6 md:right-10 w-16 h-16 bg-white/20 dark:bg-black/20 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-[1.5rem] shadow-xl shadow-primary/30 flex items-center justify-center text-primary hover:scale-110 hover:bg-white/40 dark:hover:bg-white/10 transition-all z-40 group"
               >
-                <IconCamera size={28} />
+                <div className="absolute inset-0 rounded-[1.5rem] bg-gradient-to-tr from-primary to-purple-500 opacity-20 group-hover:opacity-40 transition-opacity"></div>
+                <IconCamera size={28} className="relative z-10" />
               </button>
             )}
           </div>
@@ -1520,22 +1561,22 @@ const handleEditMemo = (id, currentMemo) => {
         )}
 
         {/* Mobile Bottom Tab Bar */}
-        <nav className="bg-white/95 dark:bg-darkCard/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shrink-0 z-50 pb-safe">
-          <div className="flex justify-around items-center px-1 pt-1.5 pb-1">
-            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center gap-0.5 p-1 w-14 transition-colors ${activeTab === 'home' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-              <div className={`p-1 rounded-full ${activeTab === 'home' ? 'bg-primary/10' : ''}`}><IconHome size={20} /></div>
-              <span className="text-[10px] font-medium leading-none">홈</span>
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-sm px-4">
+          <nav className="bg-white/80 dark:bg-[#111]/80 backdrop-blur-2xl border border-white/40 dark:border-white/10 rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.1)] p-2 flex justify-around items-center">
+            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center justify-center w-16 h-12 rounded-2xl transition-all duration-300 ${activeTab === 'home' ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-105' : 'text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5'}`}>
+              <IconHome size={22} className={activeTab === 'home' ? 'mb-0.5' : ''} />
+              {activeTab === 'home' && <span className="text-[10px] font-bold">홈</span>}
             </button>
-            <button onClick={() => setActiveTab('folders')} className={`flex flex-col items-center gap-0.5 p-1 w-14 transition-colors ${activeTab === 'folders' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-              <div className={`p-1 rounded-full ${activeTab === 'folders' ? 'bg-primary/10' : ''}`}><IconFolder size={20} /></div>
-              <span className="text-[10px] font-medium leading-none">폴더</span>
+            <button onClick={() => setActiveTab('folders')} className={`flex flex-col items-center justify-center w-16 h-12 rounded-2xl transition-all duration-300 ${activeTab === 'folders' ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-105' : 'text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5'}`}>
+              <IconFolder size={22} className={activeTab === 'folders' ? 'mb-0.5' : ''} />
+              {activeTab === 'folders' && <span className="text-[10px] font-bold">폴더</span>}
             </button>
-            <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center gap-0.5 p-1 w-14 transition-colors ${activeTab === 'settings' ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
-              <div className={`p-1 rounded-full ${activeTab === 'settings' ? 'bg-primary/10' : ''}`}><IconDatabase size={20} /></div>
-              <span className="text-[10px] font-medium leading-none">설정</span>
+            <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center justify-center w-16 h-12 rounded-2xl transition-all duration-300 ${activeTab === 'settings' ? 'bg-primary text-white shadow-lg shadow-primary/30 scale-105' : 'text-slate-500 dark:text-slate-400 hover:bg-black/5 dark:hover:bg-white/5'}`}>
+              <IconDatabase size={22} className={activeTab === 'settings' ? 'mb-0.5' : ''} />
+              {activeTab === 'settings' && <span className="text-[10px] font-bold">설정</span>}
             </button>
-          </div>
-        </nav>
+          </nav>
+        </div>
         
       </div>
     </div>
