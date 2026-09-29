@@ -1083,47 +1083,25 @@ const handleEditMemo = (id, currentMemo) => {
       )}
       
       {/* Mobile Layout Wrapper */}
-      <div className="w-full md:max-w-6xl max-w-md flex flex-col h-full overflow-hidden relative bg-white dark:bg-black md:shadow-2xl md:border border-x border-slate-200 dark:border-slate-800 md:rounded-3xl transition-all">
+      <div className="w-full md:max-w-6xl max-w-md flex flex-col h-full overflow-hidden relative bg-[#f2f2f7] dark:bg-black md:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] md:border border-white/5 md:rounded-[3rem] transition-all">
         
-        {/* Mobile Header (Top) */}
-        <header className="relative bg-white/90 dark:bg-darkCard/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 shrink-0 px-4 py-3 flex justify-between items-center shadow-sm overflow-hidden">
-          <div
-            className="absolute inset-0 opacity-[0.04] dark:opacity-[0.06] pointer-events-none"
-            style={{ backgroundImage: 'repeating-linear-gradient(90deg, currentColor 0px, currentColor 2px, transparent 2px, transparent 6px, currentColor 6px, currentColor 7px, transparent 7px, transparent 12px)' }}
-            aria-hidden="true"
-          ></div>
-          <div className="relative flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-lg shadow-glow overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700">
-              <img src={`${import.meta.env.BASE_URL}icon.jpg`} alt="Logo" className="w-full h-full object-cover" />
-            </div>
-            <h1 className="font-bold text-lg tracking-tight">WebBarcode</h1>
+        {/* Mobile Header (Top) - Toss/Wallet Style */}
+        <header className="bg-[#f2f2f7] dark:bg-black z-40 shrink-0 px-6 pt-12 pb-4 flex justify-between items-end border-none">
+          <div>
+            <h1 className="font-bold text-3xl tracking-tight text-black dark:text-white mb-1">
+              {activeTab === 'home' && '내 바코드'}
+              {activeTab === 'folders' && '폴더 관리'}
+              {activeTab === 'settings' && '설정'}
+            </h1>
+            {activeTab === 'home' && <p className="text-sm font-medium text-slate-500">스캔과 관리를 가장 빠르고 편하게.</p>}
           </div>
-          <div className="relative flex items-center gap-4">
-            <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${latestVersion}`} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-primary transition-colors shrink-0 flex items-center gap-1.5 font-mono text-xs bg-slate-100 dark:bg-[#111111] px-2 py-1 rounded-md">
-              <svg className="shrink-0" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.03c3.18-.3 6.5-1.5 6.5-7.1 0-1.5-.5-2.8-1.4-3.8.1-.3.6-1.8-.1-3.8 0 0-1.2-.4-3.9 1.4a13 13 0 0 0-7 0C6 2.3 4.8 2.7 4.8 2.7.1 4.7.6 6.2.7 6.5.1 7.5-.4 8.8-.4 10.3c0 5.6 3.3 6.8 6.5 7.1-.8.8-1 2-1 3.2V22" /><path d="M9 22v-4a4.8 4.8 0 0 1 1-3.03" /></svg>
-              v{latestVersion}
+          <div className="flex items-center gap-3 pb-1">
+            <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${latestVersion}`} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-primary transition-colors font-mono text-[10px] bg-slate-200/50 dark:bg-white/10 px-2 py-1 rounded-full font-bold tracking-widest">
+              V{latestVersion}
             </a>
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              aria-label={darkMode ? '라이트 모드로 전환' : '다크 모드로 전환'}
-              className="text-slate-500 hover:text-primary transition-colors shrink-0 p-1.5 -m-1.5 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              {darkMode ? <IconSun size={20}/> : <IconMoon size={20}/>}
+            <button onClick={() => setDarkMode(!darkMode)} className="w-10 h-10 bg-white dark:bg-[#1c1c1e] text-slate-500 hover:text-primary flex items-center justify-center rounded-full shadow-sm transition-all">
+              {darkMode ? <IconSun size={18}/> : <IconMoon size={18}/>}
             </button>
-            {session?.user && (
-              <button
-                onClick={async () => { if(window.confirm("로그아웃 하시겠습니까?")) { await supabase.auth.signOut(); window.location.reload(); } }}
-                className="shrink-0 rounded-full border border-slate-200 dark:border-slate-700 overflow-hidden shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                aria-label="로그아웃"
-                title="로그아웃"
-              >
-                <img
-                  src={session.user.user_metadata?.avatar_url || 'https://www.gravatar.com/avatar/00000000000000000000000000000000?d=mp'}
-                  alt=""
-                  className="w-7 h-7 object-cover"
-                />
-              </button>
-            )}
           </div>
         </header>
 
@@ -1192,41 +1170,26 @@ const handleEditMemo = (id, currentMemo) => {
       <section className="w-full md:flex-1 md:w-[55%] flex flex-col flex-1 pb-24 overflow-y-auto relative custom-scrollbar">
 
               <div className="flex flex-col h-full">
-                <div className="p-4 border-b border-slate-50 dark:border-slate-700/50">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
-                    <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
-                      <h2 className="font-bold flex items-center gap-2"><IconBarcode size={18}/> 스캔 기록</h2>
-                      <span className="bg-primary/10 text-primary text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">{barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length}건</span>
-                      {!isSelectionMode && filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length > 0 && (
-                        <button
-                          onClick={() => setIsSelectionMode(true)}
-                          className="ml-auto sm:ml-2 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-primary dark:hover:text-primary px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary transition-colors"
-                        >
-                          선택
-                        </button>
-                      )}
+                <div className="px-6 py-4 flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-bold text-slate-800 dark:text-white tracking-tight">전체 스캔</h2>
+                      <span className="bg-primary/10 text-primary text-xs font-bold px-2 py-0.5 rounded-full">{barcodes.length}</span>
                     </div>
-
-                    <div className="relative w-full sm:w-auto">
-                      <label htmlFor="folder-filter" className="sr-only">폴더 필터</label>
-                      <select id="folder-filter" value={currentFolder} onChange={(e) => setCurrentFolder(e.target.value)} className="w-full sm:w-[160px] appearance-none bg-slate-50 dark:bg-[#111111] border border-slate-200 dark:border-slate-700 text-sm font-semibold px-4 py-2.5 pr-10 rounded-xl text-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 dark:focus:ring-offset-black cursor-pointer shadow-sm">
-                        <option value="전체">전체 (All)</option>
-                        {folders.map(f => <option key={f} value={f}>{f}</option>)}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-slate-400">
-                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
-                      </div>
-                    </div>
+                    {isSelectionMode ? (
+                       <button onClick={() => { setIsSelectionMode(false); setSelectedIds([]); }} className="text-sm font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-full transition-colors">취소</button>
+                    ) : (
+                       <button onClick={() => setIsSelectionMode(true)} className="text-sm font-bold text-slate-500 bg-slate-100 dark:bg-white/10 px-3 py-1.5 rounded-full transition-colors">다중 선택</button>
+                    )}
                   </div>
                   <div className="relative">
-                    <IconSearch className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
-                    <label htmlFor="barcode-search" className="sr-only">바코드 번호 또는 메모 검색</label>
-                    <input id="barcode-search" type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="바코드 번호 또는 메모 검색..." className="w-full bg-slate-50 dark:bg-black/50 border-0 ring-1 ring-slate-200 dark:ring-slate-700 rounded-xl pl-11 p-3 text-sm focus:ring-2 focus:ring-primary outline-none transition-shadow" />
+                    <IconSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
+                    <input id="barcode-search" type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="바코드 번호 또는 메모 검색..." className="w-full bg-white dark:bg-[#1c1c1e] border-0 rounded-2xl pl-12 p-4 text-base font-medium focus:ring-2 focus:ring-primary outline-none transition-shadow shadow-sm" />
                   </div>
                 </div>
                 
-                <div className="flex-1 p-4 bg-slate-50/50 dark:bg-black/30 overflow-y-auto custom-scrollbar max-h-[55vh] lg:max-h-none lg:h-full">
-                  <div className="space-y-3">
+                <div className="flex-1 px-6 pb-6 overflow-y-auto custom-scrollbar max-h-[55vh] lg:max-h-none lg:h-full">
+                  <div className="space-y-4">
                     {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).map((item, idx) => (
                       <div
                       key={item.id}
@@ -1239,14 +1202,14 @@ const handleEditMemo = (id, currentMemo) => {
                       onPointerLeave={handlePointerUp}
                       onClick={(e) => handleItemClick(item.id, '', e)}
                       style={idx < 8 ? { animationDelay: `${idx * 30}ms`, animationFillMode: 'backwards' } : undefined}
-                      className={`relative p-3 sm:p-4 rounded-xl shadow-sm border transition-all flex items-center justify-between gap-3 group cursor-pointer ${idx < 8 ? 'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 duration-300 ease-out' : ''} ${
-                        selectedIds.includes(item.id)
-                          ? 'bg-primary/10 border-primary ring-2 ring-primary/20 dark:bg-primary/20'
-                          : 'bg-white dark:bg-darkCard border-slate-100 dark:border-slate-700/50 hover:shadow-md'
-                      }`}
+                      className={`relative p-5 rounded-[1.5rem] transition-all duration-300 flex items-center justify-between gap-4 group cursor-pointer ${idx < 8 ? 'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 duration-300 ease-out' : ''} ${
+    selectedIds.includes(item.id)
+      ? 'bg-primary/5 ring-2 ring-primary dark:bg-primary/20'
+      : 'bg-white dark:bg-[#1c1c1e] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:scale-[0.98]'
+  }`}
                     >
                         <div className="flex items-center gap-3 overflow-hidden flex-1">
-                          <div className="h-8 w-8 shrink-0 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 text-primary flex items-center justify-center transition-transform group-hover:scale-105">
+                          <div className="h-12 w-12 shrink-0 rounded-2xl bg-[#f2f2f7] dark:bg-[#2c2c2e] text-black dark:text-white flex items-center justify-center transition-transform group-hover:scale-110">
                             <IconBarcode size={20} />
                           </div>
                           <div className="flex flex-col flex-1 overflow-hidden">
@@ -1654,19 +1617,19 @@ const handleEditMemo = (id, currentMemo) => {
         )}
 
         {/* Mobile Bottom Tab Bar */}
-        <nav className="bg-white/95 dark:bg-darkCard/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 shrink-0 z-50 pb-safe" aria-label="주 메뉴">
-          <div className="flex justify-around items-center px-1 pt-1.5 pb-1">
-            <button onClick={() => setActiveTab('home')} aria-current={activeTab === 'home' ? 'page' : undefined} className={`flex flex-col items-center justify-center gap-0.5 py-1.5 w-16 min-h-[48px] rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${activeTab === 'home' ? 'text-primary' : 'text-slate-500 dark:text-slate-400'}`}>
-              <div className={`p-1 rounded-full transition-colors duration-200 ${activeTab === 'home' ? 'bg-primary/10' : ''}`}><IconHome size={20} aria-hidden="true" /></div>
-              <span className="text-[11px] font-semibold leading-none">홈</span>
+        <nav className="bg-[#f2f2f7] dark:bg-black shrink-0 z-50 pb-safe pt-2" aria-label="주 메뉴">
+          <div className="flex justify-around items-center px-4 pb-2">
+            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-colors ${activeTab === 'home' ? 'text-black dark:text-white' : 'text-slate-400'}`}>
+              <IconHome size={26} stroke={activeTab === 'home' ? 2.5 : 1.5} />
+              <span className="text-[10px] font-bold">홈</span>
             </button>
-            <button onClick={() => setActiveTab('folders')} aria-current={activeTab === 'folders' ? 'page' : undefined} className={`flex flex-col items-center justify-center gap-0.5 py-1.5 w-16 min-h-[48px] rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${activeTab === 'folders' ? 'text-primary' : 'text-slate-500 dark:text-slate-400'}`}>
-              <div className={`p-1 rounded-full transition-colors duration-200 ${activeTab === 'folders' ? 'bg-primary/10' : ''}`}><IconFolder size={20} aria-hidden="true" /></div>
-              <span className="text-[11px] font-semibold leading-none">폴더</span>
+            <button onClick={() => setActiveTab('folders')} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-colors ${activeTab === 'folders' ? 'text-black dark:text-white' : 'text-slate-400'}`}>
+              <IconFolder size={26} stroke={activeTab === 'folders' ? 2.5 : 1.5} />
+              <span className="text-[10px] font-bold">폴더</span>
             </button>
-            <button onClick={() => setActiveTab('settings')} aria-current={activeTab === 'settings' ? 'page' : undefined} className={`flex flex-col items-center justify-center gap-0.5 py-1.5 w-16 min-h-[48px] rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${activeTab === 'settings' ? 'text-primary' : 'text-slate-500 dark:text-slate-400'}`}>
-              <div className={`p-1 rounded-full transition-colors duration-200 ${activeTab === 'settings' ? 'bg-primary/10' : ''}`}><IconDatabase size={20} aria-hidden="true" /></div>
-              <span className="text-[11px] font-semibold leading-none">설정</span>
+            <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-colors ${activeTab === 'settings' ? 'text-black dark:text-white' : 'text-slate-400'}`}>
+              <IconDatabase size={26} stroke={activeTab === 'settings' ? 2.5 : 1.5} />
+              <span className="text-[10px] font-bold">설정</span>
             </button>
           </div>
         </nav>
