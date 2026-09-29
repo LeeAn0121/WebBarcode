@@ -154,6 +154,7 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
   const [updateInfo, setUpdateInfo] = useState(null);
+  const [latestVersion, setLatestVersion] = useState(packageJson.version);
   
   const [localFolders, setLocalFolders] = useState(() => {
     try { return JSON.parse(localStorage.getItem('folders')) || []; }
@@ -196,6 +197,9 @@ function App() {
         if (!res.ok) return;
         const data = await res.json();
         const currentVersion = packageJson.version;
+        if (data.version) {
+          setLatestVersion(data.version);
+        }
         
         const isNewer = (oldV: string, newV: string) => {
           const a = oldV.split('.').map(Number);
@@ -1024,9 +1028,9 @@ const handleEditMemo = (id, currentMemo) => {
             <h1 className="font-bold tracking-wide text-lg tracking-tight">WebBarcode</h1>
           </div>
           <div className="flex items-center gap-4">
-            <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${packageJson.version}`} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-primary transition-colors shrink-0 flex items-center gap-1.5 font-mono text-xs bg-slate-100 dark:bg-[#111111] px-2 py-1 rounded-md">
+            <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${latestVersion}`} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-primary transition-colors shrink-0 flex items-center gap-1.5 font-mono text-xs bg-slate-100 dark:bg-[#111111] px-2 py-1 rounded-md">
               <svg className="shrink-0" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 22v-4a4.8 4.8 0 0 0-1-3.03c3.18-.3 6.5-1.5 6.5-7.1 0-1.5-.5-2.8-1.4-3.8.1-.3.6-1.8-.1-3.8 0 0-1.2-.4-3.9 1.4a13 13 0 0 0-7 0C6 2.3 4.8 2.7 4.8 2.7.1 4.7.6 6.2.7 6.5.1 7.5-.4 8.8-.4 10.3c0 5.6 3.3 6.8 6.5 7.1-.8.8-1 2-1 3.2V22" /><path d="M9 22v-4a4.8 4.8 0 0 1 1-3.03" /></svg>
-              v{packageJson.version}
+              v{latestVersion}
             </a>
             <button onClick={() => setDarkMode(!darkMode)} className="text-slate-500 hover:text-primary transition-colors shrink-0">
               {darkMode ? <IconSun size={20}/> : <IconMoon size={20}/>}
