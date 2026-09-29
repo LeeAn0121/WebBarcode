@@ -138,6 +138,12 @@ function App() {
   useEffect(() => { localStorage.setItem('autoRules', JSON.stringify(autoRules)); }, [autoRules]);
 
   const [systemNotice, setSystemNotice] = useState<{isOpen: boolean, message: string}>({isOpen: false, message: ''});
+  const [noticeHistory, setNoticeHistory] = useState<{message: string, date: string}[]>(() => {
+    try { return JSON.parse(localStorage.getItem('noticeHistory') || '[]'); } catch { return []; }
+  });
+  useEffect(() => { localStorage.setItem('noticeHistory', JSON.stringify(noticeHistory)); }, [noticeHistory]);
+  const [unreadNoticeCount, setUnreadNoticeCount] = useState<number>(0);
+  const [isNoticeHistoryOpen, setIsNoticeHistoryOpen] = useState(false);
   const [smartFilter, setSmartFilter] = useState<'all' | 'today' | 'yesterday' | 'hasMemo'>('all');
   
   // PC 단축키
@@ -245,6 +251,8 @@ function App() {
       if (type === 'system_notice') {
         if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
         setSystemNotice({ isOpen: true, message });
+        setNoticeHistory(prev => [{message, date: new Date().toISOString()}, ...prev].slice(0, 50));
+        setUnreadNoticeCount(prev => prev + 1);
         playSound('success', true);
         
         // 백그라운드이거나 최소화 상태일 때 시스템 알림 띄우기
@@ -1226,7 +1234,11 @@ const handleEditMemo = (id, currentMemo) => {
             <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${latestVersion}`} target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-primary transition-colors font-mono text-[10px] bg-slate-200/50 dark:bg-white/10 px-2 py-1 rounded-full font-bold tracking-widest">
               V{latestVersion}
             </a>
-            <button onClick={() => setDarkMode(!darkMode)} className="w-10 h-10 bg-white dark:bg-[#1c1c1e] text-slate-500 hover:text-primary flex items-center justify-center rounded-full shadow-sm transition-all">
+            <button onClick={() => { setIsNoticeHistoryOpen(true); setUnreadNoticeCount(0); }} className="relative w-10 h-10 bg-white dark:bg-[#1c1c1e] text-slate-500 hover:text-primary flex items-center justify-center rounded-full shadow-sm transition-all border border-transparent dark:border-white/5" title="알림">
+              <IconBell size={18} />
+              {unreadNoticeCount > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-[#f2f2f7] dark:border-black rounded-full"></span>}
+            </button>
+            <button onClick={() => setDarkMode(!darkMode)} className="w-10 h-10 bg-white dark:bg-[#1c1c1e] text-slate-500 hover:text-primary flex items-center justify-center rounded-full shadow-sm transition-all border border-transparent dark:border-white/5">
               {darkMode ? <IconSun size={18}/> : <IconMoon size={18}/>}
             </button>
           </div>
@@ -1613,6 +1625,36 @@ const handleEditMemo = (id, currentMemo) => {
       </main>
 
         {/* Modals */}
+
+        {/* Notice History Panel */}
+        {isNoticeHistoryOpen && (
+          <div className="fixed inset-0 z-[100] flex justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsNoticeHistoryOpen(false)}>
+            <div className="bg-[#f2f2f7] dark:bg-black w-full max-w-sm h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300" onClick={e => e.stopPropagation()}>
+              <div className="p-6 bg-white dark:bg-[#1c1c1e] border-b border-slate-100 dark:border-white/5 flex justify-between items-center shrink-0">
+                <h3 className="text-xl font-bold text-black dark:text-white flex items-center gap-2"><IconBell size={24} /> 알림 내역</h3>
+                <button onClick={() => setIsNoticeHistoryOpen(false)} className="p-2 -m-2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
+                  <IconX size={24} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto custom-scrollbar p-6 flex flex-col gap-4">
+                {noticeHistory.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center h-40 text-slate-400 gap-3">
+                    <IconBellX size={40} className="text-slate-300 dark:text-slate-600" />
+                    <span className="text-sm font-medium">새로운 알림이 없습니다.</span>
+                  </div>
+                ) : (
+                  noticeHistory.map((notice, idx) => (
+                    <div key={idx} className="bg-white dark:bg-[#1c1c1e] p-5 rounded-2xl shadow-sm border border-transparent dark:border-white/5">
+                      <div className="text-xs text-slate-400 mb-2 font-medium">{format(new Date(notice.date), 'yyyy년 MM월 dd일 HH:mm')}</div>
+                      <p className="text-sm font-bold text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-wrap">{notice.message}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
 
         {/* System Notice Modal */}
         {systemNotice.isOpen && (
