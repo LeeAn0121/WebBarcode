@@ -105,19 +105,15 @@ const Auth = ({ supabase }: { supabase: any }) => {
 
 const Splash = ({ fadingOut }: { fadingOut: boolean }) => {
   return (
-    <div className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#050505] transition-opacity duration-300 ease-out overflow-hidden ${fadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-purple-400/30 dark:bg-purple-900/40 blur-[80px] mix-blend-screen animate-blob"></div>
-      <div className="absolute top-[20%] right-[-10%] w-[40%] h-[60%] rounded-full bg-blue-400/30 dark:bg-blue-900/40 blur-[80px] mix-blend-screen animate-blob animation-delay-2000"></div>
-      <div className="absolute bottom-[-20%] left-[20%] w-[60%] h-[50%] rounded-full bg-emerald-400/20 dark:bg-emerald-900/30 blur-[80px] mix-blend-screen animate-blob animation-delay-4000"></div>
-      
-      <div className="relative z-10 flex flex-col items-center justify-center gap-6 bg-black/40 border border-white/10 backdrop-blur-[40px] p-10 rounded-[40px] shadow-[0_40px_100px_-20px_rgba(0,0,0,0.5)]">
-        <div className="relative w-[88px] h-[88px] rounded-3xl shadow-[0_10px_40px_rgba(99,102,241,0.3)]">
+    <div className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#f2f2f7] dark:bg-black transition-opacity duration-300 ease-out overflow-hidden ${fadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+      <div className="relative z-10 flex flex-col items-center justify-center gap-6">
+        <div className="relative w-24 h-24 rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.1)]">
           <img src={`${import.meta.env.BASE_URL}icon.jpg`} alt="" className="w-full h-full object-cover rounded-3xl relative z-10" />
-          <div className="absolute inset-0 rounded-3xl bg-primary z-0 animate-[pulseGlow_2s_cubic-bezier(0.4,0,0.6,1)_infinite]"></div>
+          <div className="absolute inset-0 rounded-3xl bg-primary z-0 animate-ping opacity-50"></div>
         </div>
-        <h1 className="text-2xl font-extrabold tracking-tight bg-gradient-to-br from-indigo-400 to-purple-400 text-transparent bg-clip-text">WebBarcode</h1>
-        <div className="w-12 h-1.5 rounded-full bg-indigo-500/20 overflow-hidden relative">
-          <div className="absolute top-0 left-0 h-full w-[40%] bg-indigo-500 rounded-full animate-[loadBar_1.2s_ease-in-out_infinite]"></div>
+        <h1 className="text-3xl font-extrabold tracking-tight text-black dark:text-white">WebBarcode</h1>
+        <div className="w-12 h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden relative">
+          <div className="absolute top-0 left-0 h-full w-[40%] bg-primary rounded-full animate-[loadBar_1.2s_ease-in-out_infinite]"></div>
         </div>
       </div>
     </div>
@@ -1211,20 +1207,12 @@ const handleEditMemo = (id, currentMemo) => {
         </div>
       )}
       
-      {/* Mobile Layout Wrapper */}
-      
-      {/* 🌌 오로라(Mesh) 그라데이션 배경 (공간 UI) */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none bg-[#f8f9fa] dark:bg-[#050505]">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] rounded-full bg-purple-400/30 dark:bg-purple-900/40 blur-[100px] animate-blob mix-blend-multiply dark:mix-blend-screen"></div>
-        <div className="absolute top-[20%] right-[-10%] w-[40%] h-[60%] rounded-full bg-blue-400/30 dark:bg-blue-900/40 blur-[100px] animate-blob animation-delay-2000 mix-blend-multiply dark:mix-blend-screen"></div>
-        <div className="absolute bottom-[-20%] left-[20%] w-[60%] h-[50%] rounded-full bg-emerald-400/20 dark:bg-emerald-900/30 blur-[100px] animate-blob animation-delay-4000 mix-blend-multiply dark:mix-blend-screen"></div>
-      </div>
 
       {/* Mobile Layout Wrapper - Glassmorphism */}
-      <div className="w-full md:max-w-6xl max-w-md flex flex-col h-full overflow-hidden relative bg-white/60 dark:bg-black/60 backdrop-blur-3xl md:shadow-[0_40px_100px_-20px_rgba(0,0,0,0.4)] md:border border-white/40 dark:border-white/10 md:rounded-[3rem] transition-all z-10">
+      <div className="w-full md:max-w-6xl max-w-md flex flex-col h-full overflow-hidden relative bg-[#f2f2f7] dark:bg-black md:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] md:border border-white/5 md:rounded-[3rem] transition-all z-10">
         
         {/* Mobile Header (Top) - Toss/Wallet Style */}
-        <header className="bg-white/30 dark:bg-black/30 backdrop-blur-md z-40 shrink-0 px-6 pt-12 pb-4 flex justify-between items-end border-b border-white/20 dark:border-white/5">
+        <header className="bg-[#f2f2f7] dark:bg-black z-40 shrink-0 px-6 pt-12 pb-4 flex justify-between items-end border-none">
           <div>
             <h1 className="font-bold text-3xl tracking-tight text-black dark:text-white mb-1">
               {activeTab === 'home' && '내 바코드'}
@@ -1342,13 +1330,13 @@ const handleEditMemo = (id, currentMemo) => {
                   </div>
                   <div className="relative">
                     <IconSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} aria-hidden="true" />
-                    <input id="barcode-search" type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="바코드 번호 또는 메모 검색..." className="w-full bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 rounded-2xl pl-12 p-4 text-base font-bold focus:ring-4 focus:ring-primary/30 outline-none fluid-spring shadow-[0_8px_30px_rgb(0,0,0,0.04)]" />
+                    <input id="barcode-search" type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="바코드 번호 또는 메모 검색..." className="w-full bg-white dark:bg-[#1c1c1e] border-0 rounded-2xl pl-12 p-4 text-base font-medium focus:ring-2 focus:ring-primary outline-none transition-shadow shadow-sm" />
                   </div>
   {/* 폴더 탭 영역 (가로 스크롤) */}
   <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-2 px-1">
-    <button onClick={() => setCurrentFolder('전체')} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${currentFolder === '전체' ? 'bg-black dark:bg-white text-white dark:text-black fluid-spring scale-105 shadow-[0_8px_20px_rgba(0,0,0,0.15)]' : 'bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 text-slate-600 dark:text-slate-400 fluid-spring hover:scale-105 shadow-sm'}`}>전체보기</button>
+    <button onClick={() => setCurrentFolder('전체')} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${currentFolder === '전체' ? 'bg-black dark:bg-white text-white dark:text-black shadow-md' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800'}`}>전체보기</button>
     {folders.map(f => (
-      <button key={f} onClick={() => setCurrentFolder(f)} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${currentFolder === f ? 'bg-black dark:bg-white text-white dark:text-black fluid-spring scale-105 shadow-[0_8px_20px_rgba(0,0,0,0.15)]' : 'bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 text-slate-600 dark:text-slate-400 fluid-spring hover:scale-105 shadow-sm'}`}>{f}</button>
+      <button key={f} onClick={() => setCurrentFolder(f)} className={`shrink-0 px-4 py-2 rounded-full text-sm font-bold transition-all ${currentFolder === f ? 'bg-black dark:bg-white text-white dark:text-black shadow-md' : 'bg-white dark:bg-[#1c1c1e] text-slate-500 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800'}`}>{f}</button>
     ))}
   </div>
 </div>
@@ -1369,7 +1357,7 @@ const handleEditMemo = (id, currentMemo) => {
                       className={`relative p-5 rounded-[1.5rem] transition-all duration-300 flex items-center justify-between gap-4 group cursor-pointer ${idx < 8 ? 'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 duration-300 ease-out' : ''} ${
     selectedIds.includes(item.id)
       ? 'bg-primary/5 ring-2 ring-primary dark:bg-primary/20'
-      : 'bg-white/70 dark:bg-white/5 backdrop-blur-xl border border-white/50 dark:border-white/10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] fluid-spring hover:scale-[0.98] hover:shadow-[0_10px_40px_rgb(0,0,0,0.08)]'
+      : 'bg-white dark:bg-[#1c1c1e] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:scale-[0.98] border border-transparent dark:border-white/5'
   }`}
                     >
                         <div className="flex items-center gap-3 overflow-hidden flex-1">

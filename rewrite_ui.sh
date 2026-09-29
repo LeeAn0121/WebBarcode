@@ -1,0 +1,2 @@
+sed -i '' -e 's/bg-white dark:bg-black md:shadow-2xl md:border border-x border-slate-200 dark:border-slate-800 md:rounded-3xl/bg-[#f2f2f7] dark:bg-black md:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] md:border border-white\/5 md:rounded-[3rem]/g' src/App.tsx
+sed -i '' -e 's/bg-white\/95 dark:bg-darkCard\/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 z-40 shrink-0 px-4 py-3/bg-[#f2f2f7] dark:bg-black z-40 shrink-0 px-6 pt-10 pb-4 border-none/g' src/App.tsx
