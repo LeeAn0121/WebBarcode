@@ -141,39 +141,6 @@ function App() {
   });
   useEffect(() => { localStorage.setItem('autoRules', JSON.stringify(autoRules)); }, [autoRules]);
 
-  
-  
-  // 공지사항 & 브로드캐스트 채널 리스너
-  useEffect(() => {
-    // 알림 권한 요청
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-
-    const adminChannel = supabase.channel('wb-admin-actions').on('broadcast', { event: 'admin_command' }, async (payload) => {
-      const { type, target_email, message } = payload.payload;
-      if (type === 'system_notice') {
-        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
-        setSystemNotice({ isOpen: true, message });
-        playSound('success', true);
-        
-        // 백그라운드이거나 최소화 상태일 때 시스템 알림 띄우기
-        if ('Notification' in window && Notification.permission === 'granted') {
-          if (document.hidden) {
-            new Notification('시스템 공지사항', { body: message, icon: `${import.meta.env.BASE_URL}icon.jpg` });
-          }
-        }
-      }
-      if (type === 'force_kick' && session?.user?.email === target_email) {
-        alert('관리자에 의해 강제 로그아웃 되었습니다.');
-        await supabase.auth.signOut();
-        window.location.reload();
-      }
-    }).subscribe();
-
-    return () => { supabase.removeChannel(adminChannel); };
-  }, [session?.user?.email]);
-
   const [systemNotice, setSystemNotice] = useState<{isOpen: boolean, message: string}>({isOpen: false, message: ''});
   const [smartFilter, setSmartFilter] = useState<'all' | 'today' | 'yesterday' | 'hasMemo'>('all');
   
@@ -264,6 +231,41 @@ function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [splashVisible, setSplashVisible] = useState(true);
   const [splashFadingOut, setSplashFadingOut] = useState(false);
+
+
+  
+  
+  // 공지사항 & 브로드캐스트 채널 리스너
+  useEffect(() => {
+    // 알림 권한 요청
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+
+    const adminChannel = supabase.channel('wb-admin-actions').on('broadcast', { event: 'admin_command' }, async (payload) => {
+      const { type, target_email, message } = payload.payload;
+      if (type === 'system_notice') {
+        if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+        setSystemNotice({ isOpen: true, message });
+        playSound('success', true);
+        
+        // 백그라운드이거나 최소화 상태일 때 시스템 알림 띄우기
+        if ('Notification' in window && Notification.permission === 'granted') {
+          if (document.hidden) {
+            new Notification('시스템 공지사항', { body: message, icon: `${import.meta.env.BASE_URL}icon.jpg` });
+          }
+        }
+      }
+      if (type === 'force_kick' && session?.user?.email === target_email) {
+        alert('관리자에 의해 강제 로그아웃 되었습니다.');
+        await supabase.auth.signOut();
+        window.location.reload();
+      }
+    }).subscribe();
+
+    return () => { supabase.removeChannel(adminChannel); };
+  }, [session?.user?.email]);
+
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
