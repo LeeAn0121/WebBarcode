@@ -9,7 +9,7 @@ import {
   IconFolder, IconFolderPlus, IconCloudUpload, IconFileExport, IconFileImport, IconUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink, IconLink
 , IconArrowUp, IconBell, IconBellX, IconFolderOpen } from '@tabler/icons-react';
 import { format } from 'date-fns';
-import { supabase, logDebug, getDebugSessionId } from './supabaseClient';
+import { supabase, logDebug, getDebugSessionId, isAdminEmail } from './supabaseClient';
 
 function playSound(type = 'success', isSoundEnabled) {
   if (!isSoundEnabled) return;
@@ -257,8 +257,7 @@ function App() {
   const [authChecked, setAuthChecked] = useState(false);
   const [splashVisible, setSplashVisible] = useState(true);
   const [splashFadingOut, setSplashFadingOut] = useState(false);
-  const ADMIN_EMAILS = ['leean0121@naver.com', 'leean0121@gmail.com'];
-  const isAdmin = session?.user?.email && ADMIN_EMAILS.includes(session.user.email);
+  const [isAdmin, setIsAdmin] = useState(false);
 
 
   
@@ -300,8 +299,20 @@ function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setAuthChecked(true);
+      if (session?.user?.email) {
+        isAdminEmail(session.user.email).then(setIsAdmin);
+      } else {
+        setIsAdmin(false);
+      }
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => setSession(session));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+      if (session?.user?.email) {
+        isAdminEmail(session.user.email).then(setIsAdmin);
+      } else {
+        setIsAdmin(false);
+      }
+    });
     return () => subscription.unsubscribe();
   }, []);
 
