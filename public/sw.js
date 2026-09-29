@@ -22,6 +22,9 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   if (event.request.method !== 'GET') return;
 
+  // Ignore non-HTTP(S) schemes (like chrome-extension://)
+  if (!event.request.url.startsWith('http')) return;
+
   event.respondWith(
     fetch(event.request).then(response => {
       // Don't cache if not a successful response
