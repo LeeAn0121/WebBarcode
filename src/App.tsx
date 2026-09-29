@@ -1624,11 +1624,11 @@ const handleEditMemo = (id, currentMemo) => {
 
         {/* Modals */}
 
-        {/* Notice History Panel */}
+        {/* Notice History Popup */}
         {isNoticeHistoryOpen && (
-          <div className="fixed inset-0 z-[100] flex justify-end bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setIsNoticeHistoryOpen(false)}>
-            <div className="bg-[#f2f2f7] dark:bg-black w-full max-w-sm h-full shadow-2xl flex flex-col animate-in slide-in-from-right duration-300" onClick={e => e.stopPropagation()}>
-              <div className="p-6 bg-white dark:bg-[#1c1c1e] border-b border-slate-100 dark:border-white/5 flex justify-between items-center shrink-0">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setIsNoticeHistoryOpen(false)}>
+            <div className="bg-[#f2f2f7] dark:bg-black w-full max-w-sm max-h-[80vh] rounded-[2rem] shadow-2xl flex flex-col animate-in zoom-in-95 slide-in-from-bottom-10 duration-300 overflow-hidden border border-slate-100 dark:border-white/5" onClick={e => e.stopPropagation()}>
+              <div className="p-5 bg-white dark:bg-[#1c1c1e] border-b border-slate-100 dark:border-white/5 flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-2">
                   <h3 className="text-xl font-bold text-black dark:text-white flex items-center gap-2">
                     <IconBell size={24} className="text-primary" /> 알림 내역
@@ -1643,7 +1643,7 @@ const handleEditMemo = (id, currentMemo) => {
                       모두 읽음
                     </button>
                   )}
-                  <button onClick={() => setIsNoticeHistoryOpen(false)} className="p-2 -m-2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
+                  <button onClick={() => setIsNoticeHistoryOpen(false)} className="p-1 -m-1 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
                     <IconX size={24} />
                   </button>
                 </div>
@@ -1663,7 +1663,7 @@ const handleEditMemo = (id, currentMemo) => {
                           setNoticeHistory(prev => prev.map(n => n.id === notice.id ? {...n, read: true} : n));
                         }
                       }}
-                      className={`p-5 rounded-2xl shadow-sm transition-colors cursor-pointer border ${notice.read ? 'bg-white dark:bg-[#1c1c1e] border-transparent dark:border-white/5 opacity-70' : 'bg-white dark:bg-[#1c1c1e] border-primary/30 dark:border-primary/50'}`}
+                      className={`p-4 rounded-2xl shadow-sm transition-colors cursor-pointer border ${notice.read ? 'bg-white dark:bg-[#1c1c1e] border-transparent dark:border-white/5 opacity-70' : 'bg-white dark:bg-[#1c1c1e] border-primary/30 dark:border-primary/50'}`}
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div className="text-xs text-slate-400 font-medium">{format(new Date(notice.date), 'yyyy년 MM월 dd일 HH:mm')}</div>
