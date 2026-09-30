@@ -245,7 +245,7 @@ function App() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const pressTimerRef = useRef<any>(null);
-  const [moveModal, setMoveModal] = useState({ isOpen: false, ids: [] as string[], targetFolder: '기본폴더' });
+  const [moveModal, setMoveModal] = useState({ isOpen: false, ids: [] as string[], targetFolder: '기본폴더', type: 'barcode' as 'barcode' | 'folder', sourceFolder: '' });
   const [shareModal, setShareModal] = useState({ isOpen: false, url: '', title: '', description: '', shareText: '' });
   const [shareConfig, setShareConfig] = useState({ isOpen: false, type: '', folderName: '', item: null as any, expireHours: 1 });
   const [collabFolders, setCollabFolders] = useState<{owner_id: string, folder_name: string}[]>([]);
@@ -1003,19 +1003,85 @@ function App() {
   };
 
   const handleMoveFolderSubmit = async () => {
-    if (moveModal.ids.length === 0) return;
     try {
-      const { error } = await supabase.from('barcodes').update({ folder: moveModal.targetFolder }).in('id', moveModal.ids);
-      if (error) throw error;
-      setBarcodes(prev => prev.map(b => moveModal.ids.includes(b.id) ? { ...b, folder: moveModal.targetFolder } : b));
-      toast.success(`${moveModal.ids.length}개 폴더 이동 완료!`);
-      setMoveModal({ isOpen: false, ids: [], targetFolder: '기본폴더' });
+      if (moveModal.type === 'barcode') {
+        if (moveModal.ids.length === 0) return;
+        const { error } = await supabase.from('barcodes').update({ folder: moveModal.targetFolder }).in('id', moveModal.ids);
+        if (error) throw error;
+        setBarcodes(prev => prev.map(b => moveModal.ids.includes(b.id) ? { ...b, folder: moveModal.targetFolder } : b));
+        toast.success(`${moveModal.ids.length}개 항목 이동 완료!`);
+      } else if (moveModal.type === 'folder') {
+        const oldName = moveModal.sourceFolder;
+        const newName = moveModal.targetFolder === '기본폴더' ? oldName.split('/').pop()! : `${moveModal.targetFolder}/${oldName.split('/').pop()}`;
+        
+        if (oldName === newName) {
+          setMoveModal(prev => ({ ...prev, isOpen: false }));
+          return;
+        }
+
+        const oldPrefix = oldName + '/';
+        const newPrefix = newName + '/';
+        
+        // 1. DB 업데이트
+        const barcodesToUpdate = barcodes.filter(b => {
+          const f = b.folder || '기본폴더';
+          return f === oldName || f.startsWith(oldPrefix);
+        });
+        
+        if (barcodesToUpdate.length > 0) {
+          const uniqueFolders = Array.from(new Set(barcodesToUpdate.map(b => b.folder || '기본폴더')));
+          for (const f of uniqueFolders) {
+            const updatedF = f === oldName ? newName : f.replace(oldPrefix, newPrefix);
+            const ids = barcodesToUpdate.filter(b => (b.folder || '기본폴더') === f).map(b => b.id);
+            const { error } = await supabase.from('barcodes').update({ folder: updatedF }).in('id', ids);
+            if (error) throw error;
+          }
+        }
+        
+        // 2. 상태 업데이트
+        setLocalFolders(prev => {
+          const next = prev.map(f => {
+            if (f === oldName) return newName;
+            if (f.startsWith(oldPrefix)) return f.replace(oldPrefix, newPrefix);
+            return f;
+          });
+          if (!next.includes(newName)) next.push(newName);
+          const uniqueNext = Array.from(new Set(next));
+          localStorage.setItem('folders', JSON.stringify(uniqueNext));
+          return uniqueNext;
+        });
+        
+        setBarcodes(prev => prev.map(b => {
+          const f = b.folder || '기본폴더';
+          if (f === oldName) return { ...b, folder: newName };
+          if (f.startsWith(oldPrefix)) return { ...b, folder: f.replace(oldPrefix, newPrefix) };
+          return b;
+        }));
+        
+        setFolderOrder(prev => {
+          const next = prev.map(f => {
+            if (f === oldName) return newName;
+            if (f.startsWith(oldPrefix)) return f.replace(oldPrefix, newPrefix);
+            return f;
+          });
+          localStorage.setItem('folderOrder', JSON.stringify(next));
+          return next;
+        });
+
+        if (currentFolder === oldName) setCurrentFolder(newName);
+        if (explorerPath === oldName) setExplorerPath(newName);
+        else if (explorerPath.startsWith(oldPrefix)) setExplorerPath(explorerPath.replace(oldPrefix, newPrefix));
+        
+        toast.success('폴더 위치가 이동되었습니다.');
+      }
+      
+      setMoveModal(prev => ({ ...prev, isOpen: false }));
       setActiveActionMenu(null);
       setIsSelectionMode(false);
       setSelectedIds([]);
-    } catch(e) {
+    } catch(e: any) {
       console.error(e);
-      toast.error('폴더 이동에 실패했습니다.');
+      toast.error('이동에 실패했습니다: ' + e.message);
     }
   };
 const handleEditMemo = (id, currentMemo) => {
@@ -1074,7 +1140,17 @@ const handleEditMemo = (id, currentMemo) => {
 
   const handleRenameFolder = async (oldName: string) => {
     if (oldName === '기본폴더') return toast.error('기본 폴더는 이름 변경이 불가능합니다.');
-    const newName = prompt(`'${oldName}' 폴더의 새 이름을 입력하세요:\n(경로 변경 시 '상위폴더/새이름' 형태로 입력)`, oldName);
+    const baseName = oldName.split('/').pop() || oldName;
+    const newBaseName = prompt(`'${baseName}' 폴더의 새 이름을 입력하세요:`, baseName);
+    if (!newBaseName || newBaseName === baseName) return;
+    
+    // Construct new full path
+    const parts = oldName.split('/');
+    parts.pop();
+    parts.push(newBaseName.trim().replace(/\//g, ''));
+    const newName = parts.join('/');
+    
+    if (newName === oldName) return;
     if (!newName || newName === oldName) return;
     
     try {
@@ -1082,7 +1158,7 @@ const handleEditMemo = (id, currentMemo) => {
       const barcodesToUpdate = barcodes.filter(b => (b.folder || '기본폴더') === oldName);
       if (barcodesToUpdate.length > 0) {
         const ids = barcodesToUpdate.map(b => b.id);
-        const { error } = await supabase.from('scans').update({ folder: newName }).in('id', ids);
+        const { error } = await supabase.from('barcodes').update({ folder: newName }).in('id', ids);
         if (error) throw error;
       }
       
@@ -1390,7 +1466,7 @@ const handleEditMemo = (id, currentMemo) => {
         <button onClick={async () => {
           if (!window.confirm(`선택한 ${selectedIds.length}개의 바코드를 삭제하시겠습니까?`)) return;
           try {
-            const { error } = await supabase.from('scans').delete().in('id', selectedIds);
+            const { error } = await supabase.from('barcodes').delete().in('id', selectedIds);
             if (error) throw error;
             setBarcodes(prev => prev.filter(b => !selectedIds.includes(b.id)));
             setSelectedIds([]);
@@ -1617,7 +1693,7 @@ const handleEditMemo = (id, currentMemo) => {
                             className="bg-white dark:bg-[#1c1c1e] p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/10 transition-colors active:scale-95"
                           >
                             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-500 rounded-xl flex items-center justify-center shrink-0">
-                              <IconFolder size={24} fill="currentColor" />
+                              <IconFolderFilled size={24} className="text-yellow-500 drop-shadow-sm" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">{name}</h3>
@@ -1633,8 +1709,8 @@ const handleEditMemo = (id, currentMemo) => {
                           onClick={() => setExplorerPath(fullPath)}
                           className="bg-white dark:bg-darkCard p-4 rounded-[20px] shadow-apple border border-slate-100/50 dark:border-white/5 flex flex-col items-center gap-3 cursor-pointer hover:shadow-lg dark:hover:bg-white/5 transition-all active:scale-95"
                         >
-                          <div className="w-16 h-16 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-500 rounded-2xl flex items-center justify-center">
-                            <IconFolder size={32} fill="currentColor" />
+                          <div className="w-16 h-16 flex items-center justify-center">
+                            <IconFolderFilled size={40} className="text-yellow-500 drop-shadow-sm" />
                           </div>
                           <div className="text-center w-full">
                             <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">{name}</h3>
@@ -1665,7 +1741,7 @@ const handleEditMemo = (id, currentMemo) => {
                             {activeActionMenu === b.id && (
                               <div className="absolute inset-y-0 right-0 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2 px-4 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200">
                                 <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(b.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="p-2 bg-slate-100 dark:bg-black rounded-lg text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-colors" title="복사"><IconCopy size={18} /></button>
-                                <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [b.id], targetFolder: b.folder || '기본폴더' }); setActiveActionMenu(null); }} className="p-2 bg-slate-100 dark:bg-black rounded-lg text-slate-600 dark:text-slate-300 hover:text-purple-500 hover:bg-purple-50 transition-colors" title="이동"><IconFolder size={18} /></button>
+                                <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [b.id], targetFolder: b.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); setActiveActionMenu(null); }} className="p-2 bg-slate-100 dark:bg-black rounded-lg text-slate-600 dark:text-slate-300 hover:text-purple-500 hover:bg-purple-50 transition-colors" title="이동"><IconFolder size={18} /></button>
                                 <button onClick={(e) => { e.stopPropagation(); handleDelete(b.id); setActiveActionMenu(null); }} className="p-2 bg-slate-100 dark:bg-black rounded-lg text-slate-600 dark:text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors" title="삭제"><IconTrash size={18} /></button>
                               </div>
                             )}
@@ -1691,7 +1767,7 @@ const handleEditMemo = (id, currentMemo) => {
                               <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(b.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="w-10 h-10 bg-slate-100 dark:bg-black rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-colors" title="복사">
                                 <IconCopy size={18} />
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [b.id], targetFolder: b.folder || '기본폴더' }); setActiveActionMenu(null); }} className="w-10 h-10 bg-slate-100 dark:bg-black rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-purple-500 hover:bg-purple-50 transition-colors" title="이동">
+                              <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [b.id], targetFolder: b.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); setActiveActionMenu(null); }} className="w-10 h-10 bg-slate-100 dark:bg-black rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-purple-500 hover:bg-purple-50 transition-colors" title="이동">
                                 <IconFolder size={18} />
                               </button>
                               <button onClick={(e) => { e.stopPropagation(); handleDelete(b.id); setActiveActionMenu(null); }} className="w-10 h-10 bg-slate-100 dark:bg-black rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors" title="삭제">
@@ -2099,7 +2175,7 @@ const handleEditMemo = (id, currentMemo) => {
                   <button role="menuitem" onClick={() => { navigator.clipboard.writeText(item.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-black dark:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-colors"><IconCopy size={24} className="text-black dark:text-white" /> 복사하기</button>
                   <button role="menuitem" onClick={() => { handleShare(item); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-black dark:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-colors"><IconShare size={24} className="text-black dark:text-white" /> 외부로 공유</button>
                   <button role="menuitem" onClick={() => { handleEditMemo(item.id, item.memo); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-2xl transition-colors"><IconMessagePlus size={24} /> 메모 추가/수정</button>
-                  <button role="menuitem" onClick={() => { setMoveModal({ isOpen: true, ids: [item.id], targetFolder: item.folder || '기본폴더' }); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-2xl transition-colors"><IconFolder size={24} /> 다른 폴더로 이동</button>
+                  <button role="menuitem" onClick={() => { setMoveModal({ isOpen: true, ids: [item.id], targetFolder: item.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-2xl transition-colors"><IconFolder size={24} /> 다른 폴더로 이동</button>
                   <button role="menuitem" onClick={() => { handleClone(item); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-2xl transition-colors"><IconCopy size={24} /> 이 바코드 복제하기</button>
                   <button role="menuitem" onClick={() => { handleEditCode(item.id, item.code); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10 rounded-2xl transition-colors"><IconEdit size={24} /> 바코드 번호 수정</button>
                   <button role="menuitem" onClick={() => { handleDelete(item.id); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition-colors"><IconTrash size={24} /> 삭제하기</button>
@@ -2108,37 +2184,54 @@ const handleEditMemo = (id, currentMemo) => {
             </div>
           );
         })()}
-{moveModal.isOpen && moveModal.ids.length > 0 && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setMoveModal({ ...moveModal, isOpen: false })} role="dialog" aria-modal="true" aria-label="폴더 이동">
-            <div className="bg-white dark:bg-[#111111] w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">폴더 이동</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">선택한 바코드 {moveModal.ids.length}개를 이동할 폴더를 선택하세요.</p>
+{moveModal.isOpen && (
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 animate-in fade-in duration-200" onClick={() => setMoveModal(prev => ({ ...prev, isOpen: false }))} role="dialog" aria-modal="true" aria-label="이동 위치 선택">
+            <div className="bg-white dark:bg-[#1c1c1e] w-full sm:max-w-sm rounded-t-3xl sm:rounded-[24px] shadow-2xl p-6 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200 flex flex-col max-h-[80svh]" onClick={e => e.stopPropagation()}>
+              <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
+              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">이동할 위치 선택</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+                {moveModal.type === 'barcode' ? `선택한 바코드 ${moveModal.ids.length}개를 이동합니다.` : `'${moveModal.sourceFolder.split('/').pop()}' 폴더를 이동합니다.`}
+              </p>
 
-              <div className="relative mb-6">
-                <label htmlFor="move-target-folder" className="sr-only">이동할 폴더</label>
-                <select
-                  id="move-target-folder"
-                  value={moveModal.targetFolder}
-                  onChange={(e) => setMoveModal({ ...moveModal, targetFolder: e.target.value })}
-                  className="w-full appearance-none bg-slate-50 dark:bg-black border border-slate-200 dark:border-slate-700 rounded-xl p-3 pr-10 text-sm font-medium focus:ring-2 focus:ring-primary outline-none text-slate-700 dark:text-slate-200"
+              <div className="flex-1 overflow-y-auto custom-scrollbar mb-6 border border-slate-100/50 dark:border-white/5 rounded-[20px] p-2 bg-slate-50 dark:bg-black/20 flex flex-col gap-1">
+                <button 
+                  onClick={() => setMoveModal(prev => ({ ...prev, targetFolder: '기본폴더' }))}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-[16px] transition-colors ${moveModal.targetFolder === '기본폴더' ? 'bg-primary/10 text-primary font-bold' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'}`}
                 >
-                  {folders.map(f => (
-                    <option key={f} value={f}>{f}</option>
-                  ))}
-                </select>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                  <IconFolder size={18} aria-hidden="true" />
-                </div>
+                  <IconHome size={20} /> <span className="text-left flex-1">최상위 폴더 (Home)</span>
+                  {moveModal.targetFolder === '기본폴더' && <div className="w-2 h-2 rounded-full bg-primary"></div>}
+                </button>
+                
+                {folders.filter(f => f !== '기본폴더').map(f => {
+                  const depth = f.split('/').length - 1;
+                  const name = f.split('/').pop();
+                  
+                  // 폴더 본인이거나 자신의 하위 폴더로는 이동 불가
+                  if (moveModal.type === 'folder' && (f === moveModal.sourceFolder || f.startsWith(moveModal.sourceFolder + '/'))) return null;
+
+                  return (
+                    <button 
+                      key={f}
+                      onClick={() => setMoveModal(prev => ({ ...prev, targetFolder: f }))}
+                      style={{ paddingLeft: `${(depth * 1.5) + 1}rem` }}
+                      className={`w-full flex items-center gap-3 pr-4 py-3 rounded-[16px] transition-colors ${moveModal.targetFolder === f ? 'bg-primary/10 text-primary font-bold' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'}`}
+                    >
+                      <IconFolderFilled size={20} className={moveModal.targetFolder === f ? 'text-primary' : 'text-yellow-500'} /> 
+                      <span className="text-left flex-1 truncate">{name}</span>
+                      {moveModal.targetFolder === f && <div className="w-2 h-2 rounded-full bg-primary"></div>}
+                    </button>
+                  );
+                })}
               </div>
 
-              <div className="flex gap-3">
-                <button onClick={() => setMoveModal({ ...moveModal, isOpen: false })} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">취소</button>
-                <button onClick={handleMoveFolderSubmit} className="flex-1 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-xl shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2">이동하기</button>
+              <div className="flex gap-3 shrink-0">
+                <button onClick={() => setMoveModal(prev => ({ ...prev, isOpen: false }))} className="flex-1 py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold rounded-[16px] transition-colors focus-visible:outline-none">취소</button>
+                <button onClick={handleMoveFolderSubmit} className="flex-1 py-3.5 bg-primary hover:bg-primaryHover text-white font-bold rounded-[16px] shadow-[0_4px_12px_rgba(49,130,246,0.3)] transition-all focus-visible:outline-none active:scale-95">여기로 이동</button>
               </div>
             </div>
           </div>
         )}
-
+        
         {/* Mobile Bottom Tab Bar */}
         <nav className="bg-white/60 dark:bg-black/40 backdrop-blur-md border border-white/40 dark:border-white/5 shrink-0 z-50 pb-safe pt-2" aria-label="주 메뉴">
           <div className="flex justify-around items-center px-4 pb-2">
