@@ -5,7 +5,7 @@
 
 @layer base {
   body {
-    @apply bg-appleBg dark:bg-darkBg text-slate-800 dark:text-slate-200 min-h-[100svh] font-sans antialiased selection:bg-primary/30;
+    @apply bg-tossBg dark:bg-darkBg text-slate-800 dark:text-slate-200 min-h-[100svh] font-sans antialiased selection:bg-primary/30;
   }
 }
 

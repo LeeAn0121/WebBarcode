@@ -17,7 +17,7 @@ export default {
         secondary: '#00c853',
         darkBg: '#000000', // Apple Pure Black
         darkCard: '#1c1c1e', // Apple Dark Card
-        appleBg: '#f5f5f7', // Apple Light Gray Background
+        tossBg: '#f2f4f6', // Apple Light Gray Background
       },
       boxShadow: {
         'soft': '0 4px 24px rgba(0, 0, 0, 0.04)',

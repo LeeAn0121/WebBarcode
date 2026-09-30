@@ -105,7 +105,7 @@ const Auth = ({ supabase }: { supabase: any }) => {
 
 const Splash = ({ fadingOut }: { fadingOut: boolean }) => {
   return (
-    <div className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#f5f5f7] dark:bg-black transition-opacity duration-300 ease-out overflow-hidden ${fadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+    <div className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#f2f4f6] dark:bg-black transition-opacity duration-300 ease-out overflow-hidden ${fadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
       <div className="relative z-10 flex flex-col items-center justify-center gap-6">
         <div className="relative w-24 h-24 rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.1)]">
           <img src={`${import.meta.env.BASE_URL}icon.jpg`} alt="" className="w-full h-full object-cover rounded-3xl relative z-10" />
@@ -1358,12 +1358,12 @@ const handleEditMemo = (id, currentMemo) => {
       
 
       {/* Mobile Layout Wrapper - Glassmorphism */}
-      <div className="w-full md:max-w-6xl max-w-md flex flex-col h-full overflow-hidden relative bg-[#f5f5f7] dark:bg-black md:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] md:border border-white/5 md:rounded-[3rem] transition-all z-10">
+      <div className="w-full md:max-w-6xl max-w-md flex flex-col h-full overflow-hidden relative bg-[#f2f4f6] dark:bg-black md:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] md:border border-white/5 md:rounded-[3rem] transition-all z-10">
         
         {/* Mobile Header (Top) - Toss/Wallet Style */}
-        <header className="absolute top-0 left-0 right-0 bg-[#f5f5f7]/85 dark:bg-black/85 backdrop-blur-2xl z-40 px-6 pt-12 pb-4 flex justify-between items-end border-b border-slate-200/50 dark:border-white/10 transition-all">
+        <header className="bg-[#f2f4f6] dark:bg-black z-40 shrink-0 px-6 pt-12 pb-5 flex justify-between items-end border-none transition-all">
           <div>
-            <h1 className="font-extrabold text-4xl tracking-tight text-black dark:text-white mb-2">
+            <h1 className="font-bold text-[28px] tracking-tight text-black dark:text-white mb-2">
               {activeTab === 'home' && '내 바코드'}
               {activeTab === 'folders' && '폴더 관리'}
               {activeTab === 'settings' && '설정'}
@@ -1514,7 +1514,7 @@ const handleEditMemo = (id, currentMemo) => {
   }`}
                     >
                         <div className="flex items-center gap-3 overflow-hidden flex-1">
-                          <div className="h-12 w-12 shrink-0 rounded-2xl bg-[#f5f5f7] dark:bg-[#2c2c2e] text-black dark:text-white flex items-center justify-center transition-transform group-hover:scale-110">
+                          <div className="h-12 w-12 shrink-0 rounded-2xl bg-[#f2f4f6] dark:bg-[#2c2c2e] text-black dark:text-white flex items-center justify-center transition-transform group-hover:scale-110">
                             <IconBarcode size={20} />
                           </div>
                           <div className="flex flex-col flex-1 overflow-hidden">
@@ -1597,7 +1597,7 @@ const handleEditMemo = (id, currentMemo) => {
         
         {/* Tab: Folders */}
         {activeTab === 'folders' && (
-          <div className="flex-1 flex flex-col min-h-0 bg-[#f5f5f7] dark:bg-black animate-in fade-in slide-in-from-bottom-2 duration-300 pt-28">
+          <div className="flex-1 flex flex-col min-h-0 bg-[#f2f4f6] dark:bg-black animate-in fade-in slide-in-from-bottom-2 duration-300 pt-28">
             {/* Breadcrumb Header */}
             <div className="flex-none p-4 pb-2 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/10 z-10 sticky top-0 flex flex-col gap-3">
               <div className="flex justify-between items-center">
@@ -1693,7 +1693,7 @@ const handleEditMemo = (id, currentMemo) => {
                             className="bg-white dark:bg-[#1c1c1e] p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/10 transition-colors active:scale-95"
                           >
                             <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-500 rounded-xl flex items-center justify-center shrink-0">
-                              <IconFolderFilled size={24} className="text-yellow-500 drop-shadow-sm" />
+                              <IconFolderFilled size={28} className="text-[#3182f6]" />
                             </div>
                             <div className="flex-1 min-w-0">
                               <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">{name}</h3>
@@ -1707,10 +1707,10 @@ const handleEditMemo = (id, currentMemo) => {
                         <div 
                           key={fullPath}
                           onClick={() => setExplorerPath(fullPath)}
-                          className="bg-white dark:bg-darkCard p-4 rounded-[20px] shadow-apple border border-slate-100/50 dark:border-white/5 flex flex-col items-center gap-3 cursor-pointer hover:shadow-lg dark:hover:bg-white/5 transition-all active:scale-95"
+                          className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] shadow-sm border border-slate-100/50 dark:border-white/5 border border-slate-100/50 dark:border-white/5 flex flex-col items-center gap-3 cursor-pointer hover:shadow-lg dark:hover:bg-white/5 transition-all active:scale-95"
                         >
                           <div className="w-16 h-16 flex items-center justify-center">
-                            <IconFolderFilled size={40} className="text-yellow-500 drop-shadow-sm" />
+                            <IconFolderFilled size={40} className="text-[#3182f6]" />
                           </div>
                           <div className="text-center w-full">
                             <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">{name}</h3>
@@ -1733,7 +1733,7 @@ const handleEditMemo = (id, currentMemo) => {
                               <IconBarcode size={24} />
                             </div>
                             <div className="flex-1 min-w-0 flex flex-col justify-center">
-                              <span className="font-mono text-lg tracking-tight font-bold text-black dark:text-white truncate">{b.code}</span>
+                              <span className="font-mono text-[17px] tracking-tight font-bold text-slate-900 dark:text-white truncate">{b.code}</span>
                               {b.memo && <span className="text-sm text-primary font-medium truncate mt-0.5">{b.memo}</span>}
                             </div>
                             
@@ -1753,7 +1753,7 @@ const handleEditMemo = (id, currentMemo) => {
                         <div 
                           key={b.id}
                           onClick={() => setActiveActionMenu(activeActionMenu === b.id ? null : b.id)}
-                          className="bg-white dark:bg-darkCard p-4 rounded-[20px] shadow-apple border border-slate-100/50 dark:border-white/5 flex flex-col justify-between gap-3 cursor-pointer hover:shadow-lg dark:hover:bg-white/5 transition-all relative group"
+                          className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] shadow-sm border border-slate-100/50 dark:border-white/5 border border-slate-100/50 dark:border-white/5 flex flex-col justify-between gap-3 cursor-pointer hover:shadow-lg dark:hover:bg-white/5 transition-all relative group"
                         >
                           <div className="flex flex-col gap-1 items-center pt-2">
                             <IconBarcode size={32} className="text-slate-800 dark:text-slate-200" />
@@ -1786,8 +1786,8 @@ const handleEditMemo = (id, currentMemo) => {
         )}
         
         {activeTab === 'settings' && (
-          <div className="flex-1 overflow-y-auto custom-scrollbar pt-28 pb-28 px-4 animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
-          <div className="bg-white dark:bg-darkCard rounded-[24px] shadow-apple border border-slate-100/50 dark:border-white/5 overflow-hidden min-h-[500px]">
+          <div className="flex-1 overflow-y-auto custom-scrollbar pt-4 pb-28 px-5 animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
+          <div className="bg-white dark:bg-darkCard rounded-[24px] shadow-sm border border-slate-100/50 dark:border-white/5 border border-slate-100/50 dark:border-white/5 overflow-hidden min-h-[500px]">
             <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-black/30">
               <h2 className="font-bold flex items-center gap-2 text-xl"><IconSettings className="text-primary" size={24} aria-hidden="true" /> 설정</h2>
             </div>
@@ -1798,7 +1798,7 @@ const handleEditMemo = (id, currentMemo) => {
               <section className="space-y-4">
                 <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-300 font-bold uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">데이터 백업 및 복원</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white dark:bg-darkCard p-5 rounded-[20px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-apple hover:shadow-lg transition-all">
+                  <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm border border-slate-100/50 dark:border-white/5 hover:shadow-lg transition-all">
                     <div className="flex items-center gap-3 text-blue-500">
                       <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
                         <IconCloudDownload size={24} aria-hidden="true" />
@@ -1809,7 +1809,7 @@ const handleEditMemo = (id, currentMemo) => {
                     <button onClick={handleBackup} className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">백업 파일 다운로드</button>
                   </div>
 
-                  <div className="bg-white dark:bg-darkCard p-5 rounded-[20px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-apple hover:shadow-lg transition-all">
+                  <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm border border-slate-100/50 dark:border-white/5 hover:shadow-lg transition-all">
                     <div className="flex items-center gap-3 text-indigo-500">
                       <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-lg">
                         <IconCloudUpload size={24} aria-hidden="true" />
@@ -1826,7 +1826,7 @@ const handleEditMemo = (id, currentMemo) => {
               {/* 엑셀 영역 */}
               <section className="space-y-4">
                 <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-300 font-bold uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">엑셀 출력</h3>
-                <div className="bg-white dark:bg-darkCard p-5 rounded-[20px] border border-slate-100/50 dark:border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-apple">
+                <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm border border-slate-100/50 dark:border-white/5">
                   <div className="flex items-start gap-4">
                     <div className="bg-green-100 dark:bg-green-900/30 p-2.5 rounded-lg text-sm text-green-600 dark:text-green-400 shrink-0">
                       <IconDownload size={24} aria-hidden="true"/>
@@ -1848,7 +1848,7 @@ const handleEditMemo = (id, currentMemo) => {
                   <h3 className="text-sm font-semibold text-purple-500 uppercase tracking-widest border-b border-purple-100 dark:border-purple-900/30 pb-2 flex items-center gap-2">
                     <IconRocket size={16} aria-hidden="true"/> 시스템 관리 (Admin)
                   </h3>
-                  <div className="bg-white dark:bg-darkCard p-5 sm:p-6 rounded-[20px] border border-slate-100/50 dark:border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-apple">
+                  <div className="bg-white dark:bg-darkCard p-5 sm:p-6 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm border border-slate-100/50 dark:border-white/5">
                     <div>
                       <h4 className="font-bold text-purple-600 dark:text-purple-400 text-lg">Admin Center</h4>
                       <p className="text-sm text-purple-500/80 dark:text-purple-400/80 mt-1 leading-relaxed">공지사항 관리, 전체 로그 모니터링 및 실시간 접속자 현황 등을 확인합니다.</p>
@@ -1863,7 +1863,7 @@ const handleEditMemo = (id, currentMemo) => {
               {/* 위험 구역 */}
               <section className="space-y-4 pt-4">
                 <h3 className="text-sm font-semibold text-red-500 uppercase tracking-widest border-b border-red-100 dark:border-red-900/30 pb-2 flex items-center gap-2"><IconAlertTriangle size={16} aria-hidden="true"/> 위험 구역</h3>
-                <div className="bg-white dark:bg-darkCard p-5 sm:p-6 rounded-[20px] border border-slate-100/50 dark:border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-apple">
+                <div className="bg-white dark:bg-darkCard p-5 sm:p-6 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm border border-slate-100/50 dark:border-white/5">
                   <div>
                     <h4 className="font-bold text-red-600 dark:text-red-400 text-lg">모든 데이터 삭제</h4>
                     <p className="text-sm text-red-500/80 dark:text-red-400/80 mt-1 leading-relaxed">이 작업은 되돌릴 수 없습니다. 서버의 모든 데이터가 영구 삭제됩니다.</p>
@@ -1907,7 +1907,7 @@ const handleEditMemo = (id, currentMemo) => {
         {/* Notice History Popup */}
         {isNoticeHistoryOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setIsNoticeHistoryOpen(false)}>
-            <div className="bg-[#f5f5f7] dark:bg-black w-full max-w-sm max-h-[80vh] rounded-[2rem] shadow-2xl flex flex-col animate-in zoom-in-95 slide-in-from-bottom-10 duration-300 overflow-hidden border border-slate-100 dark:border-white/5" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#f2f4f6] dark:bg-black w-full max-w-sm max-h-[80vh] rounded-[2rem] shadow-2xl flex flex-col animate-in zoom-in-95 slide-in-from-bottom-10 duration-300 overflow-hidden border border-slate-100 dark:border-white/5" onClick={e => e.stopPropagation()}>
               <div className="p-5 bg-white dark:bg-[#1c1c1e] border-b border-slate-100 dark:border-white/5 flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-2">
                   <h3 className="text-xl font-bold text-black dark:text-white flex items-center gap-2">
@@ -2165,7 +2165,7 @@ const handleEditMemo = (id, currentMemo) => {
           const item = barcodes.find(b => b.id === activeActionMenu)!;
           return (
             <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 transition-all" onClick={() => setActiveActionMenu(null)} role="dialog" aria-modal="true" aria-label={`${item.code} 작업 메뉴`}>
-              <div className="bg-white dark:bg-[#1c1c1e] w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+              <div className="bg-white dark:bg-[#1c1c1e] w-full sm:max-w-sm rounded-t-[32px] sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                 <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto my-3 sm:hidden"></div>
                 <div className="px-6 pb-4 pt-2 flex flex-col">
                   <span className="font-mono font-bold text-xl text-black dark:text-white truncate">{item.code}</span>
@@ -2214,14 +2214,14 @@ const handleEditMemo = (id, currentMemo) => {
         })()}
 {moveModal.isOpen && (
           <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 animate-in fade-in duration-200" onClick={() => setMoveModal(prev => ({ ...prev, isOpen: false }))} role="dialog" aria-modal="true" aria-label="이동 위치 선택">
-            <div className="bg-white dark:bg-[#1c1c1e] w-full sm:max-w-sm rounded-t-3xl sm:rounded-[24px] shadow-2xl p-6 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200 flex flex-col max-h-[80svh]" onClick={e => e.stopPropagation()}>
+            <div className="bg-white dark:bg-[#1c1c1e] w-full sm:max-w-sm rounded-t-[32px] sm:rounded-[24px] shadow-2xl p-6 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200 flex flex-col max-h-[80svh]" onClick={e => e.stopPropagation()}>
               <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
               <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">이동할 위치 선택</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
                 {moveModal.type === 'barcode' ? `선택한 바코드 ${moveModal.ids.length}개를 이동합니다.` : `'${moveModal.sourceFolder.split('/').pop()}' 폴더를 이동합니다.`}
               </p>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar mb-6 border border-slate-100/50 dark:border-white/5 rounded-[20px] p-2 bg-slate-50 dark:bg-black/20 flex flex-col gap-1">
+              <div className="flex-1 overflow-y-auto custom-scrollbar mb-6 border border-slate-100/50 dark:border-white/5 rounded-[24px] p-2 bg-slate-50 dark:bg-black/20 flex flex-col gap-1">
                 <button 
                   onClick={() => setMoveModal(prev => ({ ...prev, targetFolder: '기본폴더' }))}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-[16px] transition-colors ${moveModal.targetFolder === '기본폴더' ? 'bg-primary/10 text-primary font-bold' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'}`}
@@ -2244,7 +2244,7 @@ const handleEditMemo = (id, currentMemo) => {
                       style={{ paddingLeft: `${(depth * 1.5) + 1}rem` }}
                       className={`w-full flex items-center gap-3 pr-4 py-3 rounded-[16px] transition-colors ${moveModal.targetFolder === f ? 'bg-primary/10 text-primary font-bold' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'}`}
                     >
-                      <IconFolderFilled size={20} className={moveModal.targetFolder === f ? 'text-primary' : 'text-yellow-500'} /> 
+                      <IconFolderFilled size={24} className={moveModal.targetFolder === f ? "text-primary" : "text-slate-300 dark:text-slate-600"} /> 
                       <span className="text-left flex-1 truncate">{name}</span>
                       {moveModal.targetFolder === f && <div className="w-2 h-2 rounded-full bg-primary"></div>}
                     </button>
