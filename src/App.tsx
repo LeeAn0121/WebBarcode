@@ -1684,7 +1684,21 @@ const handleEditMemo = (id, currentMemo) => {
                     const newFolderName = prompt('현재 위치에 새 폴더 생성:');
                     if (newFolderName && newFolderName.trim()) {
                       const finalName = explorerPath ? `${explorerPath}/${newFolderName.trim()}` : newFolderName.trim();
-                      setLocalFolders(prev => Array.from(new Set([...prev, finalName])));
+                      setLocalFolders(prev => {
+                        const next = Array.from(new Set([...prev, finalName]));
+                        localStorage.setItem('folders', JSON.stringify(next));
+                        return next;
+                      });
+                      
+                      setFolderOrder(prev => {
+                        if (!prev.includes(finalName)) {
+                          const next = [...prev, finalName];
+                          localStorage.setItem('folderOrder', JSON.stringify(next));
+                          return next;
+                        }
+                        return prev;
+                      });
+                      
                       setExplorerPath(finalName);
                       toast.success('폴더가 생성되었습니다.');
                     }
