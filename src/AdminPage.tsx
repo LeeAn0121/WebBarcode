@@ -150,18 +150,18 @@ export default function AdminPage() {
   };
 
   if (checking || (session && !adminChecked)) return (
-    <div className="min-h-screen bg-[#f2f2f7] dark:bg-black flex items-center justify-center">
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-black flex items-center justify-center">
       <div className="w-10 h-10 border-4 border-black/10 dark:border-white/10 border-t-black dark:border-t-white rounded-full animate-spin"></div>
     </div>
   );
 
   if (!session) return (
-    <div className="min-h-screen bg-[#f2f2f7] dark:bg-black flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-black flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm bg-white dark:bg-[#1c1c1e] p-8 rounded-[2rem] shadow-[0_12px_40px_rgba(0,0,0,0.06)] flex flex-col items-center text-center">
         <IconShieldLock size={48} className="text-black dark:text-white mb-6" />
         <h2 className="text-2xl font-bold text-black dark:text-white mb-2">WebBarcode Admin</h2>
         <p className="text-slate-500 mb-8 text-sm">관리자 계정으로 로그인하세요.</p>
-        <button onClick={login} className="w-full bg-[#f2f2f7] hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-black dark:text-white transition-colors py-4 rounded-2xl font-bold flex items-center justify-center gap-3">
+        <button onClick={login} className="w-full bg-[#f5f5f7] hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-black dark:text-white transition-colors py-4 rounded-2xl font-bold flex items-center justify-center gap-3">
           <IconBrandGoogle size={20} /> Google로 계속
         </button>
       </div>
@@ -169,12 +169,12 @@ export default function AdminPage() {
   );
 
   if (!isAdmin) return (
-    <div className="min-h-screen bg-[#f2f2f7] dark:bg-black flex flex-col items-center justify-center p-6">
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-black flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-sm bg-white dark:bg-[#1c1c1e] p-8 rounded-[2rem] shadow-[0_12px_40px_rgba(0,0,0,0.06)] flex flex-col items-center text-center">
         <IconShieldLock size={48} className="text-red-500 mb-6" />
         <h2 className="text-2xl font-bold text-black dark:text-white mb-2">접근 거부</h2>
         <p className="text-slate-500 text-sm mb-6"><span className="font-bold text-black dark:text-white">{session.user.email}</span><br/>계정은 관리자가 아닙니다.</p>
-        <button onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }} className="w-full bg-[#f2f2f7] dark:bg-white/10 text-black dark:text-white transition-colors py-4 rounded-2xl font-bold">
+        <button onClick={async () => { await supabase.auth.signOut(); window.location.reload(); }} className="w-full bg-[#f5f5f7] dark:bg-white/10 text-black dark:text-white transition-colors py-4 rounded-2xl font-bold">
           다른 계정으로 로그인
         </button>
       </div>
@@ -184,7 +184,7 @@ export default function AdminPage() {
   const filteredLogs = levelFilter === 'all' ? logs : logs.filter(l => l.level === levelFilter);
 
   return (
-    <div className="min-h-screen bg-[#f2f2f7] dark:bg-[#000000] text-slate-900 dark:text-white font-sans p-6 md:p-12">
+    <div className="min-h-screen bg-[#f5f5f7] dark:bg-[#000000] text-slate-900 dark:text-white font-sans p-6 md:p-12">
       <Toaster position="top-center" />
       <div className="max-w-6xl mx-auto flex flex-col gap-8">
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6 mb-4">
@@ -235,7 +235,7 @@ export default function AdminPage() {
                   {visitors.length === 0 ? (
                     <div className="text-center py-12 text-slate-400">접속 중인 사용자가 없습니다.</div>
                   ) : visitors.map((v, i) => (
-                    <div key={i} className="bg-[#f2f2f7] dark:bg-black p-4 rounded-2xl flex flex-col gap-2">
+                    <div key={i} className="bg-[#f5f5f7] dark:bg-black p-4 rounded-2xl flex flex-col gap-2">
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2">
                           <span className="font-bold">{v.email || '익명'}</span>
@@ -263,7 +263,7 @@ export default function AdminPage() {
                     value={noticeText} 
                     onChange={e => setNoticeText(e.target.value)} 
                     placeholder="새로운 공지사항을 입력하세요. (등록 시 접속자에게 실시간 전송)" 
-                    className="w-full bg-[#f2f2f7] dark:bg-black rounded-xl p-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 border border-transparent dark:border-white/5 resize-none h-24" 
+                    className="w-full bg-[#f5f5f7] dark:bg-black rounded-xl p-4 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-500 border border-transparent dark:border-white/5 resize-none h-24" 
                   />
                   <button onClick={sendNotice} className="bg-purple-600 text-white font-bold py-3.5 rounded-xl hover:bg-purple-700 transition-colors shadow-sm">
                     새 공지 등록 및 실시간 전송
@@ -275,7 +275,7 @@ export default function AdminPage() {
                   {notices.length === 0 ? (
                     <div className="text-center py-12 text-slate-400">등록된 공지사항이 없습니다.</div>
                   ) : notices.map(notice => (
-                    <div key={notice.id} className="bg-[#f2f2f7] dark:bg-black p-5 rounded-2xl flex flex-col gap-3 border border-transparent dark:border-white/5">
+                    <div key={notice.id} className="bg-[#f5f5f7] dark:bg-black p-5 rounded-2xl flex flex-col gap-3 border border-transparent dark:border-white/5">
                       {editingNotice?.id === notice.id ? (
                         <div className="flex flex-col gap-3">
                           <textarea 
@@ -316,9 +316,9 @@ export default function AdminPage() {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 shrink-0">
                   <div className="flex items-center gap-3">
                     <h3 className="text-xl font-bold text-green-600 dark:text-green-400 flex items-center gap-2"><IconBug size={24}/> 시스템 로그</h3>
-                    <span className="bg-[#f2f2f7] dark:bg-black px-3 py-1 rounded-full text-sm font-bold text-slate-500">{filteredLogs.length}</span>
+                    <span className="bg-[#f5f5f7] dark:bg-black px-3 py-1 rounded-full text-sm font-bold text-slate-500">{filteredLogs.length}</span>
                   </div>
-                  <div className="flex items-center gap-2 bg-[#f2f2f7] dark:bg-black p-1.5 rounded-xl overflow-x-auto custom-scrollbar w-full sm:w-auto">
+                  <div className="flex items-center gap-2 bg-[#f5f5f7] dark:bg-black p-1.5 rounded-xl overflow-x-auto custom-scrollbar w-full sm:w-auto">
                     {(['all', 'info', 'warn', 'error'] as const).map(lv => (
                       <button key={lv} onClick={() => setLevelFilter(lv)} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${levelFilter === lv ? 'bg-white dark:bg-[#1c1c1e] shadow-sm text-slate-800 dark:text-white' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
                         {lv.toUpperCase()}
@@ -333,7 +333,7 @@ export default function AdminPage() {
                   {filteredLogs.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-slate-400">데이터가 없습니다.</div>
                   ) : filteredLogs.map(log => (
-                    <div key={log.id} className="bg-[#f2f2f7] dark:bg-black p-5 rounded-2xl flex flex-col gap-2">
+                    <div key={log.id} className="bg-[#f5f5f7] dark:bg-black p-5 rounded-2xl flex flex-col gap-2">
                       <div className="flex items-center gap-3">
                         <span className={`text-xs font-bold px-2 py-1 rounded-md ${log.level==='error'?'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400':log.level==='warn'?'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400':'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'}`}>
                           {log.level.toUpperCase()}
