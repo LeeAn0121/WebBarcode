@@ -1571,7 +1571,7 @@ const handleEditMemo = (id, currentMemo) => {
                               <IconTrash size={22} />
                               <span className="text-[10px] font-bold">삭제</span>
                                 </button>
-                            <button onClick={(e) => { e.stopPropagation(); setActiveGlobalMenu(b?.id || item?.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all active:scale-95" aria-label="더보기">
+                            <button onClick={(e) => { e.stopPropagation(); setActiveGlobalMenu(item.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all active:scale-95" aria-label="더보기">
                               <IconDotsVertical size={22} />
                               <span className="text-[10px] font-bold">더보기</span>
                             </button>
@@ -1851,7 +1851,7 @@ const handleEditMemo = (id, currentMemo) => {
                                   <IconTrash size={22} />
                                   <span className="text-[10px] font-bold">삭제</span>
                                 </button>
-                            <button onClick={(e) => { e.stopPropagation(); setActiveGlobalMenu(b?.id || item?.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all active:scale-95" aria-label="더보기">
+                            <button onClick={(e) => { e.stopPropagation(); setActiveGlobalMenu(b.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all active:scale-95" aria-label="더보기">
                               <IconDotsVertical size={22} />
                               <span className="text-[10px] font-bold">더보기</span>
                             </button>
@@ -1892,7 +1892,7 @@ const handleEditMemo = (id, currentMemo) => {
                                 <IconTrash size={20} />
                                 <span className="text-[10px] font-bold">삭제</span>
                                 </button>
-                            <button onClick={(e) => { e.stopPropagation(); setActiveGlobalMenu(b?.id || item?.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all active:scale-95" aria-label="더보기">
+                            <button onClick={(e) => { e.stopPropagation(); setActiveGlobalMenu(b.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all active:scale-95" aria-label="더보기">
                               <IconDotsVertical size={22} />
                               <span className="text-[10px] font-bold">더보기</span>
                             </button>
