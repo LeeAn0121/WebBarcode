@@ -1697,7 +1697,14 @@ const handleEditMemo = (id, currentMemo) => {
                 // Ensure '기본폴더' is always at root
                 if (explorerPath === '') subfolderNames.add('기본폴더');
                 
-                const subfoldersList = Array.from(subfolderNames).sort();
+                const subfoldersList = Array.from(subfolderNames).map(name => ({ id: name, name, fullPath: explorerPath ? `${explorerPath}/${name}` : name })).sort((a, b) => {
+                  const idxA = folderOrder.indexOf(a.fullPath);
+                  const idxB = folderOrder.indexOf(b.fullPath);
+                  if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                  if (idxA !== -1) return -1;
+                  if (idxB !== -1) return 1;
+                  return a.name.localeCompare(b.name);
+                });
 
                 // 2. Files (Barcodes in current folder)
                 const currentFolderExact = explorerPath === '' ? '기본폴더' : explorerPath;
@@ -1715,8 +1722,27 @@ const handleEditMemo = (id, currentMemo) => {
                 return (
                   <div className={folderViewMode === 'grid' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pb-8" : "flex flex-col gap-3 pb-8"}>
                     {/* Render Subfolders */}
-                    {subfoldersList.map(name => {
-                      const fullPath = explorerPath ? `${explorerPath}/${name}` : name;
+                    <ReactSortable
+                      list={subfoldersList}
+                      setList={(newState) => {
+                        const newFullPaths = newState.map(item => item.fullPath);
+                        setFolderOrder(prev => {
+                          const others = prev.filter(p => !newFullPaths.includes(p));
+                          const updated = [...newFullPaths, ...others];
+                          localStorage.setItem('folderOrder', JSON.stringify(updated));
+                          return updated;
+                        });
+                      }}
+                      className={folderViewMode === 'grid' ? "contents" : "contents"}
+                      animation={200}
+                      delayOnTouchOnly={true}
+                      delay={150}
+                      ghostClass="opacity-40"
+                    >
+                    {subfoldersList.map(item => {
+                      const name = item.name;
+                      const fullPath = item.fullPath;
+                      
                       const count = barcodes.filter(b => {
                         const bFolder = b.folder || '기본폴더';
                         return bFolder === fullPath || bFolder.startsWith(fullPath + '/');
@@ -1757,6 +1783,7 @@ const handleEditMemo = (id, currentMemo) => {
                       );
                     })}
 
+                    </ReactSortable>
                     {/* Render Files (Barcodes) */}
                     {files.map(b => {
                       if (folderViewMode === 'list') {
@@ -1776,10 +1803,23 @@ const handleEditMemo = (id, currentMemo) => {
                             
                             {/* Action Overlay for List Mode */}
                             {activeActionMenu === b.id && (
-                              <div className="absolute inset-y-0 right-0 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2 px-4 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200">
-                                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(b.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="p-2 bg-slate-100 dark:bg-black rounded-lg text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-colors" title="복사"><IconCopy size={18} /></button>
-                                <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [b.id], targetFolder: b.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); setActiveActionMenu(null); }} className="p-2 bg-slate-100 dark:bg-black rounded-lg text-slate-600 dark:text-slate-300 hover:text-purple-500 hover:bg-purple-50 transition-colors" title="이동"><IconFolder size={18} /></button>
-                                <button onClick={(e) => { e.stopPropagation(); handleDelete(b.id); setActiveActionMenu(null); }} className="p-2 bg-slate-100 dark:bg-black rounded-lg text-slate-600 dark:text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors" title="삭제"><IconTrash size={18} /></button>
+                              <div className="absolute inset-y-0 right-0 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2.5 px-5 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200 rounded-r-[24px]">
+                                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(b.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95" aria-label="복사">
+                                  <IconCopy size={22} />
+                                  <span className="text-[10px] font-bold">복사</span>
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); handleEditMemo(b.id, b.memo); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl transition-all active:scale-95" aria-label="메모">
+                                  <IconMessagePlus size={22} />
+                                  <span className="text-[10px] font-bold">메모</span>
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [b.id], targetFolder: b.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all active:scale-95" aria-label="이동">
+                                  <IconFolder size={22} />
+                                  <span className="text-[10px] font-bold">이동</span>
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); handleDelete(b.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all active:scale-95" aria-label="삭제">
+                                  <IconTrash size={22} />
+                                  <span className="text-[10px] font-bold">삭제</span>
+                                </button>
                               </div>
                             )}
                           </div>
@@ -1800,15 +1840,22 @@ const handleEditMemo = (id, currentMemo) => {
                           
                           {/* Action Overlay */}
                           {activeActionMenu === b.id && (
-                            <div className="absolute inset-0 bg-white/90 dark:bg-[#1c1c1e]/90 backdrop-blur-sm rounded-2xl flex items-center justify-center gap-2 p-2 z-10 animate-in fade-in duration-100">
-                              <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(b.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="w-10 h-10 bg-slate-100 dark:bg-black rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 transition-colors" title="복사">
-                                <IconCopy size={18} />
+                            <div className="absolute inset-0 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md rounded-[24px] flex flex-wrap content-center justify-center gap-2 p-3 z-10 animate-in zoom-in-95 duration-150">
+                              <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(b.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-slate-600 dark:text-slate-300 hover:text-blue-500 bg-slate-50 dark:bg-black/20 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-[14px] transition-all active:scale-95" aria-label="복사">
+                                <IconCopy size={20} />
+                                <span className="text-[10px] font-bold">복사</span>
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [b.id], targetFolder: b.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); setActiveActionMenu(null); }} className="w-10 h-10 bg-slate-100 dark:bg-black rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-purple-500 hover:bg-purple-50 transition-colors" title="이동">
-                                <IconFolder size={18} />
+                              <button onClick={(e) => { e.stopPropagation(); handleEditMemo(b.id, b.memo); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-slate-600 dark:text-slate-300 hover:text-emerald-500 bg-slate-50 dark:bg-black/20 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-[14px] transition-all active:scale-95" aria-label="메모">
+                                <IconMessagePlus size={20} />
+                                <span className="text-[10px] font-bold">메모</span>
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); handleDelete(b.id); setActiveActionMenu(null); }} className="w-10 h-10 bg-slate-100 dark:bg-black rounded-full flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors" title="삭제">
-                                <IconTrash size={18} />
+                              <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [b.id], targetFolder: b.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-slate-600 dark:text-slate-300 hover:text-purple-500 bg-slate-50 dark:bg-black/20 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-[14px] transition-all active:scale-95" aria-label="이동">
+                                <IconFolder size={20} />
+                                <span className="text-[10px] font-bold">이동</span>
+                              </button>
+                              <button onClick={(e) => { e.stopPropagation(); handleDelete(b.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-red-500 bg-slate-50 dark:bg-black/20 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-[14px] transition-all active:scale-95" aria-label="삭제">
+                                <IconTrash size={20} />
+                                <span className="text-[10px] font-bold">삭제</span>
                               </button>
                             </div>
                           )}
@@ -2200,7 +2247,7 @@ const handleEditMemo = (id, currentMemo) => {
 
         
         {/* Global Action Menu Popup */}
-        {activeActionMenu && barcodes.find(b => b.id === activeActionMenu) && (() => {
+        {activeTab === 'home' && activeActionMenu && barcodes.find(b => b.id === activeActionMenu) && (() => {
           const item = barcodes.find(b => b.id === activeActionMenu)!;
           return (
             <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 transition-all" onClick={() => setActiveActionMenu(null)} role="dialog" aria-modal="true" aria-label={`${item.code} 작업 메뉴`}>
