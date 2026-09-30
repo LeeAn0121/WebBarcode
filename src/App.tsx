@@ -243,6 +243,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeActionMenu, setActiveActionMenu] = useState<any>(null);
+  const [activeGlobalMenu, setActiveGlobalMenu] = useState<any>(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const pressTimerRef = useRef<any>(null);
