@@ -254,7 +254,7 @@ function App() {
   const [loadingShare, setLoadingShare] = useState(false);
   const [folderActionModal, setFolderActionModal] = useState<string | null>(null);
   const [explorerPath, setExplorerPath] = useState<string>('');
-  const [folderViewMode, setFolderViewMode] = useState<'grid' | 'list'>('grid');
+  const [folderViewMode, setFolderViewMode] = useState<'grid' | 'list'>('list');
   const [folderOrder, setFolderOrder] = useState<string[]>(JSON.parse(localStorage.getItem('folderOrder') || '[]'));
   const [promptModal, setPromptModal] = useState({ isOpen: false, title: '', placeholder: '', value: '', type: 'text', description: '', confirmText: '확인', onConfirm: (val: string) => {} });
   const [session, setSession] = useState<any>(null);
@@ -1679,9 +1679,7 @@ const handleEditMemo = (id, currentMemo) => {
                       <IconEdit size={20} />
                     </button>
                   )}
-                  <button onClick={() => setFolderViewMode(prev => prev === 'grid' ? 'list' : 'grid')} className="p-2 bg-slate-100 dark:bg-white/10 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/20 transition-colors flex items-center gap-1" title="보기 방식 변경">
-                    {folderViewMode === 'grid' ? <IconList size={20} /> : <IconLayoutGrid size={20} />}
-                  </button>
+                  
                   <button onClick={() => {
                     const newFolderName = prompt('현재 위치에 새 폴더 생성:');
                     if (newFolderName && newFolderName.trim()) {
