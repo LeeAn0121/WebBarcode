@@ -7,7 +7,7 @@ import {
   IconBarcode, IconMoon, IconSun, IconDownload, IconCamera, IconVolume, IconVolume3,
   IconSearch, IconCopy, IconShare, IconMessagePlus, IconEdit, IconTrash, IconClock,
   IconFolder, IconFolderPlus, IconCloudUpload, IconFileExport, IconFileImport, IconUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink, IconLink
-, IconArrowUp, IconBell, IconBellX, IconFolderOpen , IconLayoutGrid, IconList, IconFolderFilled} from '@tabler/icons-react';
+, IconArrowUp, IconBell, IconBellX, IconFolderOpen , IconLayoutGrid, IconList, IconFolderFilled, IconChevronRight} from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { supabase, logDebug, getDebugSessionId, isAdminEmail } from './supabaseClient';
 
@@ -1363,7 +1363,7 @@ const handleEditMemo = (id, currentMemo) => {
         {/* Mobile Header (Top) - Toss/Wallet Style */}
         <header className="absolute top-0 left-0 right-0 bg-[#f5f5f7]/85 dark:bg-black/85 backdrop-blur-2xl z-40 px-6 pt-12 pb-4 flex justify-between items-end border-b border-slate-200/50 dark:border-white/10 transition-all">
           <div>
-            <h1 className="font-bold text-3xl tracking-tight text-black dark:text-white mb-1">
+            <h1 className="font-extrabold text-4xl tracking-tight text-black dark:text-white mb-2">
               {activeTab === 'home' && '내 바코드'}
               {activeTab === 'folders' && '폴더 관리'}
               {activeTab === 'settings' && '설정'}
@@ -1733,8 +1733,8 @@ const handleEditMemo = (id, currentMemo) => {
                               <IconBarcode size={24} />
                             </div>
                             <div className="flex-1 min-w-0 flex flex-col justify-center">
-                              <span className="font-mono text-sm font-bold text-slate-800 dark:text-slate-200 truncate">{b.code}</span>
-                              {b.memo && <span className="text-[11px] text-primary font-bold truncate mt-0.5">{b.memo}</span>}
+                              <span className="font-mono text-lg tracking-tight font-bold text-black dark:text-white truncate">{b.code}</span>
+                              {b.memo && <span className="text-sm text-primary font-medium truncate mt-0.5">{b.memo}</span>}
                             </div>
                             
                             {/* Action Overlay for List Mode */}
@@ -1796,7 +1796,7 @@ const handleEditMemo = (id, currentMemo) => {
               
               {/* 내보내기 영역 */}
               <section className="space-y-4">
-                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">데이터 백업 및 복원</h3>
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-300 font-bold uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">데이터 백업 및 복원</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="bg-white dark:bg-darkCard p-5 rounded-[20px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-apple hover:shadow-lg transition-all">
                     <div className="flex items-center gap-3 text-blue-500">
@@ -1825,7 +1825,7 @@ const handleEditMemo = (id, currentMemo) => {
 
               {/* 엑셀 영역 */}
               <section className="space-y-4">
-                <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">엑셀 출력</h3>
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-300 font-bold uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">엑셀 출력</h3>
                 <div className="bg-white dark:bg-darkCard p-5 rounded-[20px] border border-slate-100/50 dark:border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-apple">
                   <div className="flex items-start gap-4">
                     <div className="bg-green-100 dark:bg-green-900/30 p-2.5 rounded-lg text-sm text-green-600 dark:text-green-400 shrink-0">
@@ -2171,14 +2171,42 @@ const handleEditMemo = (id, currentMemo) => {
                   <span className="font-mono font-bold text-xl text-black dark:text-white truncate">{item.code}</span>
                   <span className="text-sm font-bold text-slate-500 mt-1">{item.folder || '기본폴더'}</span>
                 </div>
-                <div className="flex flex-col p-3 pb-8 sm:pb-3" role="menu">
-                  <button role="menuitem" onClick={() => { navigator.clipboard.writeText(item.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-black dark:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-colors"><IconCopy size={24} className="text-black dark:text-white" /> 복사하기</button>
-                  <button role="menuitem" onClick={() => { handleShare(item); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-black dark:text-white hover:bg-slate-50 dark:hover:bg-white/5 rounded-2xl transition-colors"><IconShare size={24} className="text-black dark:text-white" /> 외부로 공유</button>
-                  <button role="menuitem" onClick={() => { handleEditMemo(item.id, item.memo); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-2xl transition-colors"><IconMessagePlus size={24} /> 메모 추가/수정</button>
-                  <button role="menuitem" onClick={() => { setMoveModal({ isOpen: true, ids: [item.id], targetFolder: item.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-2xl transition-colors"><IconFolder size={24} /> 다른 폴더로 이동</button>
-                  <button role="menuitem" onClick={() => { handleClone(item); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-2xl transition-colors"><IconCopy size={24} /> 이 바코드 복제하기</button>
-                  <button role="menuitem" onClick={() => { handleEditCode(item.id, item.code); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-white/10 rounded-2xl transition-colors"><IconEdit size={24} /> 바코드 번호 수정</button>
-                  <button role="menuitem" onClick={() => { handleDelete(item.id); setActiveActionMenu(null); }} className="flex items-center gap-4 w-full p-4 font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-2xl transition-colors"><IconTrash size={24} /> 삭제하기</button>
+                <div className="px-5 pb-8 sm:pb-5">
+                  {/* Primary Actions Grid */}
+                  <div className="grid grid-cols-4 gap-3 mb-4" role="menu">
+                    <button role="menuitem" onClick={() => { navigator.clipboard.writeText(item.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-[18px] transition-all active:scale-95 text-slate-700 dark:text-slate-200">
+                      <IconCopy size={26} />
+                      <span className="text-[11px] font-bold">복사</span>
+                    </button>
+                    <button role="menuitem" onClick={() => { handleShare(item); setActiveActionMenu(null); }} className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-[18px] transition-all active:scale-95 text-slate-700 dark:text-slate-200">
+                      <IconShare size={26} />
+                      <span className="text-[11px] font-bold">공유</span>
+                    </button>
+                    <button role="menuitem" onClick={() => { setMoveModal({ isOpen: true, ids: [item.id], targetFolder: item.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); setActiveActionMenu(null); }} className="flex flex-col items-center justify-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-[18px] transition-all active:scale-95 text-emerald-600 dark:text-emerald-400">
+                      <IconFolder size={26} />
+                      <span className="text-[11px] font-bold">이동</span>
+                    </button>
+                    <button role="menuitem" onClick={() => { handleDelete(item.id); setActiveActionMenu(null); }} className="flex flex-col items-center justify-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-[18px] transition-all active:scale-95 text-red-500 dark:text-red-400">
+                      <IconTrash size={26} />
+                      <span className="text-[11px] font-bold">삭제</span>
+                    </button>
+                  </div>
+
+                  {/* Secondary Actions List */}
+                  <div className="flex flex-col gap-1" role="menu">
+                    <button role="menuitem" onClick={() => { handleEditMemo(item.id, item.memo); setActiveActionMenu(null); }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
+                      <div className="flex items-center gap-3"><IconMessagePlus size={20} className="text-blue-500" /> 메모 추가 및 수정</div>
+                      <IconChevronRight size={18} className="text-slate-400" />
+                    </button>
+                    <button role="menuitem" onClick={() => { handleEditCode(item.id, item.code); setActiveActionMenu(null); }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
+                      <div className="flex items-center gap-3"><IconEdit size={20} className="text-amber-500" /> 바코드 번호 직접 수정</div>
+                      <IconChevronRight size={18} className="text-slate-400" />
+                    </button>
+                    <button role="menuitem" onClick={() => { handleClone(item); setActiveActionMenu(null); }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
+                      <div className="flex items-center gap-3"><IconCopy size={20} className="text-slate-500" /> 이 바코드 그대로 복제</div>
+                      <IconChevronRight size={18} className="text-slate-400" />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
