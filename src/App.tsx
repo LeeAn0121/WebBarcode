@@ -376,7 +376,7 @@ function App() {
       else if (shareConfig.isOpen) setShareConfig(prev => ({ ...prev, isOpen: false }));
       else if (shareModal.isOpen) setShareModal({ isOpen: false, url: '', title: '', description: '', shareText: '' });
       else if (moveModal.isOpen) setMoveModal(prev => ({ ...prev, isOpen: false }));
-      else if (activeActionMenu !== null) setActiveActionMenu(null);
+      else if (activeActionMenu !== null) {setActiveActionMenu(null); setActiveGlobalMenu(null);}
       else if (isSelectionMode) { setIsSelectionMode(false); setSelectedIds([]); }
     };
     window.addEventListener('keydown', handleEsc);
@@ -811,7 +811,7 @@ function App() {
         setBarcodes(prev => [data[0], ...prev]);
         toast.success('바코드 복제 성공!');
       }
-      setActiveActionMenu(null);
+      {setActiveActionMenu(null); setActiveGlobalMenu(null);}
     } catch(e) {
       console.error(e);
       toast.error('바코드 복제에 실패했습니다.');
@@ -1076,7 +1076,7 @@ function App() {
       }
       
       setMoveModal(prev => ({ ...prev, isOpen: false }));
-      setActiveActionMenu(null);
+      {setActiveActionMenu(null); setActiveGlobalMenu(null);}
       setIsSelectionMode(false);
       setSelectedIds([]);
     } catch(e: any) {
@@ -1280,7 +1280,7 @@ const handleEditMemo = (id, currentMemo) => {
   const handleShare = (item) => {
     if (!session?.user?.id) return toast.error('로그인이 필요합니다.');
     setShareConfig({ isOpen: true, type: 'share_item', folderName: '', item, expireHours: 1 });
-    setActiveActionMenu(null);
+    {setActiveActionMenu(null); setActiveGlobalMenu(null);}
   };
 
   const filteredBarcodes = barcodes.filter(b => 
@@ -1505,9 +1505,15 @@ const handleEditMemo = (id, currentMemo) => {
                       }}
                       onPointerUp={handlePointerUp}
                       onPointerLeave={handlePointerUp}
-                      onClick={(e) => handleItemClick(item.id, '', e)}
+                      onClick={(e) => {
+                        if (isSelectionMode || e.ctrlKey || e.metaKey || e.shiftKey) {
+                          handleItemClick(item.id, '', e);
+                        } else {
+                          setActiveActionMenu(activeActionMenu === item.id ? null : item.id);
+                        }
+                      }}
                       style={idx < 8 ? { animationDelay: `${idx * 30}ms`, animationFillMode: 'backwards' } : undefined}
-                      className={`relative p-5 rounded-[1.5rem] transition-all duration-300 flex items-center justify-between gap-4 group cursor-pointer ${idx < 8 ? 'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 duration-300 ease-out' : ''} ${
+                      className={`relative p-5 rounded-[1.5rem] transition-all duration-300 flex items-center justify-between gap-4 group cursor-pointer overflow-hidden ${idx < 8 ? 'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 duration-300 ease-out' : ''} ${
     selectedIds.includes(item.id)
       ? 'bg-primary/5 ring-2 ring-primary dark:bg-primary/20'
       : 'bg-white dark:bg-[#1c1c1e] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:scale-[0.98] border border-transparent dark:border-white/5'
@@ -1537,27 +1543,38 @@ const handleEditMemo = (id, currentMemo) => {
                           </div>
                         </div>
                         
-                        <div className="shrink-0 relative">
-                          
-                          {isSelectionMode ? (
+                        <div className="shrink-0 relative z-20 mr-2">
+                          {isSelectionMode && (
                             <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.includes(item.id) ? 'bg-primary border-primary text-white' : 'border-slate-300 dark:border-slate-600'}`}>
                               {selectedIds.includes(item.id) && <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>}
                             </div>
-                          ) : (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); setActiveActionMenu(activeActionMenu === item.id ? null : item.id); }}
-                              className="p-2.5 -m-0.5 text-slate-500 hover:text-primary hover:bg-slate-50 dark:hover:bg-slate-800 rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                              aria-label={`${item.code} 작업 메뉴 열기`}
-                              aria-haspopup="menu"
-                              aria-expanded={activeActionMenu === item.id}
-                            >
-                              <IconDotsVertical size={20} />
-                            </button>
                           )}
-
-                          
-                          
                         </div>
+
+                        {!isSelectionMode && activeActionMenu === item.id && (
+                          <div className="absolute inset-y-0 right-0 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2.5 px-5 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200 rounded-r-[24px]">
+                            <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.code); toast.success('복사됨'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95" aria-label="복사">
+                              <IconCopy size={22} />
+                              <span className="text-[10px] font-bold">복사</span>
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); handleEditMemo(item.id, item.memo); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl transition-all active:scale-95" aria-label="메모">
+                              <IconMessagePlus size={22} />
+                              <span className="text-[10px] font-bold">메모</span>
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [item.id], targetFolder: item.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all active:scale-95" aria-label="이동">
+                              <IconFolder size={22} />
+                              <span className="text-[10px] font-bold">이동</span>
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); handleDelete(item.id); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all active:scale-95" aria-label="삭제">
+                              <IconTrash size={22} />
+                              <span className="text-[10px] font-bold">삭제</span>
+                                </button>
+                            <button onClick={(e) => { e.stopPropagation(); setActiveGlobalMenu(b?.id || item?.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all active:scale-95" aria-label="더보기">
+                              <IconDotsVertical size={22} />
+                              <span className="text-[10px] font-bold">더보기</span>
+                            </button>
+                              </div>
+                        )}
                       </div>
                     ))}
                     
@@ -1804,22 +1821,26 @@ const handleEditMemo = (id, currentMemo) => {
                             {/* Action Overlay for List Mode */}
                             {activeActionMenu === b.id && (
                               <div className="absolute inset-y-0 right-0 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2.5 px-5 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200 rounded-r-[24px]">
-                                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(b.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95" aria-label="복사">
+                                <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(b.code); toast.success('복사됨'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95" aria-label="복사">
                                   <IconCopy size={22} />
                                   <span className="text-[10px] font-bold">복사</span>
                                 </button>
-                                <button onClick={(e) => { e.stopPropagation(); handleEditMemo(b.id, b.memo); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl transition-all active:scale-95" aria-label="메모">
+                                <button onClick={(e) => { e.stopPropagation(); handleEditMemo(b.id, b.memo); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl transition-all active:scale-95" aria-label="메모">
                                   <IconMessagePlus size={22} />
                                   <span className="text-[10px] font-bold">메모</span>
                                 </button>
-                                <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [b.id], targetFolder: b.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all active:scale-95" aria-label="이동">
+                                <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [b.id], targetFolder: b.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all active:scale-95" aria-label="이동">
                                   <IconFolder size={22} />
                                   <span className="text-[10px] font-bold">이동</span>
                                 </button>
-                                <button onClick={(e) => { e.stopPropagation(); handleDelete(b.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all active:scale-95" aria-label="삭제">
+                                <button onClick={(e) => { e.stopPropagation(); handleDelete(b.id); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all active:scale-95" aria-label="삭제">
                                   <IconTrash size={22} />
                                   <span className="text-[10px] font-bold">삭제</span>
                                 </button>
+                            <button onClick={(e) => { e.stopPropagation(); setActiveGlobalMenu(b?.id || item?.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all active:scale-95" aria-label="더보기">
+                              <IconDotsVertical size={22} />
+                              <span className="text-[10px] font-bold">더보기</span>
+                            </button>
                               </div>
                             )}
                           </div>
@@ -1841,23 +1862,27 @@ const handleEditMemo = (id, currentMemo) => {
                           {/* Action Overlay */}
                           {activeActionMenu === b.id && (
                             <div className="absolute inset-0 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md rounded-[24px] flex flex-wrap content-center justify-center gap-2 p-3 z-10 animate-in zoom-in-95 duration-150">
-                              <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(b.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-slate-600 dark:text-slate-300 hover:text-blue-500 bg-slate-50 dark:bg-black/20 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-[14px] transition-all active:scale-95" aria-label="복사">
+                              <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(b.code); toast.success('복사됨'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-slate-600 dark:text-slate-300 hover:text-blue-500 bg-slate-50 dark:bg-black/20 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-[14px] transition-all active:scale-95" aria-label="복사">
                                 <IconCopy size={20} />
                                 <span className="text-[10px] font-bold">복사</span>
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); handleEditMemo(b.id, b.memo); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-slate-600 dark:text-slate-300 hover:text-emerald-500 bg-slate-50 dark:bg-black/20 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-[14px] transition-all active:scale-95" aria-label="메모">
+                              <button onClick={(e) => { e.stopPropagation(); handleEditMemo(b.id, b.memo); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-slate-600 dark:text-slate-300 hover:text-emerald-500 bg-slate-50 dark:bg-black/20 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-[14px] transition-all active:scale-95" aria-label="메모">
                                 <IconMessagePlus size={20} />
                                 <span className="text-[10px] font-bold">메모</span>
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [b.id], targetFolder: b.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-slate-600 dark:text-slate-300 hover:text-purple-500 bg-slate-50 dark:bg-black/20 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-[14px] transition-all active:scale-95" aria-label="이동">
+                              <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [b.id], targetFolder: b.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-slate-600 dark:text-slate-300 hover:text-purple-500 bg-slate-50 dark:bg-black/20 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-[14px] transition-all active:scale-95" aria-label="이동">
                                 <IconFolder size={20} />
                                 <span className="text-[10px] font-bold">이동</span>
                               </button>
-                              <button onClick={(e) => { e.stopPropagation(); handleDelete(b.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-red-500 bg-slate-50 dark:bg-black/20 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-[14px] transition-all active:scale-95" aria-label="삭제">
+                              <button onClick={(e) => { e.stopPropagation(); handleDelete(b.id); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-red-500 bg-slate-50 dark:bg-black/20 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-[14px] transition-all active:scale-95" aria-label="삭제">
                                 <IconTrash size={20} />
                                 <span className="text-[10px] font-bold">삭제</span>
-                              </button>
-                            </div>
+                                </button>
+                            <button onClick={(e) => { e.stopPropagation(); setActiveGlobalMenu(b?.id || item?.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all active:scale-95" aria-label="더보기">
+                              <IconDotsVertical size={22} />
+                              <span className="text-[10px] font-bold">더보기</span>
+                            </button>
+                              </div>
                           )}
                         </div>
                       );
@@ -2247,10 +2272,10 @@ const handleEditMemo = (id, currentMemo) => {
 
         
         {/* Global Action Menu Popup */}
-        {activeTab === 'home' && activeActionMenu && barcodes.find(b => b.id === activeActionMenu) && (() => {
-          const item = barcodes.find(b => b.id === activeActionMenu)!;
+        {activeGlobalMenu && barcodes.find(b => b.id === activeGlobalMenu) && (() => {
+          const item = barcodes.find(b => b.id === activeGlobalMenu)!;
           return (
-            <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 transition-all" onClick={() => setActiveActionMenu(null)} role="dialog" aria-modal="true" aria-label={`${item.code} 작업 메뉴`}>
+            <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 transition-all" onClick={() => {setActiveActionMenu(null); setActiveGlobalMenu(null);}} role="dialog" aria-modal="true" aria-label={`${item.code} 작업 메뉴`}>
               <div className="bg-white dark:bg-[#1c1c1e] w-full sm:max-w-sm rounded-t-[32px] sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                 <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto my-3 sm:hidden"></div>
                 <div className="px-6 pb-4 pt-2 flex flex-col">
@@ -2260,19 +2285,19 @@ const handleEditMemo = (id, currentMemo) => {
                 <div className="px-5 pb-8 sm:pb-5">
                   {/* Primary Actions Grid */}
                   <div className="grid grid-cols-4 gap-3 mb-4" role="menu">
-                    <button role="menuitem" onClick={() => { navigator.clipboard.writeText(item.code); toast.success('복사됨'); setActiveActionMenu(null); }} className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-[18px] transition-all active:scale-95 text-slate-700 dark:text-slate-200">
+                    <button role="menuitem" onClick={() => { navigator.clipboard.writeText(item.code); toast.success('복사됨'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-[18px] transition-all active:scale-95 text-slate-700 dark:text-slate-200">
                       <IconCopy size={26} />
                       <span className="text-[11px] font-bold">복사</span>
                     </button>
-                    <button role="menuitem" onClick={() => { handleShare(item); setActiveActionMenu(null); }} className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-[18px] transition-all active:scale-95 text-slate-700 dark:text-slate-200">
+                    <button role="menuitem" onClick={() => { handleShare(item); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-[18px] transition-all active:scale-95 text-slate-700 dark:text-slate-200">
                       <IconShare size={26} />
                       <span className="text-[11px] font-bold">공유</span>
                     </button>
-                    <button role="menuitem" onClick={() => { setMoveModal({ isOpen: true, ids: [item.id], targetFolder: item.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); setActiveActionMenu(null); }} className="flex flex-col items-center justify-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-[18px] transition-all active:scale-95 text-emerald-600 dark:text-emerald-400">
+                    <button role="menuitem" onClick={() => { setMoveModal({ isOpen: true, ids: [item.id], targetFolder: item.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center justify-center gap-2 p-3 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-[18px] transition-all active:scale-95 text-emerald-600 dark:text-emerald-400">
                       <IconFolder size={26} />
                       <span className="text-[11px] font-bold">이동</span>
                     </button>
-                    <button role="menuitem" onClick={() => { handleDelete(item.id); setActiveActionMenu(null); }} className="flex flex-col items-center justify-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-[18px] transition-all active:scale-95 text-red-500 dark:text-red-400">
+                    <button role="menuitem" onClick={() => { handleDelete(item.id); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center justify-center gap-2 p-3 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-[18px] transition-all active:scale-95 text-red-500 dark:text-red-400">
                       <IconTrash size={26} />
                       <span className="text-[11px] font-bold">삭제</span>
                     </button>
@@ -2280,15 +2305,15 @@ const handleEditMemo = (id, currentMemo) => {
 
                   {/* Secondary Actions List */}
                   <div className="flex flex-col gap-1" role="menu">
-                    <button role="menuitem" onClick={() => { handleEditMemo(item.id, item.memo); setActiveActionMenu(null); }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
+                    <button role="menuitem" onClick={() => { handleEditMemo(item.id, item.memo); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
                       <div className="flex items-center gap-3"><IconMessagePlus size={20} className="text-blue-500" /> 메모 추가 및 수정</div>
                       <IconChevronRight size={18} className="text-slate-400" />
                     </button>
-                    <button role="menuitem" onClick={() => { handleEditCode(item.id, item.code); setActiveActionMenu(null); }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
+                    <button role="menuitem" onClick={() => { handleEditCode(item.id, item.code); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
                       <div className="flex items-center gap-3"><IconEdit size={20} className="text-amber-500" /> 바코드 번호 직접 수정</div>
                       <IconChevronRight size={18} className="text-slate-400" />
                     </button>
-                    <button role="menuitem" onClick={() => { handleClone(item); setActiveActionMenu(null); }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
+                    <button role="menuitem" onClick={() => { handleClone(item); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
                       <div className="flex items-center gap-3"><IconCopy size={20} className="text-slate-500" /> 이 바코드 그대로 복제</div>
                       <IconChevronRight size={18} className="text-slate-400" />
                     </button>
