@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 *.cjs
 *.sql
+.agents/
+.styleseed/
