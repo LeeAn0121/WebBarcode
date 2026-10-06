@@ -1436,7 +1436,7 @@ const handleEditMemo = (id, currentMemo) => {
         </div>
       )}
       
-      <section className="w-full md:flex-1 md:w-[55%] flex flex-col flex-1 pb-24 overflow-y-auto relative custom-scrollbar">
+      <section className={`w-full md:flex-1 md:w-[55%] flex flex-col flex-1 overflow-y-auto relative custom-scrollbar ${isScannerModalOpen ? 'pb-4' : 'pb-24'}`}>
 
               <div className="flex flex-col h-full">
                 <div className="px-6 py-4 flex flex-col gap-4">
@@ -1473,7 +1473,7 @@ const handleEditMemo = (id, currentMemo) => {
                   </div>
                   
 </div>
-<div className="flex-1 px-6 pb-6 overflow-y-auto custom-scrollbar max-h-[55vh] lg:max-h-none lg:h-full">
+<div className="flex-1 px-6 pb-6 overflow-y-auto custom-scrollbar">
                   <div className="space-y-4">
                     {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).map((item, idx) => (
                       <div
