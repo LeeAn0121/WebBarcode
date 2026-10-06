@@ -585,7 +585,7 @@ function App() {
 
   };
 
-  const startScanner = async (camIndexOverride?: number) => {
+  const startScanner = async (requestedFacingMode?: 'environment' | 'user') => {
     try {
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -593,7 +593,7 @@ function App() {
           stream.getTracks().forEach(track => track.stop());
         }
       } catch (permErr: any) {
-        console.warn("명시적 권한 요청 실패 (무시하고 계속 진행):", permErr);
+        console.warn("명시적 권한 요청 실패:", permErr);
         if (permErr.name === 'NotAllowedError') {
            throw permErr;
         }
@@ -603,76 +603,39 @@ function App() {
         scannerRef.current = new Html5Qrcode("reader", { formatsToSupport });
       }
       
-      let currentDevices = cameras;
-      if (!currentDevices || currentDevices.length === 0) {
-        currentDevices = await Html5Qrcode.getCameras();
-        if (currentDevices && currentDevices.length > 0) {
-          setCameras(currentDevices);
-        } else {
-          toast.error("카메라 장치를 찾을 수 없습니다.");
-          return;
-        }
-      }
+      const targetFacingMode = requestedFacingMode || facingMode;
       
-      let startIdx = 0;
-      if (typeof camIndexOverride === 'number') {
-         startIdx = camIndexOverride;
-      } else {
-         const backIndex = currentDevices.findIndex((d: any) => d.label.toLowerCase().includes('back') || d.label.toLowerCase().includes('후면'));
-         if (backIndex !== -1) startIdx = backIndex;
-      }
-      
-      let success = false;
-      let lastErr = null;
-      let currentIdx = startIdx;
-      
-      // Override 여부와 상관없이, 카메라 렌즈 수만큼 계속 다음 렌즈로 시도 (더미 센서 자동 스킵)
-      const attempts = Math.min(5, currentDevices.length);
-      
-      for (let i = 0; i < attempts; i++) {
-        try {
-          const targetDevice = currentDevices[currentIdx];
-          setSelectedCamera(currentIdx.toString());
-          
-          await scannerRef.current.start(
-            targetDevice.id,
-            {
-              fps: 30,
-              qrbox: { width: window.innerWidth < 400 ? 320 : 380, height: 160 },
-              disableFlip: true,
-              videoConstraints: {
-                deviceId: { exact: targetDevice.id },
-                width: { ideal: 1920 },
-                height: { ideal: 1080 },
-                advanced: [{ focusMode: 'continuous' } as any]
-              }
+      try {
+        await scannerRef.current.start(
+          { facingMode: targetFacingMode },
+          {
+            fps: 30,
+            qrbox: (w, h) => {
+              const minDim = Math.min(w, h);
+              const size = Math.min(280, minDim * 0.75);
+              return { width: size, height: size };
             },
-            handleScan,
-            () => {}
-          );
-          
-          success = true;
-          setIsScanning(true);
-          logDebug('info', '카메라 시작 성공', { deviceLabel: targetDevice.label, camIndex: currentIdx });
-          break; // 성공 시 루프 탈출
-        } catch (err: any) {
-          console.warn(`Camera index ${currentIdx} failed:`, err);
-          lastErr = err;
-          logDebug('warn', '카메라 시작 실패, 다음 카메라 시도', { camIndex: currentIdx, error: err?.message, name: err?.name });
-          // 실패 시 다음 카메라로 강제 이동하여 재시도
-          currentIdx = (currentIdx + 1) % currentDevices.length;
-        }
-      }
-
-      if (!success) {
-        throw lastErr;
+            aspectRatio: 1.0,
+            disableFlip: false,
+          },
+          handleScanInner,
+          () => {}
+        );
+        
+        setIsScanning(true);
+        setFacingMode(targetFacingMode);
+        logDebug('info', '카메라 시작 성공', { facingMode: targetFacingMode });
+      } catch (err: any) {
+        console.warn(`${targetFacingMode} 카메라 시작 실패:`, err);
+        throw err;
       }
       
       // Setup Zoom if available
       setTimeout(() => {
-        const videoEl = document.querySelector('#reader video');
+        const videoEl = document.querySelector('#reader video') as HTMLVideoElement;
         if (videoEl && videoEl.srcObject) {
-          const track = videoEl.srcObject.getVideoTracks()[0];
+          const stream = videoEl.srcObject as MediaStream;
+          const track = stream.getVideoTracks()[0];
           if (track) {
             videoTrackRef.current = track;
             const capabilities = track.getCapabilities ? track.getCapabilities() : null;
@@ -680,13 +643,6 @@ function App() {
               setMaxZoom(capabilities.zoom.max);
               setZoomLevel(track.getSettings().zoom || 1);
             }
-            const settings = track.getSettings ? track.getSettings() : {};
-            logDebug('info', '카메라 실제 트랙 설정', {
-              settings,
-              capabilities,
-              videoElWidth: videoEl.videoWidth,
-              videoElHeight: videoEl.videoHeight,
-            });
           }
         }
       }, 500);
@@ -706,7 +662,6 @@ function App() {
       }
       
       toast.error(toastMsg);
-      logDebug('error', '카메라 시작 최종 실패', { errName, errMsgTxt });
     }
   };
   const stopScanner = () => {
@@ -1414,34 +1369,44 @@ const handleEditMemo = (id, currentMemo) => {
               )}
            </div>
            
-           <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col items-center gap-4 z-50">
-              {isScanning && cameras.length > 1 && (
+           <div className="absolute top-1/2 -translate-y-1/2 right-4 flex flex-col items-center gap-6 z-50">
+              {isScanning && (
                 <button 
                   disabled={isSwitching}
                   onClick={async () => {
                     if (isSwitching) return;
                     setIsSwitching(true);
                     try {
-                      const currentIndex = parseInt(selectedCamera || "0");
-                      const nextIndex = (currentIndex + 1) % cameras.length;
                       if (scannerRef.current) { try { await scannerRef.current.stop(); } catch(e) {} }
-                      await new Promise(resolve => setTimeout(resolve, 400));
-                      await startScanner(nextIndex);
+                      await new Promise(resolve => setTimeout(resolve, 300));
+                      const nextMode = facingMode === 'environment' ? 'user' : 'environment';
+                      await startScanner(nextMode);
                     } finally {
                       setIsSwitching(false);
                     }
                   }}
-                  className="flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-5 py-2.5 rounded-full font-bold shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                  className="w-12 h-12 flex items-center justify-center bg-black/40 backdrop-blur-md text-white rounded-full shadow-lg border border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white transition-all active:scale-90"
+                  aria-label="렌즈 전환"
                 >
-                  <IconRefresh size={18} className={isSwitching ? 'animate-spin' : ''} />
-                  {isSwitching ? '전환중...' : '렌즈 전환'}
+                  <IconRefresh size={22} className={isSwitching ? 'animate-spin' : ''} />
                 </button>
               )}
 
               {maxZoom > 1 && isScanning && (
-                <div className="w-full max-w-[200px] flex items-center gap-3 bg-black/40 backdrop-blur-md p-2 rounded-2xl shadow-lg border border-white/10">
-                  <IconSearch size={14} className="text-white/70" aria-hidden="true" />
-                  <input type="range" min="1" max={maxZoom} step="0.1" value={zoomLevel} onChange={handleZoomChange} aria-label="카메라 줌 배율" className="flex-1 accent-primary" />
+                <div className="flex flex-col items-center gap-3 bg-black/40 backdrop-blur-md px-2 py-4 rounded-full shadow-lg border border-white/10 h-48">
+                  <span className="text-white/80 text-[10px] font-bold">{(zoomLevel).toFixed(1)}x</span>
+                  <input 
+                    type="range" 
+                    min="1" 
+                    max={maxZoom} 
+                    step="0.1" 
+                    value={zoomLevel} 
+                    onChange={handleZoomChange} 
+                    aria-label="카메라 줌 배율" 
+                    className="flex-1 accent-primary w-2 h-full appearance-none bg-transparent [&::-webkit-slider-runnable-track]:w-1 [&::-webkit-slider-runnable-track]:bg-white/20 [&::-webkit-slider-runnable-track]:rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:-ml-1.5" 
+                    style={{ writingMode: 'bt-lr', WebkitAppearance: 'slider-vertical' }}
+                  />
+                  <IconSearch size={14} className="text-white/70 mt-2" aria-hidden="true" />
                 </div>
               )}
            </div>
@@ -1598,7 +1563,7 @@ const handleEditMemo = (id, currentMemo) => {
             
             {/* Floating Action Button for Scanner */}
             {!isScannerModalOpen && (
-              <div className="absolute bottom-20 right-6 md:right-10 z-40">
+              <div className="absolute bottom-28 right-6 md:bottom-10 md:right-10 z-40">
                 {barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length === 0 && (
                   <span className="absolute inset-0 rounded-full bg-primary/50 motion-safe:animate-ping motion-reduce:hidden" aria-hidden="true"></span>
                 )}
