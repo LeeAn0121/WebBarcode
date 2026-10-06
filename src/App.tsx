@@ -1247,19 +1247,18 @@ const handleEditMemo = (id, currentMemo) => {
 
   const renderFormattedCode = (c) => {
     if (!c) return '';
-    // If it's a typical barcode (long string of numbers/letters), highlight the last 6 characters
     if (c.length >= 8 && /^[a-zA-Z0-9]+$/.test(c)) {
       const prefix = c.substring(0, c.length - 6);
       const suffix = c.substring(c.length - 6);
       return (
-        <span className="inline-flex items-baseline font-mono tracking-tight">
-          <span className="text-slate-400 dark:text-slate-500 text-sm">{prefix}</span>
-          {prefix && <span className="text-slate-300 dark:text-slate-600 mx-0.5 text-xs">-</span>}
-          <span className="text-primary dark:text-[#3182f6] text-lg font-black tracking-widest">{suffix}</span>
+        <span className="font-mono tracking-tight">
+          <span className="text-slate-400 dark:text-slate-500 font-medium">{prefix}</span>
+          {prefix && <span className="text-slate-300 dark:text-slate-600 mx-1">-</span>}
+          <span className="text-primary dark:text-[#3182f6] font-extrabold">{suffix}</span>
         </span>
       );
     }
-    return <span className="font-mono text-base font-bold">{c}</span>;
+    return <span className="font-mono font-bold">{c}</span>;
   };
 
   
@@ -1495,29 +1494,28 @@ const handleEditMemo = (id, currentMemo) => {
                           <div className="h-12 w-12 shrink-0 rounded-2xl bg-[#f2f4f6] dark:bg-[#2c2c2e] text-black dark:text-white flex items-center justify-center transition-transform group-hover:scale-110">
                             <IconBarcode size={20} />
                           </div>
-                          <div className="flex flex-col flex-1 overflow-hidden gap-1 py-1">
-                            {/* Memo (Title) */}
+                          <div className="flex flex-col flex-1 overflow-hidden gap-0.5 py-1">
                             {item.memo ? (
-                              <div className="font-bold text-lg text-slate-900 dark:text-white truncate">
-                                {item.memo}
-                              </div>
+                              <>
+                                <div className="font-bold text-base text-slate-900 dark:text-white truncate">
+                                  {item.memo}
+                                </div>
+                                <div className="truncate text-[13px]">
+                                  {renderFormattedCode(item.code)}
+                                </div>
+                              </>
                             ) : (
-                              <div className="font-medium text-sm text-slate-400 dark:text-slate-500 italic truncate">
-                                메모 없음
+                              <div className="truncate text-base mt-1">
+                                {renderFormattedCode(item.code)}
                               </div>
                             )}
                             
-                            {/* Barcode Code */}
-                            <div className="truncate">
-                              {renderFormattedCode(item.code)}
-                            </div>
-                            
                             {/* Meta Info */}
-                            <div className="flex items-center gap-2 text-[10px] mt-1 flex-wrap">
-                              <span className="text-slate-400 flex items-center gap-1 shrink-0"><IconClock size={10} aria-hidden="true"/> {format(new Date(item.created_at), 'MM.dd HH:mm')}</span>
+                            <div className="flex items-center gap-2 text-[10px] mt-1.5 flex-wrap">
+                              <span className="text-slate-400 flex items-center gap-1 shrink-0"><IconClock size={12} aria-hidden="true"/> {format(new Date(item.created_at), 'MM.dd HH:mm')}</span>
                               {currentFolder === '전체' && (
                                 <span className="flex items-center gap-1 shrink-0 text-slate-500 bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 rounded-md font-medium">
-                                  <IconFolder size={10} aria-hidden="true"/> {item.folder || '기본폴더'}
+                                  <IconFolder size={12} aria-hidden="true"/> {item.folder || '기본폴더'}
                                 </span>
                               )}
                             </div>
