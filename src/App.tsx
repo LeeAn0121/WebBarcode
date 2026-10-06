@@ -1321,11 +1321,11 @@ const handleEditMemo = (id, currentMemo) => {
         <header className="bg-[#f2f4f6] dark:bg-black z-40 shrink-0 px-6 pt-12 pb-5 flex justify-between items-end border-none transition-all">
           <div>
             <h1 className="font-bold text-[28px] tracking-tight text-black dark:text-white mb-2">
-              {activeTab === 'home' && '내 바코드'}
+              
               {activeTab === 'folders' && '폴더 관리'}
               {activeTab === 'settings' && '설정'}
             </h1>
-            {activeTab === 'home' && <p className="text-sm font-medium text-slate-500">스캔과 관리를 가장 빠르고 편하게.</p>}
+            
           </div>
           <div className="flex items-center gap-3 pb-1">
             <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${latestVersion}`} target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-primary transition-colors font-mono text-[10px] bg-slate-200/50 dark:bg-white/10 px-2.5 py-1 rounded-full font-bold tracking-widest">
