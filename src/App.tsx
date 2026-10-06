@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ReactSortable } from 'react-sortablejs';
+import JsBarcode from 'jsbarcode';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { Toaster, toast } from 'sonner';
 import * as XLSX from 'xlsx';
@@ -715,8 +716,7 @@ function App() {
   const handlePointerDown = (id: string) => {
     if (isSelectionMode) return;
     pressTimerRef.current = setTimeout(() => {
-      setIsSelectionMode(true);
-      setSelectedIds([id]);
+      setIsSelectionMode(true); setSelectedIds([id]); triggerHaptic('medium');
       if (navigator.vibrate) navigator.vibrate(50);
     }, 500); // 500ms long press
   };
@@ -729,7 +729,7 @@ function App() {
     if (isSelectionMode || e.ctrlKey || e.metaKey || e.shiftKey) {
       e.preventDefault();
       e.stopPropagation();
-      setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+      setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]); triggerHaptic('light');
     } else {
       // Normal click behavior (if any) - originally they could click to open links if memo has link
     }
@@ -1223,7 +1223,7 @@ const handleEditMemo = (id, currentMemo) => {
           localStorage.setItem('folders', JSON.stringify(mergedFolders));
         }
 
-        toast.success(`${cleanData.length}개의 바코드 및 ${importedFolders.length}개의 폴더가 성공적으로 복원되었습니다.`);
+        toast.success(`${cleanData.length}개의 바코드 및 ${importedFolders.length}개의 폴더가 성공적으로 복원되었습니다.`); triggerHaptic('success');
         fetchBarcodes();
       } catch (err) {
         console.error(err);
@@ -1521,7 +1521,7 @@ const handleEditMemo = (id, currentMemo) => {
 
                         {!isSelectionMode && activeActionMenu === item.id && (
                           <div className="absolute inset-y-0 right-0 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2.5 px-5 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200 rounded-r-[24px]">
-                            <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.code); toast.success('복사됨'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95" aria-label="복사">
+                            <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(item.code); toast.success('복사됨'); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95" aria-label="복사">
                               <IconCopy size={22} />
                               <span className="text-[10px] font-bold">복사</span>
                             </button>
@@ -1548,7 +1548,10 @@ const handleEditMemo = (id, currentMemo) => {
                     
                     {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length === 0 && (
                       <div className="h-56 flex flex-col items-center justify-center text-slate-400 gap-2 text-center px-6">
-                        <IconBarcode size={32} className="text-slate-300 dark:text-slate-600" aria-hidden="true" />
+                        <div className="relative w-20 h-20 mb-2 flex items-center justify-center animate-float">
+                          <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full"></div>
+                          <IconBarcode size={48} className="text-primary/70 relative z-10" aria-hidden="true" />
+                        </div>
                         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
                           {searchQuery ? '검색 결과가 없습니다.' : '기록이 없습니다.'}
                         </p>
@@ -1973,7 +1976,7 @@ const handleEditMemo = (id, currentMemo) => {
         
       {/* 다중 선택 모드 플로팅 바 */}
       {isSelectionMode && (
-        <div role="toolbar" aria-label="다중 선택 도구" className="fixed top-[calc(1rem+env(safe-area-inset-top))] left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-slate-900/95 backdrop-blur-md text-white rounded-2xl p-4 shadow-2xl z-50 flex items-center justify-between border border-slate-700 animate-in slide-in-from-top-5">
+        <div role="toolbar" aria-label="다중 선택 도구" className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-slate-900/95 backdrop-blur-xl text-white rounded-[24px] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 flex items-center justify-between border border-white/10 animate-in slide-in-from-bottom-8 duration-300">
           <span className="font-bold text-sm" aria-live="polite">
             <span className="text-primary">{selectedIds.length}개</span> 선택됨
           </span>
@@ -2354,15 +2357,15 @@ const handleEditMemo = (id, currentMemo) => {
         {/* Mobile Bottom Tab Bar */}
         <nav className="bg-white/60 dark:bg-black/40 backdrop-blur-md border border-white/40 dark:border-white/5 shrink-0 z-50 pb-safe pt-2" aria-label="주 메뉴">
           <div className="flex justify-around items-center px-4 pb-2">
-            <button onClick={() => setActiveTab('home')} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-all ${activeTab === 'home' ? 'text-primary dark:text-primary scale-105' : 'text-slate-400 hover:text-slate-500 dark:hover:text-slate-300'}`}>
+            <button onClick={() => { setActiveTab('home'); triggerHaptic('light'); }} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-all ${activeTab === 'home' ? 'text-primary dark:text-primary scale-105' : 'text-slate-400 hover:text-slate-500 dark:hover:text-slate-300'}`}>
               <IconHome size={26} stroke={activeTab === 'home' ? 2.5 : 1.5} />
               <span className="text-[10px] font-bold">홈</span>
             </button>
-            <button onClick={() => setActiveTab('folders')} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-all ${activeTab === 'folders' ? 'text-primary dark:text-primary scale-105' : 'text-slate-400 hover:text-slate-500 dark:hover:text-slate-300'}`}>
+            <button onClick={() => { setActiveTab('folders'); triggerHaptic('light'); }} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-all ${activeTab === 'folders' ? 'text-primary dark:text-primary scale-105' : 'text-slate-400 hover:text-slate-500 dark:hover:text-slate-300'}`}>
               <IconFolder size={26} stroke={activeTab === 'folders' ? 2.5 : 1.5} />
               <span className="text-[10px] font-bold">폴더</span>
             </button>
-            <button onClick={() => setActiveTab('settings')} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-all ${activeTab === 'settings' ? 'text-primary dark:text-primary scale-105' : 'text-slate-400 hover:text-slate-500 dark:hover:text-slate-300'}`}>
+            <button onClick={() => { setActiveTab('settings'); triggerHaptic('light'); }} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-all ${activeTab === 'settings' ? 'text-primary dark:text-primary scale-105' : 'text-slate-400 hover:text-slate-500 dark:hover:text-slate-300'}`}>
               <IconSettings size={26} stroke={activeTab === 'settings' ? 2.5 : 1.5} />
               <span className="text-[10px] font-bold">설정</span>
             </button>

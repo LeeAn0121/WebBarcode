@@ -106,3 +106,8 @@
   0% { transform: translateX(-100%); }
   100% { transform: translateX(300%); }
 }
+
+
+html, body, #root {
+  @apply transition-colors duration-500;
+}
