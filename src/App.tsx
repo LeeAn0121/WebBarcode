@@ -1365,15 +1365,7 @@ const handleEditMemo = (id, currentMemo) => {
               V{latestVersion}
             </a>
             
-            {/* Camera Button in Header */}
-            {!isScannerModalOpen && activeTab === 'home' && (
-              <button onClick={() => { setIsScannerModalOpen(true); startScanner(); }} className="relative w-10 h-10 bg-gradient-to-tr from-primary to-purple-500 text-white flex items-center justify-center rounded-full shadow-md transition-all active:scale-95" title="스캐너 열기">
-                <IconCamera size={18} />
-                {barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length === 0 && (
-                  <span className="absolute inset-0 rounded-full bg-primary/50 motion-safe:animate-ping motion-reduce:hidden pointer-events-none" aria-hidden="true"></span>
-                )}
-              </button>
-            )}
+            
             
             <button onClick={() => { setIsNoticeHistoryOpen(true); }} className="relative w-10 h-10 bg-white dark:bg-[#1c1c1e] text-slate-500 hover:text-primary flex items-center justify-center rounded-full shadow-sm transition-all border border-transparent dark:border-white/5" title="공지사항">
               <IconBell size={18} />
@@ -2372,18 +2364,35 @@ const handleEditMemo = (id, currentMemo) => {
           </div>
         )}
         
+        
+        {/* Toss Style Floating Camera Button */}
+        {!isScannerModalOpen && activeTab === 'home' && (
+          <div className="absolute bottom-[96px] right-6 z-50">
+            <button
+              onClick={() => { setIsScannerModalOpen(true); startScanner(); triggerHaptic('medium'); }}
+              aria-label="바코드 스캐너 열기"
+              className="w-14 h-14 bg-[#3182f6] dark:bg-[#3182f6] rounded-full shadow-[0_8px_24px_rgba(49,130,246,0.4)] flex items-center justify-center text-white active:scale-95 transition-transform"
+            >
+              <IconCamera size={26} stroke={2.5} />
+              {barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length === 0 && (
+                  <span className="absolute inset-0 rounded-full bg-[#3182f6] animate-ping opacity-60 pointer-events-none" aria-hidden="true"></span>
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Mobile Bottom Tab Bar */}
-        <nav className="bg-white/60 dark:bg-black/40 backdrop-blur-md border border-white/40 dark:border-white/5 shrink-0 z-50 pb-safe pt-2" aria-label="주 메뉴">
-          <div className="flex justify-around items-center px-4 pb-2">
-            <button onClick={() => { setActiveTab('home'); triggerHaptic('light'); }} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-all ${activeTab === 'home' ? 'text-primary dark:text-primary scale-105' : 'text-slate-400 hover:text-slate-500 dark:hover:text-slate-300'}`}>
+        <nav className="bg-white/80 dark:bg-[#111111]/80 backdrop-blur-xl border-t border-slate-200/50 dark:border-white/10 shrink-0 z-50 pb-safe pt-2" aria-label="주 메뉴">
+          <div className="flex justify-around items-center px-2 pb-2">
+            <button onClick={() => { setActiveTab('home'); triggerHaptic('light'); }} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-colors ${activeTab === 'home' ? 'text-[#3182f6] dark:text-[#3182f6]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
               <IconHome size={26} stroke={activeTab === 'home' ? 2.5 : 1.5} />
               <span className="text-[10px] font-bold">홈</span>
             </button>
-            <button onClick={() => { setActiveTab('folders'); triggerHaptic('light'); }} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-all ${activeTab === 'folders' ? 'text-primary dark:text-primary scale-105' : 'text-slate-400 hover:text-slate-500 dark:hover:text-slate-300'}`}>
+            <button onClick={() => { setActiveTab('folders'); triggerHaptic('light'); }} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-colors ${activeTab === 'folders' ? 'text-[#3182f6] dark:text-[#3182f6]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
               <IconFolder size={26} stroke={activeTab === 'folders' ? 2.5 : 1.5} />
               <span className="text-[10px] font-bold">폴더</span>
             </button>
-            <button onClick={() => { setActiveTab('settings'); triggerHaptic('light'); }} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-all ${activeTab === 'settings' ? 'text-primary dark:text-primary scale-105' : 'text-slate-400 hover:text-slate-500 dark:hover:text-slate-300'}`}>
+            <button onClick={() => { setActiveTab('settings'); triggerHaptic('light'); }} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-colors ${activeTab === 'settings' ? 'text-[#3182f6] dark:text-[#3182f6]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
               <IconSettings size={26} stroke={activeTab === 'settings' ? 2.5 : 1.5} />
               <span className="text-[10px] font-bold">설정</span>
             </button>
