@@ -1364,6 +1364,17 @@ const handleEditMemo = (id, currentMemo) => {
             <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${latestVersion}`} target="_blank" rel="noopener noreferrer" className="hidden sm:block text-slate-500 hover:text-primary transition-colors font-mono text-[10px] bg-slate-200/50 dark:bg-white/10 px-2.5 py-1 rounded-full font-bold tracking-widest">
               V{latestVersion}
             </a>
+            
+            {/* Camera Button in Header */}
+            {!isScannerModalOpen && activeTab === 'home' && (
+              <button onClick={() => { setIsScannerModalOpen(true); startScanner(); }} className="relative w-10 h-10 bg-gradient-to-tr from-primary to-purple-500 text-white flex items-center justify-center rounded-full shadow-md transition-all active:scale-95" title="스캐너 열기">
+                <IconCamera size={18} />
+                {barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length === 0 && (
+                  <span className="absolute inset-0 rounded-full bg-primary/50 motion-safe:animate-ping motion-reduce:hidden pointer-events-none" aria-hidden="true"></span>
+                )}
+              </button>
+            )}
+            
             <button onClick={() => { setIsNoticeHistoryOpen(true); }} className="relative w-10 h-10 bg-white dark:bg-[#1c1c1e] text-slate-500 hover:text-primary flex items-center justify-center rounded-full shadow-sm transition-all border border-transparent dark:border-white/5" title="공지사항">
               <IconBell size={18} />
               {unreadNoticeCount > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-[#f2f2f7] dark:border-black rounded-full"></span>}
@@ -1586,20 +1597,7 @@ const handleEditMemo = (id, currentMemo) => {
             </section>
             
             {/* Floating Action Button for Scanner */}
-            {!isScannerModalOpen && (
-              <div className="absolute bottom-28 right-6 md:bottom-10 md:right-10 z-40">
-                {barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length === 0 && (
-                  <span className="absolute inset-0 rounded-full bg-primary/50 motion-safe:animate-ping motion-reduce:hidden" aria-hidden="true"></span>
-                )}
-                <button
-                  onClick={() => { setIsScannerModalOpen(true); startScanner(); }}
-                  aria-label="바코드 스캐너 열기"
-                  className="relative w-16 h-16 bg-gradient-to-tr from-primary to-purple-500 rounded-[1.5rem] shadow-[0_10px_40px_rgba(99,102,241,0.5)] flex items-center justify-center text-white fluid-spring hover:scale-110 active:scale-90 hover:rounded-full focus-visible:outline-none"
-                >
-                  <IconCamera size={28} />
-                </button>
-              </div>
-            )}
+            
           </div>
         )}
         
