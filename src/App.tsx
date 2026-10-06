@@ -251,6 +251,7 @@ function App() {
   const [isSwitching, setIsSwitching] = useState(false);
   const [currentFolder, setCurrentFolder] = useState('전체');
   const [activeTab, setActiveTab] = useState('home');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeActionMenu, setActiveActionMenu] = useState<any>(null);
   const [activeGlobalMenu, setActiveGlobalMenu] = useState<any>(null);
@@ -1331,6 +1332,10 @@ const handleEditMemo = (id, currentMemo) => {
         
         {/* Mobile Header (Top) - Toss/Wallet Style */}
         <header className="bg-[#f2f4f6] dark:bg-black z-40 shrink-0 px-6 pt-12 pb-4 flex justify-between items-center gap-2 border-none transition-all">
+          
+          <button onClick={() => setIsSidebarOpen(true)} className="p-2 mr-2 -ml-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 rounded-full transition-colors focus-visible:outline-none">
+            <IconMenu2 size={24} />
+          </button>
           <div className="flex-1 min-w-0">
             {activeTab !== 'home' && (
               <h1 className="font-bold text-[28px] tracking-tight text-black dark:text-white">
@@ -1543,7 +1548,7 @@ const handleEditMemo = (id, currentMemo) => {
                         </div>
 
                         {!isSelectionMode && activeActionMenu === item.id && (
-                          <div className="absolute inset-y-0 right-0 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2.5 px-5 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200 rounded-r-[24px]">
+                          <div className="absolute inset-y-0 right-0 max-w-full overflow-x-auto custom-scrollbar bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2 px-3 sm:px-5 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200 rounded-[24px] sm:rounded-l-none sm:rounded-r-[24px]">
                             <button onClick={(e) => { e.stopPropagation(); const serial = item.code.length > 6 ? item.code.substring(0, item.code.length - 6) : item.code; navigator.clipboard.writeText(serial); toast.success('복사됨'); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95" aria-label="복사">
                               <IconCopy size={22} />
                               <span className="text-[10px] font-bold">복사</span>
@@ -1813,7 +1818,7 @@ const handleEditMemo = (id, currentMemo) => {
                             
                             {/* Action Overlay for List Mode */}
                             {activeActionMenu === b.id && (
-                              <div className="absolute inset-y-0 right-0 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2.5 px-5 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200 rounded-r-[24px]">
+                              <div className="absolute inset-y-0 right-0 max-w-full overflow-x-auto custom-scrollbar bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2 px-3 sm:px-5 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200 rounded-[24px] sm:rounded-l-none sm:rounded-r-[24px]">
                                 <button onClick={(e) => { e.stopPropagation(); const serial = b.code.length > 6 ? b.code.substring(0, b.code.length - 6) : b.code; navigator.clipboard.writeText(serial); toast.success('복사됨'); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95" aria-label="복사">
                                   <IconCopy size={22} />
                                   <span className="text-[10px] font-bold">복사</span>
@@ -2367,7 +2372,7 @@ const handleEditMemo = (id, currentMemo) => {
         
         {/* Toss Style Floating Camera Button */}
         {!isScannerModalOpen && activeTab === 'home' && (
-          <div className="absolute bottom-[96px] right-6 z-50">
+          <div className="absolute bottom-8 right-6 z-50">
             <button
               onClick={() => { setIsScannerModalOpen(true); startScanner(); triggerHaptic('medium'); }}
               aria-label="바코드 스캐너 열기"
@@ -2380,24 +2385,40 @@ const handleEditMemo = (id, currentMemo) => {
             </button>
           </div>
         )}
-
-        {/* Mobile Bottom Tab Bar */}
-        <nav className="bg-white/80 dark:bg-[#111111]/80 backdrop-blur-xl border-t border-slate-200/50 dark:border-white/10 shrink-0 z-50 pb-safe pt-2" aria-label="주 메뉴">
-          <div className="flex justify-around items-center px-2 pb-2">
-            <button onClick={() => { setActiveTab('home'); triggerHaptic('light'); }} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-colors ${activeTab === 'home' ? 'text-[#3182f6] dark:text-[#3182f6]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
-              <IconHome size={26} stroke={activeTab === 'home' ? 2.5 : 1.5} />
-              <span className="text-[10px] font-bold">홈</span>
-            </button>
-            <button onClick={() => { setActiveTab('folders'); triggerHaptic('light'); }} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-colors ${activeTab === 'folders' ? 'text-[#3182f6] dark:text-[#3182f6]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
-              <IconFolder size={26} stroke={activeTab === 'folders' ? 2.5 : 1.5} />
-              <span className="text-[10px] font-bold">폴더</span>
-            </button>
-            <button onClick={() => { setActiveTab('settings'); triggerHaptic('light'); }} className={`flex flex-col items-center justify-center gap-1 py-2 w-20 transition-colors ${activeTab === 'settings' ? 'text-[#3182f6] dark:text-[#3182f6]' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'}`}>
-              <IconSettings size={26} stroke={activeTab === 'settings' ? 2.5 : 1.5} />
-              <span className="text-[10px] font-bold">설정</span>
-            </button>
+        {/* Sidebar Drawer */}
+        {isSidebarOpen && (
+          <div className="fixed inset-0 z-[100] flex">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity animate-in fade-in" onClick={() => setIsSidebarOpen(false)}></div>
+            <div className="relative w-64 max-w-[80vw] h-full bg-white dark:bg-[#1c1c1e] shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
+              <div className="p-6 pb-2 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
+                <h2 className="text-2xl font-black tracking-tight text-[#3182f6]">WebBarcode</h2>
+                <button onClick={() => setIsSidebarOpen(false)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500">
+                  <IconX size={20} />
+                </button>
+              </div>
+              <div className="flex flex-col p-4 gap-2 overflow-y-auto">
+                <button onClick={() => { setActiveTab('home'); setIsSidebarOpen(false); triggerHaptic('light'); }} className={`flex items-center gap-4 px-4 py-3 rounded-2xl font-bold transition-all ${activeTab === 'home' ? 'bg-blue-50 dark:bg-blue-900/20 text-[#3182f6]' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'}`}>
+                  <IconHome size={22} stroke={activeTab === 'home' ? 2.5 : 1.5} />
+                  <span>모든 바코드</span>
+                </button>
+                <button onClick={() => { setActiveTab('folders'); setIsSidebarOpen(false); triggerHaptic('light'); }} className={`flex items-center gap-4 px-4 py-3 rounded-2xl font-bold transition-all ${activeTab === 'folders' ? 'bg-blue-50 dark:bg-blue-900/20 text-[#3182f6]' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'}`}>
+                  <IconFolder size={22} stroke={activeTab === 'folders' ? 2.5 : 1.5} />
+                  <span>폴더 관리</span>
+                </button>
+                <button onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); triggerHaptic('light'); }} className={`flex items-center gap-4 px-4 py-3 rounded-2xl font-bold transition-all ${activeTab === 'settings' ? 'bg-blue-50 dark:bg-blue-900/20 text-[#3182f6]' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'}`}>
+                  <IconSettings size={22} stroke={activeTab === 'settings' ? 2.5 : 1.5} />
+                  <span>환경 설정</span>
+                </button>
+              </div>
+              <div className="mt-auto p-6 text-xs font-mono text-slate-400">
+                v{packageJson.version}
+              </div>
+            </div>
           </div>
-        </nav>
+        )}
+
+
+        
         
       </div>
     </div>
