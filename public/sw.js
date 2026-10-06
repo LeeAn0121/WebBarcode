@@ -1,4 +1,4 @@
-const CACHE_NAME = 'webbarcode-v2';
+const CACHE_NAME = 'webbarcode-v3';
 
 self.addEventListener('install', event => {
   self.skipWaiting(); // Force the waiting service worker to become the active service worker.
@@ -26,7 +26,7 @@ self.addEventListener('fetch', event => {
   if (!event.request.url.startsWith('http')) return;
 
   event.respondWith(
-    fetch(event.request).then(response => {
+    fetch(event.request, { cache: event.request.mode === 'navigate' ? 'no-cache' : undefined }).then(response => {
       // Don't cache if not a successful response
       if (!response || response.status !== 200 || response.type !== 'basic') {
         return response;

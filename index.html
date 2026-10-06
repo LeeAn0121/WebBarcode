@@ -143,8 +143,27 @@
   
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('./sw.js').then(reg => console.log('SW registered!', reg)).catch(err => console.log('SW registration failed', err));
+        window.addEventListener('load', async () => {
+          // Force clear cache and unregister if ?refresh= is present
+          if (window.location.search.includes('refresh=')) {
+            try {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              for (const reg of registrations) {
+                await reg.unregister();
+              }
+              const keys = await caches.keys();
+              for (const key of keys) {
+                await caches.delete(key);
+              }
+              console.log('SW & Caches cleared by refresh parameter');
+            } catch (e) {
+              console.error('Error clearing SW/Caches:', e);
+            }
+          }
+          
+          navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('SW registered!', reg))
+            .catch(err => console.log('SW registration failed', err));
         });
       }
     </script>
