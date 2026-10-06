@@ -1735,91 +1735,92 @@ const handleEditMemo = (id, currentMemo) => {
                 }
 
                 return (
-                  <div className={folderViewMode === 'grid' ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pb-8" : "flex flex-col gap-3 pb-8"}>
-                    {/* Render Subfolders */}
-                    <ReactSortable
-                      list={subfoldersList}
-                      setList={(newState) => {
-                        const newFullPaths = newState.map(item => item.fullPath);
-                        setFolderOrder(prev => {
-                          const others = prev.filter(p => !newFullPaths.includes(p));
-                          const updated = [...newFullPaths, ...others];
-                          localStorage.setItem('folderOrder', JSON.stringify(updated));
-                          return updated;
-                        });
-                      }}
-                      className={folderViewMode === 'grid' ? "contents" : "contents"}
-                      animation={200}
-                      delayOnTouchOnly={true}
-                      delay={150}
-                      ghostClass="opacity-40"
-                    >
-                    {subfoldersList.map(item => {
-                      const name = item.name;
-                      const fullPath = item.fullPath;
+                  <div className="pb-8">
+                    <div className="bg-white dark:bg-[#1c1c1e] rounded-[24px] shadow-sm border border-slate-100 dark:border-white/5 overflow-hidden flex flex-col">
                       
-                      const count = barcodes.filter(b => {
-                        const bFolder = b.folder || '기본폴더';
-                        return bFolder === fullPath || bFolder.startsWith(fullPath + '/');
-                      }).length;
+                      {/* Render Subfolders */}
+                      <ReactSortable
+                        list={subfoldersList}
+                        setList={(newState) => {
+                          const newFullPaths = newState.map(item => item.fullPath);
+                          setFolderOrder(prev => {
+                            const others = prev.filter(p => !newFullPaths.includes(p));
+                            const updated = [...newFullPaths, ...others];
+                            localStorage.setItem('folderOrder', JSON.stringify(updated));
+                            return updated;
+                          });
+                        }}
+                        className="flex flex-col"
+                        animation={200}
+                        delayOnTouchOnly={true}
+                        delay={150}
+                        ghostClass="opacity-40 bg-slate-50 dark:bg-white/5"
+                      >
+                      {subfoldersList.map((item, idx) => {
+                        const name = item.name;
+                        const fullPath = item.fullPath;
+                        const count = barcodes.filter(b => {
+                          const bFolder = b.folder || '기본폴더';
+                          return bFolder === fullPath || bFolder.startsWith(fullPath + '/');
+                        }).length;
+                        
+                        const isLastFolder = idx === subfoldersList.length - 1 && files.length === 0;
 
-                      if (folderViewMode === 'list') {
                         return (
                           <div 
                             key={fullPath}
                             onClick={() => setExplorerPath(fullPath)}
-                            className="bg-white dark:bg-[#1c1c1e] p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/10 transition-colors active:scale-95"
+                            className={`p-4 flex items-center gap-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 transition-colors active:bg-slate-100 dark:active:bg-white/10 ${!isLastFolder ? 'border-b border-slate-100 dark:border-white/5' : ''}`}
                           >
-                            <div className="w-12 h-12 bg-yellow-100 dark:bg-yellow-900/30 text-yellow-500 rounded-xl flex items-center justify-center shrink-0">
-                              <IconFolderFilled size={28} className="text-[#3182f6]" />
+                            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 text-[#3182f6] rounded-[14px] flex items-center justify-center shrink-0">
+                              <IconFolderFilled size={22} className="text-[#3182f6]" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">{name}</h3>
+                              <h3 className="font-bold text-[15px] text-slate-800 dark:text-slate-100 truncate">{name}</h3>
                             </div>
-                            <div className="text-[11px] text-slate-400 font-medium whitespace-nowrap shrink-0 pr-2">{count}개 항목</div>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[12px] text-slate-400 font-medium whitespace-nowrap">{count}개</span>
+                              <IconChevronRight size={16} className="text-slate-300 dark:text-slate-600" />
+                            </div>
                           </div>
                         );
-                      }
+                      })}
+                      </ReactSortable>
 
-                      return (
-                        <div 
-                          key={fullPath}
-                          onClick={() => setExplorerPath(fullPath)}
-                          className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] shadow-sm border border-slate-100/50 dark:border-white/5 border border-slate-100/50 dark:border-white/5 flex flex-col items-center gap-3 cursor-pointer hover:shadow-lg dark:hover:bg-white/5 transition-all active:scale-95"
-                        >
-                          <div className="w-16 h-16 flex items-center justify-center">
-                            <IconFolderFilled size={40} className="text-[#3182f6]" />
-                          </div>
-                          <div className="text-center w-full">
-                            <h3 className="font-bold text-sm text-slate-800 dark:text-slate-200 truncate">{name}</h3>
-                            <p className="text-[10px] text-slate-400 font-medium">{count}개 항목</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-
-                    </ReactSortable>
-                    {/* Render Files (Barcodes) */}
-                    {files.map(b => {
-                      if (folderViewMode === 'list') {
+                      {/* Render Files (Barcodes) */}
+                      {files.map((b, idx) => {
+                        const isLast = idx === files.length - 1;
                         return (
                           <div 
                             key={b.id}
                             onClick={() => setActiveActionMenu(activeActionMenu === b.id ? null : b.id)}
-                            className="bg-white dark:bg-[#1c1c1e] p-3 rounded-2xl shadow-sm border border-slate-100 dark:border-white/5 flex items-center gap-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/10 transition-colors relative group overflow-hidden"
+                            className={`p-4 flex items-center gap-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 transition-colors relative group overflow-hidden ${!isLast ? 'border-b border-slate-100 dark:border-white/5' : ''}`}
                           >
-                            <div className="w-12 h-12 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 rounded-xl flex items-center justify-center shrink-0">
-                              <IconBarcode size={24} />
-                            </div>
-                            <div className="flex-1 min-w-0 flex flex-col justify-center">
-                              <span className="font-mono text-[17px] tracking-tight font-bold text-slate-900 dark:text-white truncate">{b.code}</span>
-                              {b.memo && <span className="text-sm text-primary font-medium truncate mt-0.5">{b.memo}</span>}
+                            <div className="w-10 h-10 bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 rounded-[14px] flex items-center justify-center shrink-0">
+                              <IconBarcode size={22} />
                             </div>
                             
-                            {/* Action Overlay for List Mode */}
+                            <div className="flex flex-col flex-1 min-w-0 gap-0.5 justify-center">
+                              {b.memo ? (
+                                <>
+                                  <div className="font-bold text-[15px] text-slate-900 dark:text-white truncate">
+                                    {b.memo}
+                                  </div>
+                                  <div className="truncate text-[12px] text-slate-500">
+                                    {renderFormattedCode(b.code)}
+                                  </div>
+                                </>
+                              ) : (
+                                <div className="truncate text-[15px] text-slate-900 dark:text-white">
+                                  {renderFormattedCode(b.code)}
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Action Overlay */}
                             {activeActionMenu === b.id && (
-                              <div className="absolute inset-y-0 right-0 max-w-full overflow-x-auto custom-scrollbar bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2 px-3 sm:px-5 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200 rounded-[24px] sm:rounded-l-none sm:rounded-r-[24px]">
-                                <button onClick={(e) => { e.stopPropagation(); const serial = b.code.length > 6 ? b.code.substring(0, b.code.length - 6) : b.code; navigator.clipboard.writeText(serial); toast.success('복사됨'); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95" aria-label="복사">
+                              <div className="absolute inset-y-0 right-0 max-w-full overflow-x-auto custom-scrollbar bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2 px-3 sm:px-5 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200">
+                                <button onClick={(e) => { e.stopPropagation(); const serial = b.code.length > 6 ? b.code.substring(0, b.code.length - 6) : b.code; navigator.clipboard.writeText(serial); toast.success('복사됨'); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-[#3182f6] hover:bg-blue-50 dark:hover:bg-[#3182f6]/20 rounded-xl transition-all active:scale-95" aria-label="복사">
                                   <IconCopy size={22} />
                                   <span className="text-[10px] font-bold">복사</span>
                                 </button>
@@ -1835,61 +1836,17 @@ const handleEditMemo = (id, currentMemo) => {
                                   <IconTrash size={22} />
                                   <span className="text-[10px] font-bold">삭제</span>
                                 </button>
-                            <button onClick={(e) => { e.stopPropagation(); setActiveGlobalMenu(b.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all active:scale-95" aria-label="더보기">
-                              <IconDotsVertical size={22} />
-                              <span className="text-[10px] font-bold">더보기</span>
-                            </button>
                               </div>
                             )}
                           </div>
                         );
-                      }
-
-                      return (
-                        <div 
-                          key={b.id}
-                          onClick={() => setActiveActionMenu(activeActionMenu === b.id ? null : b.id)}
-                          className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] shadow-sm border border-slate-100/50 dark:border-white/5 border border-slate-100/50 dark:border-white/5 flex flex-col justify-between gap-3 cursor-pointer hover:shadow-lg dark:hover:bg-white/5 transition-all relative group"
-                        >
-                          <div className="flex flex-col gap-1 items-center pt-2">
-                            <IconBarcode size={32} className="text-slate-800 dark:text-slate-200" />
-                            <span className="font-mono text-xs font-bold text-slate-600 dark:text-slate-400 mt-2 truncate w-full text-center">{b.code}</span>
-                          </div>
-                          {b.memo && <div className="text-[10px] text-primary font-bold text-center truncate w-full bg-primary/10 rounded-md px-1 py-0.5">{b.memo}</div>}
-                          
-                          {/* Action Overlay */}
-                          {activeActionMenu === b.id && (
-                            <div className="absolute inset-0 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md rounded-[24px] flex flex-wrap content-center justify-center gap-2 p-3 z-10 animate-in zoom-in-95 duration-150">
-                              <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(b.code); toast.success('복사됨'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-slate-600 dark:text-slate-300 hover:text-blue-500 bg-slate-50 dark:bg-black/20 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-[14px] transition-all active:scale-95" aria-label="복사">
-                                <IconCopy size={20} />
-                                <span className="text-[10px] font-bold">복사</span>
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); handleEditMemo(b.id, b.memo); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-slate-600 dark:text-slate-300 hover:text-emerald-500 bg-slate-50 dark:bg-black/20 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-[14px] transition-all active:scale-95" aria-label="메모">
-                                <IconMessagePlus size={20} />
-                                <span className="text-[10px] font-bold">메모</span>
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [b.id], targetFolder: b.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-slate-600 dark:text-slate-300 hover:text-purple-500 bg-slate-50 dark:bg-black/20 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-[14px] transition-all active:scale-95" aria-label="이동">
-                                <IconFolder size={20} />
-                                <span className="text-[10px] font-bold">이동</span>
-                              </button>
-                              <button onClick={(e) => { e.stopPropagation(); handleDelete(b.id); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 w-[45%] py-2 text-red-500 bg-slate-50 dark:bg-black/20 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-[14px] transition-all active:scale-95" aria-label="삭제">
-                                <IconTrash size={20} />
-                                <span className="text-[10px] font-bold">삭제</span>
-                                </button>
-                            <button onClick={(e) => { e.stopPropagation(); setActiveGlobalMenu(b.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all active:scale-95" aria-label="더보기">
-                              <IconDotsVertical size={22} />
-                              <span className="text-[10px] font-bold">더보기</span>
-                            </button>
-                              </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                      })}
+                    </div>
                   </div>
                 );
               })()}
             </div>
-            </div>
+          </div>
 
           </div>
         )}
