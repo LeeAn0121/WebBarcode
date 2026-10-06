@@ -1541,7 +1541,7 @@ const handleEditMemo = (id, currentMemo) => {
 
                         {!isSelectionMode && activeActionMenu === item.id && (
                           <div className="absolute inset-y-0 right-0 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2.5 px-5 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200 rounded-r-[24px]">
-                            <button onClick={(e) => { e.stopPropagation(); const serial = item.code.length > 6 ? item.code.slice(-6) : item.code; navigator.clipboard.writeText(serial); toast.success('복사됨'); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95" aria-label="복사">
+                            <button onClick={(e) => { e.stopPropagation(); const serial = item.code.length > 6 ? item.code.substring(0, item.code.length - 6) : item.code; navigator.clipboard.writeText(serial); toast.success('복사됨'); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95" aria-label="복사">
                               <IconCopy size={22} />
                               <span className="text-[10px] font-bold">복사</span>
                             </button>
@@ -1824,7 +1824,7 @@ const handleEditMemo = (id, currentMemo) => {
                             {/* Action Overlay for List Mode */}
                             {activeActionMenu === b.id && (
                               <div className="absolute inset-y-0 right-0 bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2.5 px-5 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200 rounded-r-[24px]">
-                                <button onClick={(e) => { e.stopPropagation(); const serial = b.code.length > 6 ? b.code.slice(-6) : b.code; navigator.clipboard.writeText(serial); toast.success('복사됨'); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95" aria-label="복사">
+                                <button onClick={(e) => { e.stopPropagation(); const serial = b.code.length > 6 ? b.code.substring(0, b.code.length - 6) : b.code; navigator.clipboard.writeText(serial); toast.success('복사됨'); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95" aria-label="복사">
                                   <IconCopy size={22} />
                                   <span className="text-[10px] font-bold">복사</span>
                                 </button>
@@ -2288,7 +2288,7 @@ const handleEditMemo = (id, currentMemo) => {
                 <div className="px-5 pb-8 sm:pb-5">
                   {/* Primary Actions Grid */}
                   <div className="grid grid-cols-4 gap-3 mb-4" role="menu">
-                    <button role="menuitem" onClick={() => { const serial = item.code.length > 6 ? item.code.slice(-6) : item.code; navigator.clipboard.writeText(serial); toast.success('복사됨'); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-[18px] transition-all active:scale-95 text-slate-700 dark:text-slate-200">
+                    <button role="menuitem" onClick={() => { const serial = item.code.length > 6 ? item.code.substring(0, item.code.length - 6) : item.code; navigator.clipboard.writeText(serial); toast.success('복사됨'); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-[18px] transition-all active:scale-95 text-slate-700 dark:text-slate-200">
                       <IconCopy size={26} />
                       <span className="text-[11px] font-bold">복사</span>
                     </button>
