@@ -133,6 +133,15 @@ const formatsToSupport = [
   Html5QrcodeSupportedFormats.ITF,
 ];
 function App() {
+  const triggerHaptic = (type = 'light') => {
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      if (type === 'light') navigator.vibrate(10);
+      else if (type === 'medium') navigator.vibrate(30);
+      else if (type === 'heavy') navigator.vibrate(50);
+      else if (type === 'success') navigator.vibrate([20, 50, 30]);
+    }
+  };
+
   
   const [autoRules, setAutoRules] = useState<{startsWith: string, targetFolder: string}[]>(() => {
     try { return JSON.parse(localStorage.getItem('autoRules') || '[]'); } catch { return []; }
