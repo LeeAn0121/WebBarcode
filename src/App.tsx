@@ -258,6 +258,9 @@ function App() {
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const pressTimerRef = useRef<any>(null);
+  const folderPressTimer = useRef<any>(null);
+  const folderStartY = useRef(0);
+  const folderLongPressTime = useRef(0);
   const [moveModal, setMoveModal] = useState({ isOpen: false, ids: [] as string[], targetFolder: '기본폴더', type: 'barcode' as 'barcode' | 'folder', sourceFolder: '' });
   const [shareModal, setShareModal] = useState({ isOpen: false, url: '', title: '', description: '', shareText: '' });
   const [shareConfig, setShareConfig] = useState({ isOpen: false, type: '', folderName: '', item: null as any, expireHours: 1 });
@@ -1752,6 +1755,7 @@ const handleEditMemo = (id, currentMemo) => {
                         }}
                         className="flex flex-col"
                         animation={200}
+                        animation={200}
                         delayOnTouchOnly={true}
                         delay={150}
                         ghostClass="opacity-40 bg-slate-50 dark:bg-white/5"
@@ -1769,7 +1773,41 @@ const handleEditMemo = (id, currentMemo) => {
                         return (
                           <div 
                             key={fullPath}
-                            onClick={() => setExplorerPath(fullPath)}
+                            onClick={(e) => {
+                              if (Date.now() - folderLongPressTime.current < 500) { e.preventDefault(); e.stopPropagation(); return; }
+                              setExplorerPath(fullPath);
+                            }}
+                            onContextMenu={(e) => {
+                              e.preventDefault();
+                              setFolderActionModal(fullPath);
+                            }}
+                            onPointerDown={(e) => {
+                              folderStartY.current = e.clientY;
+                              folderPressTimer.current = setTimeout(() => {
+                                folderPressTimer.current = null;
+                                folderLongPressTime.current = Date.now();
+                                setFolderActionModal(fullPath);
+                                triggerHaptic('heavy');
+                              }, 600);
+                            }}
+                            onPointerMove={(e) => {
+                              if (folderPressTimer.current && Math.abs(e.clientY - folderStartY.current) > 10) {
+                                clearTimeout(folderPressTimer.current);
+                                folderPressTimer.current = null;
+                              }
+                            }}
+                            onPointerUp={() => {
+                              if (folderPressTimer.current) {
+                                clearTimeout(folderPressTimer.current);
+                                folderPressTimer.current = null;
+                              }
+                            }}
+                            onPointerLeave={() => {
+                              if (folderPressTimer.current) {
+                                clearTimeout(folderPressTimer.current);
+                                folderPressTimer.current = null;
+                              }
+                            }}
                             className={`p-4 flex items-center gap-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 transition-colors active:bg-slate-100 dark:active:bg-white/10 ${!isLastFolder ? 'border-b border-slate-100 dark:border-white/5' : ''}`}
                           >
                             <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 text-[#3182f6] rounded-[14px] flex items-center justify-center shrink-0">
