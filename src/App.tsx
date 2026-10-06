@@ -79,7 +79,7 @@ const Auth = ({ supabase }: { supabase: any }) => {
         </div>
         
         <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-2 relative z-10 tracking-tight">
-          WebBarcode
+          웹바코드 - WebBarcode
         </h1>
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-8 relative z-10">
           나만의 바코드 관리 공간에 접속하세요
@@ -113,7 +113,7 @@ const Splash = ({ fadingOut }: { fadingOut: boolean }) => {
           <img src={`${import.meta.env.BASE_URL}icon.jpg`} alt="" className="w-full h-full object-cover rounded-3xl relative z-10" />
           <div className="absolute inset-0 rounded-3xl bg-primary z-0 animate-ping opacity-50"></div>
         </div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-black dark:text-white">WebBarcode</h1>
+        <h1 className="text-3xl font-extrabold tracking-tight text-black dark:text-white">웹바코드 - WebBarcode</h1>
         <div className="w-12 h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden relative">
           <div className="absolute top-0 left-0 h-full w-[40%] bg-primary rounded-full animate-[loadBar_1.2s_ease-in-out_infinite]"></div>
         </div>
@@ -1645,9 +1645,7 @@ const handleEditMemo = (id, currentMemo) => {
             <div className="flex-none p-4 pb-2 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/10 z-10 sticky top-0 flex flex-col gap-3">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar whitespace-nowrap text-lg font-bold text-slate-800 dark:text-white">
-                  <button onClick={() => setExplorerPath('')} className="hover:text-primary transition-colors flex items-center gap-1">
-                    <IconHome size={20} /> Home
-                  </button>
+                  <button onClick={() => setExplorerPath('')} className="hover:text-primary transition-colors">Home</button>
                   {explorerPath.split('/').filter(Boolean).map((part, idx, arr) => {
                     const path = arr.slice(0, idx + 1).join('/');
                     return (
@@ -2386,7 +2384,7 @@ const handleEditMemo = (id, currentMemo) => {
             <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity animate-in fade-in" onClick={() => setIsSidebarOpen(false)}></div>
             <div className="relative w-64 max-w-[80vw] h-full bg-white dark:bg-[#1c1c1e] shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
               <div className="p-6 pb-2 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
-                <h2 className="text-2xl font-black tracking-tight text-[#3182f6]">WebBarcode</h2>
+                <h2 className="text-2xl font-black tracking-tight text-[#3182f6]">웹바코드 - WebBarcode</h2>
                 <button onClick={() => setIsSidebarOpen(false)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500">
                   <IconX size={20} />
                 </button>
