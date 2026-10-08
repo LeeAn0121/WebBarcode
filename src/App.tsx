@@ -1508,9 +1508,13 @@ const handleEditMemo = (id, currentMemo) => {
                       className="w-full bg-transparent text-white text-sm focus:outline-none [&>option]:bg-slate-800 [&>option]:text-white truncate"
                     >
                       <option value="">(자동) 시스템 기본/방향 우선</option>
-                      {cameras.map(c => (
-                        <option key={c.id} value={c.id}>{c.label || '알 수 없는 카메라 장치'}</option>
-                      ))}
+                      {cameras.map(c => {
+                        const lbl = (c.label || '').toLowerCase();
+                        let type = '내장/기타';
+                        if (lbl.includes('usb')) type = 'USB';
+                        else if (lbl.includes('bluetooth') || lbl.includes('bt')) type = 'Bluetooth';
+                        return <option key={c.id} value={c.id}>[{type}] {c.label || '알 수 없는 카메라 장치'}</option>;
+                      })}
                     </select>
                   </div>
                 )}
