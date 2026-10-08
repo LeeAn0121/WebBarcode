@@ -667,13 +667,27 @@ function App() {
       }
       
       const targetFacingMode = requestedFacingMode || facingMode;
-      const targetDeviceId = requestedDeviceId || selectedCamera;
+      let targetDeviceId = requestedDeviceId || selectedCamera;
       
-      if (cameras.length === 0) {
+      let currentDevices = cameras;
+      if (currentDevices.length === 0) {
         try {
           const devices = await Html5Qrcode.getCameras();
-          if (devices && devices.length > 0) setCameras(devices);
+          if (devices && devices.length > 0) {
+            setCameras(devices);
+            currentDevices = devices;
+          }
         } catch(e) {}
+      }
+
+      if (!targetDeviceId && currentDevices.length > 0) {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (!isMobile) {
+          const usbCam = currentDevices.find(d => d.label.toLowerCase().includes('usb'));
+          const btCam = currentDevices.find(d => d.label.toLowerCase().includes('bluetooth') || d.label.toLowerCase().includes('bt'));
+          if (usbCam) targetDeviceId = usbCam.id;
+          else if (btCam) targetDeviceId = btCam.id;
+        }
       }
 
       const cameraConfig = targetDeviceId 
