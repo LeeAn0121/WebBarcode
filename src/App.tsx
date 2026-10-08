@@ -1985,11 +1985,6 @@ const handleEditMemo = (id, currentMemo) => {
                   <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-300 font-bold uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">기본 설정</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm hover:shadow-lg transition-all">
-                      <div className="flex items-center gap-3 text-amber-500">
-                        <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
-                          {darkMode ? <IconMoon size={24} aria-hidden="true" /> : <IconSun size={24} aria-hidden="true" />}
-                        </div>
-                        <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm hover:shadow-lg transition-all">
                       <div className="flex items-center gap-3 text-pink-500">
                         <div className="bg-pink-100 dark:bg-pink-900/30 p-2 rounded-lg">
                           <IconBell size={24} aria-hidden="true" />
@@ -2010,11 +2005,11 @@ const handleEditMemo = (id, currentMemo) => {
                     </div>
 
                     <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm hover:shadow-lg transition-all">
-                        <div className="flex items-center gap-3 text-amber-500">
-                          <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
-                            {darkMode ? <IconMoon size={24} aria-hidden="true" /> : <IconSun size={24} aria-hidden="true" />}
-                          </div>
-                          <h4 className="font-bold text-lg text-slate-800 dark:text-slate-100">테마 설정</h4>
+                      <div className="flex items-center gap-3 text-amber-500">
+                        <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
+                          {darkMode ? <IconMoon size={24} aria-hidden="true" /> : <IconSun size={24} aria-hidden="true" />}
+                        </div>
+                        <h4 className="font-bold text-lg text-slate-800 dark:text-slate-100">테마 설정</h4>
                       </div>
                       <p className="text-sm text-slate-500 dark:text-slate-400 flex-1 leading-relaxed">눈의 피로를 줄이기 위해 다크 모드를 사용할 수 있습니다.</p>
                       <button onClick={() => setDarkMode(!darkMode)} className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-semibold py-2.5 rounded-lg text-sm transition-colors shadow-sm focus-visible:outline-none">

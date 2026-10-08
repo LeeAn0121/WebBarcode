@@ -1,7 +1,7 @@
 {
   "name": "temp-app",
   "private": true,
-  "version": "2.52.34",
+  "version": "2.52.35",
   "type": "module",
   "scripts": {
     "dev": "vite",
