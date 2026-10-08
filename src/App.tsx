@@ -599,7 +599,7 @@ function App() {
 
   };
 
-  const startScanner = async (requestedFacingMode?: 'environment' | 'user') => {
+  const startScanner = async (requestedFacingMode?: 'environment' | 'user', requestedDeviceId?: string) => {
     try {
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -618,10 +618,22 @@ function App() {
       }
       
       const targetFacingMode = requestedFacingMode || facingMode;
+      const targetDeviceId = requestedDeviceId || selectedCamera;
       
+      if (cameras.length === 0) {
+        try {
+          const devices = await Html5Qrcode.getCameras();
+          if (devices && devices.length > 0) setCameras(devices);
+        } catch(e) {}
+      }
+
+      const cameraConfig = targetDeviceId 
+        ? { deviceId: { exact: targetDeviceId } }
+        : { facingMode: targetFacingMode };
+
       try {
         await scannerRef.current.start(
-          { facingMode: targetFacingMode },
+          cameraConfig,
           {
             fps: 30,
             qrbox: (w, h) => {
@@ -637,8 +649,9 @@ function App() {
         );
         
         setIsScanning(true);
-        setFacingMode(targetFacingMode);
-        logDebug('info', '카메라 시작 성공', { facingMode: targetFacingMode });
+        if (!targetDeviceId) setFacingMode(targetFacingMode);
+        if (targetDeviceId) setSelectedCamera(targetDeviceId);
+        logDebug('info', '카메라 시작 성공', { cameraConfig });
       } catch (err: any) {
         console.warn(`${targetFacingMode} 카메라 시작 실패:`, err);
         throw err;
@@ -1414,10 +1427,37 @@ const handleEditMemo = (id, currentMemo) => {
            </div>
            
            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col items-center gap-4 z-50">
-              {isScanning && (
-                <button 
-                  disabled={isSwitching}
-                  onClick={async () => {
+                {cameras.length > 0 && (
+                  <div className="w-full max-w-[280px] bg-black/40 backdrop-blur-md rounded-2xl shadow-lg border border-white/10 p-2 z-50">
+                    <select 
+                      value={selectedCamera} 
+                      onChange={async (e) => {
+                        const newDeviceId = e.target.value;
+                        if (isSwitching) return;
+                        setIsSwitching(true);
+                        try {
+                          setSelectedCamera(newDeviceId);
+                          if (scannerRef.current) { try { await scannerRef.current.stop(); } catch(e) {} }
+                          await new Promise(resolve => setTimeout(resolve, 300));
+                          await startScanner(undefined, newDeviceId);
+                        } finally {
+                          setIsSwitching(false);
+                        }
+                      }}
+                      className="w-full bg-transparent text-white text-sm focus:outline-none [&>option]:bg-slate-800 [&>option]:text-white truncate"
+                    >
+                      <option value="">(자동) 시스템 기본/방향 우선</option>
+                      {cameras.map(c => (
+                        <option key={c.id} value={c.id}>{c.label || '알 수 없는 카메라 장치'}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                {isScanning && (
+                  <button 
+                    disabled={isSwitching}
+                    onClick={async () => {
+                      setSelectedCamera(''); // 전환 시 자동 모드로 복귀
                     if (isSwitching) return;
                     setIsSwitching(true);
                     try {
