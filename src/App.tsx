@@ -1968,6 +1968,43 @@ const handleEditMemo = (id, currentMemo) => {
             </div>
             
             <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full flex flex-col gap-10">
+                {/* 기본 설정 */}
+                <section className="space-y-4">
+                  <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-300 font-bold uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">기본 설정</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm hover:shadow-lg transition-all">
+                      <div className="flex items-center gap-3 text-amber-500">
+                        <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
+                          {darkMode ? <IconMoon size={24} aria-hidden="true" /> : <IconSun size={24} aria-hidden="true" />}
+                        </div>
+                        <h4 className="font-bold text-lg text-slate-800 dark:text-slate-100">테마 설정</h4>
+                      </div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 flex-1 leading-relaxed">눈의 피로를 줄이기 위해 다크 모드를 사용할 수 있습니다.</p>
+                      <button onClick={() => setDarkMode(!darkMode)} className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-semibold py-2.5 rounded-lg text-sm transition-colors shadow-sm focus-visible:outline-none">
+                        {darkMode ? '라이트 모드로 전환' : '다크 모드로 전환'}
+                      </button>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm hover:shadow-lg transition-all">
+                      <div className="flex items-center gap-3 text-emerald-500">
+                        <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-lg">
+                          <IconRocket size={24} aria-hidden="true" />
+                        </div>
+                        <h4 className="font-bold text-lg text-slate-800 dark:text-slate-100">앱 버전 정보</h4>
+                      </div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 flex-1 leading-relaxed">현재 설치된 웹바코드 버전을 확인합니다.</p>
+                      <div className="w-full bg-slate-50 dark:bg-black/50 border border-slate-100 dark:border-white/5 py-2.5 rounded-lg flex justify-center items-center gap-2">
+                        <span className="font-mono text-slate-500 font-bold tracking-wider">v{packageJson.version}</span>
+                        {latestVersion && latestVersion !== packageJson.version && (
+                          <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${latestVersion}`} target="_blank" rel="noopener noreferrer" className="ml-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold transition-colors hover:bg-primary/20">
+                            업데이트 가능
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
               
               {/* 내보내기 영역 */}
               <section className="space-y-4">
@@ -2476,9 +2513,7 @@ const handleEditMemo = (id, currentMemo) => {
                   <span>환경 설정</span>
                 </button>
               </div>
-              <div className="mt-auto p-6 text-xs font-mono text-slate-400">
-                v{packageJson.version}
-              </div>
+              
             </div>
           </div>
         )}
