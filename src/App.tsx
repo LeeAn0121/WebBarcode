@@ -1415,9 +1415,7 @@ const handleEditMemo = (id, currentMemo) => {
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${latestVersion}`} target="_blank" rel="noopener noreferrer" className="hidden sm:block text-slate-500 hover:text-primary transition-colors font-mono text-[10px] bg-slate-200/50 dark:bg-white/10 px-2.5 py-1 rounded-full font-bold tracking-widest">
-              V{latestVersion}
-            </a>
+            
             
             
             
@@ -1425,9 +1423,7 @@ const handleEditMemo = (id, currentMemo) => {
               <IconBell size={18} />
               {unreadNoticeCount > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-[#f2f2f7] dark:border-black rounded-full"></span>}
             </button>
-            <button onClick={() => setDarkMode(!darkMode)} className="w-10 h-10 bg-white dark:bg-[#1c1c1e] text-slate-500 hover:text-primary flex items-center justify-center rounded-full shadow-sm transition-all border border-transparent dark:border-white/5">
-              {darkMode ? <IconSun size={18}/> : <IconMoon size={18}/>}
-            </button>
+            
           </div>
         </header>
 
@@ -2502,7 +2498,7 @@ const handleEditMemo = (id, currentMemo) => {
               <div className="flex flex-col p-4 gap-2 overflow-y-auto">
                 <button onClick={() => { setActiveTab('home'); setIsSidebarOpen(false); triggerHaptic('light'); }} className={`flex items-center gap-4 px-4 py-3 rounded-2xl font-bold transition-all ${activeTab === 'home' ? 'bg-blue-50 dark:bg-blue-900/20 text-[#3182f6]' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'}`}>
                   <IconHome size={22} stroke={activeTab === 'home' ? 2.5 : 1.5} />
-                  <span>모든 바코드</span>
+                  <span>홈</span>
                 </button>
                 <button onClick={() => { setActiveTab('folders'); setIsSidebarOpen(false); triggerHaptic('light'); }} className={`flex items-center gap-4 px-4 py-3 rounded-2xl font-bold transition-all ${activeTab === 'folders' ? 'bg-blue-50 dark:bg-blue-900/20 text-[#3182f6]' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'}`}>
                   <IconFolder size={22} stroke={activeTab === 'folders' ? 2.5 : 1.5} />
@@ -2510,7 +2506,7 @@ const handleEditMemo = (id, currentMemo) => {
                 </button>
                 <button onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); triggerHaptic('light'); }} className={`flex items-center gap-4 px-4 py-3 rounded-2xl font-bold transition-all ${activeTab === 'settings' ? 'bg-blue-50 dark:bg-blue-900/20 text-[#3182f6]' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'}`}>
                   <IconSettings size={22} stroke={activeTab === 'settings' ? 2.5 : 1.5} />
-                  <span>환경 설정</span>
+                  <span>설정</span>
                 </button>
               </div>
               
