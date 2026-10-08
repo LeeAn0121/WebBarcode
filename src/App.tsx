@@ -638,7 +638,7 @@ function App() {
             fps: 30,
             qrbox: (w, h) => {
               const minDim = Math.min(w, h);
-              const size = Math.min(280, minDim * 0.75);
+              const size = Math.min(450, minDim * 0.9);
               return { width: size, height: size };
             },
             aspectRatio: 1.0,
@@ -1407,7 +1407,7 @@ const handleEditMemo = (id, currentMemo) => {
             
       {/* Inline Scanner Area */}
       {isScannerModalOpen && (
-        <div className="w-full h-[50vh] md:h-full md:w-[45%] shrink-0 bg-black relative z-40 shadow-2xl flex flex-col animate-in md:slide-in-from-left-4 slide-in-from-top-4 duration-500 overflow-hidden rounded-b-3xl md:rounded-none md:rounded-br-3xl">
+        <div className="w-full h-[60vh] md:h-full md:w-[45%] shrink-0 bg-black relative z-40 shadow-2xl flex flex-col animate-in md:slide-in-from-left-4 slide-in-from-top-4 duration-500 overflow-hidden rounded-b-3xl md:rounded-none md:rounded-br-3xl">
            <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-50">
              <button onClick={() => { stopScanner(); setIsScannerModalOpen(false); }} aria-label="스캐너 닫기" className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
                <IconX size={24} />
@@ -1420,7 +1420,7 @@ const handleEditMemo = (id, currentMemo) => {
            <div className="flex-1 relative overflow-hidden">
               <div id="reader" className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"></div>
               {isScanning && (
-                <div id="reader-overlay" className="absolute inset-x-8 inset-y-12 rounded-3xl border-2 ring-[1000px] ring-black/50 border-white/80 pointer-events-none transition-all duration-300 ease-out overflow-hidden">
+                <div id="reader-overlay" className="absolute inset-6 rounded-3xl border-2 ring-[1000px] ring-black/50 border-white/80 pointer-events-none transition-all duration-300 ease-out overflow-hidden">
                   <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent shadow-glow motion-safe:animate-scan-laser motion-reduce:hidden" aria-hidden="true"></div>
                 </div>
               )}
