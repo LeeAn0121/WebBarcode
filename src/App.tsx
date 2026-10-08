@@ -1348,9 +1348,11 @@ const handleEditMemo = (id, currentMemo) => {
   }
 
   return (
-    <div className="flex h-[100svh] bg-slate-100 dark:bg-[#050505] overflow-hidden text-slate-800 dark:text-slate-100 justify-center md:p-6 lg:p-8">
+    <>
+      <Toaster position="top-center" richColors theme={darkMode ? 'dark' : 'light'} style={{ zIndex: 99999 }} />
+      <div className="flex h-[100svh] bg-slate-100 dark:bg-[#050505] overflow-hidden text-slate-800 dark:text-slate-100 justify-center md:p-6 lg:p-8">
       {splashVisible && <Splash fadingOut={splashFadingOut} />}
-      <Toaster position="bottom-center" theme={darkMode ? 'dark' : 'light'} />
+
       
       {/* Update Available Modal */}
       {updateInfo && (
@@ -2555,6 +2557,7 @@ const handleEditMemo = (id, currentMemo) => {
         
       </div>
     </div>
+    </>
   );
 }
 
