@@ -342,6 +342,17 @@ function App() {
       }
     }).subscribe();
 
+    const noticeSub = supabase
+      .channel('public:notices')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notices' }, payload => {
+        setNoticeHistory(prev => [{id: payload.new.id, message: payload.new.message, date: payload.new.created_at, read: false}, ...prev].slice(0, 50));
+        playSound('success', true);
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('새 공지사항', { body: payload.new.message, icon: `${import.meta.env.BASE_URL}icon.jpg` });
+        }
+      })
+      .subscribe();
+
     return () => { supabase.removeChannel(adminChannel); };
   }, [session?.user?.email]);
 
@@ -502,6 +513,9 @@ function App() {
         if (payload.new && payload.new.user_id && payload.new.user_id !== session?.user?.id) return;
         
         if (payload.eventType === 'INSERT') {
+          if (!pendingInsertsRef.current.has(payload.new.code) && 'Notification' in window && Notification.permission === 'granted') {
+            new Notification('새 바코드 공유됨', { body: `[${payload.new.folder}] ${payload.new.code}`, icon: `${import.meta.env.BASE_URL}icon.jpg` });
+          }
           setBarcodes(prev => {
             if (prev.some(b => b.id === payload.new.id || b.code === payload.new.code)) return prev;
             return [payload.new, ...prev];
@@ -516,6 +530,7 @@ function App() {
 
     return () => {
       supabase.removeChannel(subscription);
+      supabase.removeChannel(noticeSub);
     };
   }, [session?.user?.id]);
 
@@ -626,6 +641,7 @@ function App() {
       pendingInsertsRef.current.delete(cleanText);
     } else {
       logDebug('info', '바코드 저장 성공', { code: cleanText });
+      toast.success(`바코드 인식 성공: ${cleanText}`);
       setTimeout(() => pendingInsertsRef.current.delete(cleanText), 3000);
     }
 
@@ -1973,7 +1989,32 @@ const handleEditMemo = (id, currentMemo) => {
                         <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
                           {darkMode ? <IconMoon size={24} aria-hidden="true" /> : <IconSun size={24} aria-hidden="true" />}
                         </div>
-                        <h4 className="font-bold text-lg text-slate-800 dark:text-slate-100">테마 설정</h4>
+                        <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm hover:shadow-lg transition-all">
+                      <div className="flex items-center gap-3 text-pink-500">
+                        <div className="bg-pink-100 dark:bg-pink-900/30 p-2 rounded-lg">
+                          <IconBell size={24} aria-hidden="true" />
+                        </div>
+                        <h4 className="font-bold text-lg text-slate-800 dark:text-slate-100">시스템 알림</h4>
+                      </div>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 flex-1 leading-relaxed">새 바코드 공유 및 공지사항 알림을 받습니다.</p>
+                      <button onClick={() => {
+                        if ('Notification' in window) {
+                          Notification.requestPermission().then(perm => {
+                            if(perm === 'granted') toast.success('알림 권한이 허용되었습니다.');
+                            else toast.error('알림 권한이 거부/차단되었습니다.');
+                          });
+                        }
+                      }} className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-semibold py-2.5 rounded-lg text-sm transition-colors shadow-sm focus-visible:outline-none">
+                        알림 권한 요청
+                      </button>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm hover:shadow-lg transition-all">
+                        <div className="flex items-center gap-3 text-amber-500">
+                          <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
+                            {darkMode ? <IconMoon size={24} aria-hidden="true" /> : <IconSun size={24} aria-hidden="true" />}
+                          </div>
+                          <h4 className="font-bold text-lg text-slate-800 dark:text-slate-100">테마 설정</h4>
                       </div>
                       <p className="text-sm text-slate-500 dark:text-slate-400 flex-1 leading-relaxed">눈의 피로를 줄이기 위해 다크 모드를 사용할 수 있습니다.</p>
                       <button onClick={() => setDarkMode(!darkMode)} className="w-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-white font-semibold py-2.5 rounded-lg text-sm transition-colors shadow-sm focus-visible:outline-none">
