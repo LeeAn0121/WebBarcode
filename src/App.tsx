@@ -245,6 +245,39 @@ function App() {
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [isBatchMode, setIsBatchMode] = useState(false);
   const lastScannedRef = useRef<{code: string, time: number}>({ code: '', time: 0 });
+
+  // USB/Bluetooth 바코드 리더기 (키보드 웨지) 전역 지원 로직
+  const usbBufferRef = useRef('');
+  const usbTimeoutRef = useRef<any>(null);
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent) => {
+      // 바코드 스캐너는 마지막에 Enter 키를 전송함
+      if (e.key === 'Enter') {
+        if (usbBufferRef.current.length >= 3) {
+          const scannedCode = usbBufferRef.current;
+          usbBufferRef.current = '';
+          handleScanInner(scannedCode);
+          e.preventDefault();
+        }
+        return;
+      }
+
+      // 단일 문자 입력만 허용
+      if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
+
+      usbBufferRef.current += e.key;
+      
+      if (usbTimeoutRef.current) clearTimeout(usbTimeoutRef.current);
+      usbTimeoutRef.current = setTimeout(() => {
+        usbBufferRef.current = ''; // 사람이 치는 속도(>50ms)면 버퍼 초기화
+      }, 50);
+    };
+    
+    window.addEventListener('keydown', handleGlobalKeyDown, true);
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
+  }, []);
+
   const [zoomLevel, setZoomLevel] = useState(1);
   const [maxZoom, setMaxZoom] = useState(1);
   const [facingMode, setFacingMode] = useState<'environment'|'user'>('environment');
