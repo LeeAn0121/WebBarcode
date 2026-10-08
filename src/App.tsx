@@ -342,16 +342,6 @@ function App() {
       }
     }).subscribe();
 
-    const noticeSub = supabase
-      .channel('public:notices')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notices' }, payload => {
-        setNoticeHistory(prev => [{id: payload.new.id, message: payload.new.message, date: payload.new.created_at, read: false}, ...prev].slice(0, 50));
-        playSound('success', true);
-        if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('새 공지사항', { body: payload.new.message, icon: `${import.meta.env.BASE_URL}icon.jpg` });
-        }
-      })
-      .subscribe();
 
     return () => { supabase.removeChannel(adminChannel); };
   }, [session?.user?.email]);
@@ -505,6 +495,16 @@ function App() {
       fetchCollabFolders();
     }
 
+    const noticeSub = supabase
+      .channel('custom-notices-channel')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notices' }, payload => {
+        setNoticeHistory(prev => [{id: payload.new.id, message: payload.new.message, date: payload.new.created_at, read: false}, ...prev].slice(0, 50));
+        playSound('success', true);
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('새 공지사항', { body: payload.new.message, icon: `${import.meta.env.BASE_URL}icon.jpg` });
+        }
+      })
+      .subscribe();
     const subscription = supabase
       .channel('public:barcodes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'barcodes' }, payload => {
