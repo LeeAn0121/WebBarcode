@@ -34,10 +34,14 @@ const OPTIONS: ReaderOptions = {
   returnErrors: false,
 };
 
-function centerBand(frame: PixelFrame): PixelFrame {
-  // Retain the complete horizontal quiet zones; a narrow square crop cuts long labels.
-  const height = Math.max(1, Math.round(frame.height * 0.66));
-  const top = Math.floor((frame.height - height) / 2);
+function enhancementBand(frame: PixelFrame, attempt: number): PixelFrame {
+  // Overlapping, full-width bands cover the top and bottom as well as the
+  // center. Bound enhancement memory without shrinking thin printed bars.
+  const height = Math.min(frame.height, 512, Math.max(1, Math.floor(1_500_000 / frame.width)));
+  if (height === frame.height) return frame;
+  const count = Math.ceil((frame.height - height) / Math.max(1, Math.floor(height * 0.65))) + 1;
+  const index = ((attempt % count) + count) % count;
+  const top = Math.round((frame.height - height) * index / (count - 1));
   return {
     width: frame.width,
     height,
@@ -48,7 +52,7 @@ function centerBand(frame: PixelFrame): PixelFrame {
   };
 }
 
-function enhance(frame: PixelFrame): PixelFrame {
+function enhance(frame: PixelFrame, sparseTail = 0.005): PixelFrame {
   // A fixed local window follows the printed modules rather than the much
   // larger camera frame, where a broad window would mix in paper edges.
   const radius = 16;
@@ -97,7 +101,7 @@ function enhance(frame: PixelFrame): PixelFrame {
   // Sparse labels can occupy less than 2% of a camera frame. Flat paper
   // dominates the normalized histogram at 128; widen the tails in that case.
   const low = percentile(
-    histogram[128] > normalized.length * 0.7 ? 0.005 : 0.02,
+    histogram[128] > normalized.length * 0.7 ? sparseTail : 0.02,
   );
   const high = percentile(0.98);
   // Upscale horizontally only: duplicating rows would turn a single observed
@@ -137,17 +141,10 @@ export async function decodeLabelFrame(
   ) {
     throw new Error("Invalid barcode pixel frame");
   }
-  const center = centerBand(frame);
-  const centered = await read(center);
-  if (centered !== undefined) return centered;
-  // Oversized inputs still get their original pixels scanned, but no enhancement copies.
-  // Alternate fallback order so a stream does not always pay for full-frame decoding first.
-  const canEnhance = center.width * center.height <= 1_500_000;
-  if (canEnhance && attempt % 2 !== 0) {
-    return (await read(enhance(center))) ?? (await read(frame));
-  }
-  return (
-    (await read(frame)) ??
-    (canEnhance ? await read(enhance(center)) : undefined)
-  );
+  const full = await read(frame);
+  if (full !== undefined) return full;
+  const band = enhancementBand(frame, attempt);
+  // Two contrast ranges cover both dense labels and very sparse labels near
+  // the edge of a wide frame, without relaxing checksum/scan-line validation.
+  return (await read(enhance(band))) ?? (await read(enhance(band, 0.001)));
 }

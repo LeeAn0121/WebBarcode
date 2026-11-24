@@ -7,13 +7,12 @@ export interface CaptureRegion {
   outputHeight: number;
 }
 
-/** Mirror centered object-fit: cover, then preserve native label pixels in a bounded ROI. */
+/** Capture every visible pixel of centered object-fit: cover, including the edges. */
 export function getCameraCaptureRegion(
   sourceWidth: number,
   sourceHeight: number,
   displayWidth: number,
   displayHeight: number,
-  fullView = false,
 ): CaptureRegion | null {
   if (
     ![sourceWidth, sourceHeight].every(
@@ -41,11 +40,9 @@ export function getCameraCaptureRegion(
       Math.max(1, Math.floor(displayHeight / coverScale)),
     );
   }
-  if (!fullView) {
-    width = Math.min(width, 2560);
-    height = Math.min(height, Math.max(1, Math.floor(1_800_000 / width)));
-  }
-  const scale = fullView ? Math.min(1, 1920 / Math.max(width, height)) : 1;
+  // Preserve native pixels through 4K. Larger sensors retain the entire view
+  // within a bounded transfer buffer rather than cropping its edges away.
+  const scale = Math.min(1, Math.sqrt(8_294_400 / (width * height)));
   return {
     x: Math.floor((sourceWidth - width) / 2),
     y: Math.floor((sourceHeight - height) / 2),

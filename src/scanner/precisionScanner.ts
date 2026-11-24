@@ -13,7 +13,6 @@ export function startPrecisionScanner(
     type: "module",
   });
   let stopped = false;
-  let frameNumber = 0;
   let timer: ReturnType<typeof setTimeout>;
   let watchdog: ReturnType<typeof setTimeout>;
 
@@ -39,15 +38,13 @@ export function startPrecisionScanner(
       timer = setTimeout(capture, 250);
       return;
     }
-    // Most frames keep native pixels in the central label area. Every fourth
-    // frame includes the whole visible view, preserving large QR codes too.
+    // Every frame includes the entire visible view at native resolution up to 4K.
     const bounds = video.getBoundingClientRect();
     const region = getCameraCaptureRegion(
       video.videoWidth,
       video.videoHeight,
       bounds.width,
       bounds.height,
-      ++frameNumber % 4 === 0,
     );
     if (!region) {
       timer = setTimeout(capture, 250);

@@ -1543,18 +1543,18 @@ const handleEditMemo = (id, currentMemo) => {
              </div>
            </div>
 
-           <div className="flex-1 relative overflow-hidden">
+           <div className="h-[360px] sm:h-[400px] shrink-0 relative overflow-hidden">
               <div id="reader" className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"></div>
               {isScanning && (
-                <div id="reader-overlay" className="absolute inset-x-6 top-1/2 h-28 -translate-y-1/2 rounded-xl border-2 ring-2 ring-primary/50 border-white/80 pointer-events-none transition-all duration-300 ease-out overflow-hidden">
+                <div id="reader-overlay" className="absolute inset-3 rounded-xl border-2 ring-2 ring-primary/50 border-white/80 pointer-events-none transition-all duration-300 ease-out overflow-hidden">
                   <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent shadow-glow motion-safe:animate-scan-laser motion-reduce:hidden" aria-hidden="true"></div>
                 </div>
               )}
            </div>
 
-           <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col items-center gap-2 z-50">
+           <div className="relative p-3 bg-black flex flex-col items-center gap-2 z-50">
                 <div className="text-center text-white text-xs" role="status">
-                  <strong className="font-semibold">{scannerError ? '카메라 연결을 확인해주세요' : isScanning ? '라벨의 양옆 여백까지 중앙에 맞춰주세요' : '카메라 준비 중…'}</strong>
+                  <strong className="font-semibold">{scannerError ? '카메라 연결을 확인해주세요' : isScanning ? '화면 전체에서 인식 중 · 라벨의 양옆 여백을 보여주세요' : '카메라 준비 중…'}</strong>
                   <p className="mt-1 text-white/80">저장 위치: {currentFolder === '전체' ? '기본폴더' : currentFolder}</p>
                   {scannerError && <><p className="mt-2 max-w-md">{scannerError}</p><button className="mt-2 underline" onClick={() => void startScanner()}>카메라 다시 연결</button></>}
                 </div>

@@ -569,7 +569,7 @@ body {
   min-width: 0;
 }
 .workspace-scanner {
-  height: 440px;
+  height: auto;
   width: 100%;
   background: black;
   position: relative;
@@ -990,9 +990,6 @@ body {
     background: var(--ws-tint);
     color: var(--ws-primary);
     font-weight: 700;
-  }
-  .workspace-scanner {
-    height: 400px;
   }
   .workspace-scanner:after {
     display: none;
