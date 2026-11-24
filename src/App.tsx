@@ -12,11 +12,13 @@ import { ReactSortable } from 'react-sortablejs';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { startPrecisionScanner } from './scanner/precisionScanner';
 import { waitForCameraPlayback } from './scanner/waitForCameraPlayback';
+import { setCameraControls } from './scanner/cameraControls';
 import { Toaster, toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import packageJson from '../package.json';
 import {
   IconAlertTriangle,
+  IconBolt,
   IconBarcode,
   IconBell,
   IconBellX,
@@ -96,6 +98,12 @@ const formatsToSupport = [
   Html5QrcodeSupportedFormats.UPC_A,
   Html5QrcodeSupportedFormats.UPC_E,
   Html5QrcodeSupportedFormats.ITF,
+  Html5QrcodeSupportedFormats.CODE_93,
+  Html5QrcodeSupportedFormats.CODABAR,
+  Html5QrcodeSupportedFormats.DATA_MATRIX,
+  Html5QrcodeSupportedFormats.PDF_417,
+  Html5QrcodeSupportedFormats.RSS_14,
+  Html5QrcodeSupportedFormats.RSS_EXPANDED,
 ];
 function App() {
   const triggerHaptic = (type = 'light') => {
@@ -262,6 +270,11 @@ function App() {
 
   const [zoomLevel, setZoomLevel] = useState(1);
   const [maxZoom, setMaxZoom] = useState(1);
+  const [minZoom, setMinZoom] = useState(1);
+  const [zoomStep, setZoomStep] = useState(0.1);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
+  const [torchBusy, setTorchBusy] = useState(false);
   const [facingMode, setFacingMode] = useState<'environment'|'user'>('environment');
   const [isSwitching, setIsSwitching] = useState(false);
   const [scannerError, setScannerError] = useState('');
@@ -657,8 +670,8 @@ function App() {
     precisionStopRef.current = null;
     videoTrackRef.current = null;
     setIsScanning(false);
-    setMaxZoom(1);
-    setZoomLevel(1);
+    setMaxZoom(1); setMinZoom(1); setZoomStep(0.1);
+    setZoomLevel(1); setTorchSupported(false); setTorchOn(false); setTorchBusy(false);
     scannerOperationRef.current = scannerOperationRef.current.then(async () => {
       if (scannerRef.current?.isScanning) await scannerRef.current.stop();
     }).catch(console.error);
@@ -699,6 +712,8 @@ function App() {
         if (isCurrent()) scanCallbackRef.current(text);
       };
       let playbackReady = false;
+      let precisionPreferred = true;
+      const onPrimaryDecoded = (text: string) => { if (!precisionPreferred) onDecoded(text); };
       try {
         await scanner.start(cameraConfig, {
           fps: 12,
@@ -706,11 +721,11 @@ function App() {
           disableFlip: targetFacingMode === 'environment',
           videoConstraints: {
             ...cameraConfig,
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-            frameRate: { ideal: 30 },
+            width: { ideal: 3840 },
+            height: { ideal: 2160 },
+            frameRate: { ideal: 24 },
           },
-        }, onDecoded, () => {});
+        }, onPrimaryDecoded, () => {});
         const video = document.querySelector<HTMLVideoElement>('#reader video');
         if (!video) throw new Error('카메라 영상을 찾을 수 없습니다.');
         await waitForCameraPlayback(video);
@@ -725,24 +740,48 @@ function App() {
         const track = (video?.srcObject as MediaStream | null)?.getVideoTracks()[0];
         if (video && track) {
           videoTrackRef.current = track;
-          const capabilities = track.getCapabilities?.() as MediaTrackCapabilities & {
-            focusMode?: string[]; zoom?: { min: number; max: number };
-          };
+          let capabilities: (MediaTrackCapabilities & {
+            focusMode?: string[]; zoom?: { min: number; max: number; step?: number }; torch?: boolean;
+          }) | undefined;
+          try { capabilities = track.getCapabilities?.(); }
+          catch (error) { logDebug('warn', '카메라 제어 기능 조회 실패', { error: String(error) }); }
           if (capabilities?.focusMode?.includes('continuous')) {
             // Unsupported focus controls must never prevent the camera from starting.
-            await track.applyConstraints({ advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet] })
+            await setCameraControls(track, { focusMode: 'continuous' })
               .catch(error => { logDebug('warn', '연속 자동 초점 설정 실패', { error: String(error) }); });
           }
           if (!isCurrent()) return;
+          setTorchSupported(capabilities?.torch === true);
           if (capabilities?.zoom) {
-            setMaxZoom(capabilities.zoom.max);
-            setZoomLevel((track.getSettings() as MediaTrackSettings & { zoom?: number }).zoom ?? 1);
+            try {
+            const min = capabilities.zoom.min ?? 1;
+            const max = Math.max(min, capabilities.zoom.max);
+            const step = capabilities.zoom.step && capabilities.zoom.step > 0 ? capabilities.zoom.step : 0.1;
+            setMinZoom(min); setMaxZoom(max); setZoomStep(step);
+            const settings = track.getSettings() as MediaTrackSettings & { zoom?: number };
+            const touchRear = (settings.facingMode || targetFacingMode) === 'environment' &&
+              (navigator.maxTouchPoints > 0 || window.matchMedia('(pointer: coarse)').matches);
+            const desired = Math.min(max, Math.max(min, touchRear ? 2 : settings.zoom ?? 1));
+            const initial = Math.min(max, Math.max(min, min + Math.round((desired - min) / step) * step));
+            let applied = false;
+            try {
+              await setCameraControls(track, { zoom: Number(initial.toFixed(4)) });
+              applied = true;
+            } catch (error) { logDebug('warn', '초기 확대 설정 실패', { error: String(error) }); }
+            if (!isCurrent()) return;
+            setZoomLevel((track.getSettings() as MediaTrackSettings & { zoom?: number }).zoom ?? (applied ? initial : settings.zoom ?? min));
+            } catch (error) {
+              setMinZoom(1); setMaxZoom(1); setZoomLevel(1);
+              logDebug('warn', '확대 제어 설정 실패', { error: String(error) });
+            }
           }
           try {
             precisionStopRef.current = startPrecisionScanner(video, onDecoded, error => {
+              if (isCurrent()) precisionPreferred = false;
               logDebug('warn', '정밀 판독 중단 (기본 판독 유지)', { error });
             });
           } catch (error) {
+            precisionPreferred = false;
             logDebug('warn', '정밀 판독 초기화 실패 (기본 판독 유지)', { error: String(error) });
           }
           logDebug('info', '카메라 시작 성공', { settings: track.getSettings() });
@@ -757,6 +796,7 @@ function App() {
           return;
         }
         if (scanner.isScanning && playbackReady) {
+          if (!precisionStopRef.current) precisionPreferred = false;
           // Optional capability/enumeration failures do not invalidate a live camera.
           logDebug('warn', '카메라 부가 설정 실패', { error: String(err) });
           return;
@@ -782,14 +822,25 @@ function App() {
     return scannerOperationRef.current;
   };
 
-  const handleZoomChange = (e) => {
-    const newZoom = parseFloat(e.target.value);
-    setZoomLevel(newZoom);
-    if (videoTrackRef.current) {
-      videoTrackRef.current.applyConstraints({
-        advanced: [{ zoom: newZoom } as MediaTrackConstraintSet]
-      }).catch(console.warn);
-    }
+  const handleZoomChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const track = videoTrackRef.current;
+    if (!track) return;
+    const newZoom = Math.min(maxZoom, Math.max(minZoom, Number(e.target.value)));
+    try {
+      await setCameraControls(track, { zoom: newZoom });
+      if (videoTrackRef.current === track) setZoomLevel((track.getSettings() as MediaTrackSettings & { zoom?: number }).zoom ?? newZoom);
+    } catch { if (videoTrackRef.current === track) toast.error('확대 배율을 변경하지 못했습니다.'); }
+  };
+  const toggleTorch = async () => {
+    const track = videoTrackRef.current;
+    if (!track || torchBusy) return;
+    const next = !torchOn;
+    setTorchBusy(true);
+    try {
+      await setCameraControls(track, { torch: next });
+      if (videoTrackRef.current === track) setTorchOn(next);
+    } catch { if (videoTrackRef.current === track) toast.error('카메라 조명을 변경하지 못했습니다.'); }
+    finally { if (videoTrackRef.current === track) setTorchBusy(false); }
   };
 
   const exportExcel = (onlySelected: boolean | React.MouseEvent = false) => {
@@ -1484,28 +1535,32 @@ const handleEditMemo = (id, currentMemo) => {
              <button onClick={() => void closeScanner()} aria-label="스캐너 닫기" className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
                <IconX size={24} />
              </button>
+             <div className="flex items-center gap-2">
+             {torchSupported && <button onClick={() => void toggleTorch()} disabled={torchBusy} aria-label={torchOn ? '조명 끄기' : '조명 켜기'} aria-pressed={torchOn} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"><IconBolt size={20}/></button>}
              <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} aria-label={isSoundEnabled ? '스캔 효과음 끄기' : '스캔 효과음 켜기'} aria-pressed={isSoundEnabled} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
                {isSoundEnabled ? <IconVolume size={20} /> : <IconVolume3 size={20} />}
              </button>
+             </div>
            </div>
 
            <div className="flex-1 relative overflow-hidden">
               <div id="reader" className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"></div>
               {isScanning && (
-                <div id="reader-overlay" className="absolute inset-6 rounded-3xl border-2 ring-[1000px] ring-black/50 border-white/80 pointer-events-none transition-all duration-300 ease-out overflow-hidden">
+                <div id="reader-overlay" className="absolute inset-x-6 top-1/2 h-28 -translate-y-1/2 rounded-xl border-2 ring-2 ring-primary/50 border-white/80 pointer-events-none transition-all duration-300 ease-out overflow-hidden">
                   <div className="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent shadow-glow motion-safe:animate-scan-laser motion-reduce:hidden" aria-hidden="true"></div>
                 </div>
               )}
            </div>
 
-           <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col items-center gap-4 z-50">
+           <div className="absolute bottom-0 left-0 right-0 p-3 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col items-center gap-2 z-50">
                 <div className="text-center text-white text-xs" role="status">
-                  <strong className="font-semibold">{scannerError ? '카메라 연결을 확인해주세요' : isScanning ? '바코드를 카메라에 비춰주세요' : '카메라 준비 중…'}</strong>
+                  <strong className="font-semibold">{scannerError ? '카메라 연결을 확인해주세요' : isScanning ? '라벨의 양옆 여백까지 중앙에 맞춰주세요' : '카메라 준비 중…'}</strong>
                   <p className="mt-1 text-white/80">저장 위치: {currentFolder === '전체' ? '기본폴더' : currentFolder}</p>
                   {scannerError && <><p className="mt-2 max-w-md">{scannerError}</p><button className="mt-2 underline" onClick={() => void startScanner()}>카메라 다시 연결</button></>}
                 </div>
+                <div className="flex items-center justify-center gap-2 w-full max-w-sm">
                 {cameras.length > 0 && (
-                  <div className="w-full max-w-[280px] bg-black/40 backdrop-blur-md rounded-2xl shadow-lg border border-white/10 p-2 z-50">
+                  <div className="flex-1 min-w-0 bg-black/40 backdrop-blur-md rounded-2xl shadow-lg border border-white/10 p-2 z-50">
                     <select
                       aria-label="카메라 선택" value={selectedCamera}
                       onChange={async (e) => {
@@ -1548,18 +1603,20 @@ const handleEditMemo = (id, currentMemo) => {
                       setIsSwitching(false);
                     }
                   }}
-                  className="flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-5 py-2.5 rounded-full font-bold shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white transition-all active:scale-95"
+                  className="flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-3 py-2.5 rounded-full font-bold shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white transition-all active:scale-95"
                   aria-label="렌즈 전환"
                 >
                   <IconRefresh size={18} className={isSwitching ? 'animate-spin' : ''} />
-                  {isSwitching ? '전환중...' : '렌즈 전환'}
+                  {isSwitching ? '전환중...' : '렌즈'}
                 </button>
               )}
 
-              {maxZoom > 1 && isScanning && (
-                <div className="w-full max-w-[200px] flex items-center gap-3 bg-black/40 backdrop-blur-md p-2 rounded-2xl shadow-lg border border-white/10">
+                </div>
+              {maxZoom > minZoom && isScanning && (
+                <div className="w-full max-w-sm flex items-center gap-3 bg-black/40 backdrop-blur-md p-2 rounded-2xl shadow-lg border border-white/10">
                   <IconSearch size={14} className="text-white/70" aria-hidden="true" />
-                  <input type="range" min="1" max={maxZoom} step="0.1" value={zoomLevel} onChange={handleZoomChange} aria-label="카메라 줌 배율" className="flex-1 accent-primary" />
+                  <input type="range" min={minZoom} max={maxZoom} step={zoomStep} value={zoomLevel} onChange={handleZoomChange} aria-label="카메라 줌 배율" className="flex-1 min-w-0 accent-primary" />
+                  <output className="text-white text-xs tabular-nums min-w-10 text-right" aria-live="polite">{zoomLevel.toFixed(1)}배</output>
                 </div>
               )}
            </div>

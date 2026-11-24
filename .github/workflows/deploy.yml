@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -18,8 +19,10 @@ jobs:
   deploy:
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url || steps.deployment_retry.outputs.page_url }}
     runs-on: ubuntu-latest
+    env:
+      PAGES_ARTIFACT_NAME: github-pages-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,9 +43,49 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+        id: upload
+        uses: actions/upload-pages-artifact@v5
         with:
+          name: ${{ env.PAGES_ARTIFACT_NAME }}
           path: './dist'
+      - name: Confirm uploaded artifact is available
+        uses: actions/github-script@v9
+        env:
+          PAGES_ARTIFACT_ID: ${{ steps.upload.outputs.artifact_id }}
+        with:
+          script: |
+            const expectedId = Number(process.env.PAGES_ARTIFACT_ID);
+            const name = process.env.PAGES_ARTIFACT_NAME;
+            if (!Number.isSafeInteger(expectedId) || expectedId <= 0) {
+              throw new Error('The upload did not return an artifact ID.');
+            }
+            for (let attempt = 0; attempt < 12; attempt++) {
+              const { data } = await github.rest.actions.listWorkflowRunArtifacts({
+                ...context.repo, run_id: context.runId, per_page: 100,
+              });
+              const matches = data.artifacts.filter(item => item.name === name && !item.expired);
+              if (matches.length === 1 && matches[0].id === expectedId) {
+                core.info(`Confirmed Pages artifact ${name} (${expectedId}).`);
+                return;
+              }
+              if (matches.length > 1) throw new Error(`Duplicate Pages artifact: ${name}`);
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            }
+            throw new Error(`Uploaded Pages artifact is not visible: ${name}`);
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        continue-on-error: true
+        uses: actions/deploy-pages@v5
+        with:
+          artifact_name: ${{ env.PAGES_ARTIFACT_NAME }}
+      - name: Wait before retrying deployment
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/github-script@v9
+        with:
+          script: await new Promise(resolve => setTimeout(resolve, 10000));
+      - name: Retry GitHub Pages deployment
+        id: deployment_retry
+        if: steps.deployment.outcome == 'failure'
+        uses: actions/deploy-pages@v5
+        with:
+          artifact_name: ${{ env.PAGES_ARTIFACT_NAME }}

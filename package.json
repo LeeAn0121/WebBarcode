@@ -1,7 +1,7 @@
 {
   "name": "temp-app",
   "private": true,
-  "version": "2.54.0",
+  "version": "2.55.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,7 +9,9 @@
     "lint": "oxlint",
     "test": "node --test tests/*.test.mjs",
     "typecheck": "tsc -p tsconfig.app.json --pretty false",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "verify": "npm run build && npm test && npm run typecheck && npm run lint",
+    "hooks:install": "git config --local core.hooksPath .githooks"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.112.4",
