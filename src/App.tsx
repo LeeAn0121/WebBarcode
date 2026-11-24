@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { AppShell } from './components/AppShell';
 import { BarcodeLibrary, type BarcodeRecord, type SortOrder } from './components/BarcodeLibrary';
 import { EntryDialog, type EntryValues } from './components/EntryDialog';
+import { ActionDialog, type ActionDialogProps } from './components/ActionDialog';
+import { applyQuickFilter, getQuickFilterCounts, type QuickFilter } from './barcodeFilters';
+import { collectFolderPaths, normalizeFolderPath, planFolderRename, renameFolderPath } from './folderOperations';
 import AuthScreen from './components/AuthScreen';
 import './workspace.css';
 import { useDialogFocusManager } from './hooks/useDialogFocusManager';
@@ -139,7 +142,17 @@ function App() {
     fetchGlobalNotices();
   }, []);
 
-  const [smartFilter, setSmartFilter] = useState<'all' | 'today' | 'yesterday' | 'hasMemo'>('all');
+  const [smartFilter, setSmartFilter] = useState<QuickFilter>('all');
+  const [filterDate, setFilterDate] = useState(() => new Date());
+  useEffect(() => {
+    const refreshDay = () => {
+      const now = new Date();
+      setFilterDate(previous => previous.toDateString() === now.toDateString() ? previous : now);
+    };
+    const timer = setInterval(refreshDay, 60000);
+    document.addEventListener('visibilitychange', refreshDay);
+    return () => { clearInterval(timer); document.removeEventListener('visibilitychange', refreshDay); };
+  }, []);
 
   const workspaceActionsRef = useRef({
     navigate: async (_tab: 'home' | 'folders' | 'settings') => {},
@@ -257,7 +270,7 @@ function App() {
   const [activeActionMenu, setActiveActionMenu] = useState<any>(null);
   const [activeGlobalMenu, setActiveGlobalMenu] = useState<any>(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectionIds, setSelectedIds] = useState<string[]>([]);
   const folderPressTimer = useRef<any>(null);
   const folderStartY = useRef(0);
   const folderLongPressTime = useRef(0);
@@ -269,8 +282,14 @@ function App() {
   const [folderActionModal, setFolderActionModal] = useState<string | null>(null);
   const [explorerPath, setExplorerPath] = useState<string>('');
   const [folderViewMode, setFolderViewMode] = useState<'grid' | 'list'>('list');
-  const [folderOrder, setFolderOrder] = useState<string[]>(JSON.parse(localStorage.getItem('folderOrder') || '[]'));
-  const [promptModal, setPromptModal] = useState({ isOpen: false, title: '', placeholder: '', value: '', type: 'text', description: '', confirmText: '확인', onConfirm: (val: string) => {} });
+  const [folderOrder, setFolderOrder] = useState<string[]>(() => {
+    try {
+      const saved: unknown = JSON.parse(localStorage.getItem('folderOrder') || '[]');
+      return Array.isArray(saved) ? saved.filter((value): value is string => typeof value === 'string') : [];
+    } catch { return []; }
+  });
+  useEffect(() => { localStorage.setItem('folderOrder', JSON.stringify(folderOrder)); }, [folderOrder]);
+  const [promptModal, setPromptModal] = useState<Omit<ActionDialogProps, 'onClose'> & { isOpen: boolean }>({ isOpen: false, title: '', placeholder: '', value: '', type: 'text', description: '', confirmText: '확인', onConfirm: (val: string) => {} });
   const [session, setSession] = useState<any>(null);
   const [authChecked, setAuthChecked] = useState(false);
   const [splashVisible, setSplashVisible] = useState(true);
@@ -346,9 +365,13 @@ function App() {
   const [latestVersion, setLatestVersion] = useState(packageJson.version);
 
   const [localFolders, setLocalFolders] = useState<string[]>(() => {
-    try { return JSON.parse(localStorage.getItem('folders') || '[]'); }
+    try {
+      const saved: unknown = JSON.parse(localStorage.getItem('folders') || '[]');
+      return Array.isArray(saved) ? saved.filter((value): value is string => typeof value === 'string') : [];
+    }
     catch { return []; }
   });
+  useEffect(() => { localStorage.setItem('folders', JSON.stringify(localFolders)); }, [localFolders]);
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerOperationRef = useRef<Promise<void>>(Promise.resolve());
@@ -362,7 +385,8 @@ function App() {
   const currentFolderRef = useRef('전체');
 
   // Derived unique folders from barcodes and local
-  const folders = Array.from(new Set(['기본폴더', ...localFolders, ...barcodes.map(b => b.folder).filter((folder): folder is string => Boolean(folder))]));
+  const explicitFolders = ['기본폴더', ...localFolders, ...barcodes.map(b => b.folder).filter((folder): folder is string => Boolean(folder))];
+  const folders = [...new Set([...explicitFolders, ...collectFolderPaths(explicitFolders)])];
   folders.sort((a, b) => {
     const idxA = folderOrder.indexOf(a);
     const idxB = folderOrder.indexOf(b);
@@ -784,38 +808,38 @@ function App() {
     XLSX.writeFile(wb, `WebBarcode_${format(new Date(), 'yyyyMMdd')}.xlsx`);
   };
 
-  const handleMultiDelete = async () => {
-    if (selectedIds.length === 0) return;
-    if (confirm(`선택한 ${selectedIds.length}개의 바코드를 정말 삭제하시겠습니까?`)) {
-      const { error } = await supabase.from('barcodes').delete().in('id', selectedIds);
-      if (error) {
-        toast.error('삭제 실패: ' + error.message);
-      } else {
-        setBarcodes(prev => prev.filter(b => !selectedIds.includes(b.id)));
-        toast.success(`${selectedIds.length}개가 삭제되었습니다.`);
-        setIsSelectionMode(false);
-        setSelectedIds([]);
-      }
-    }
+  const handleMultiDelete = () => {
+    const ids = [...selectedIds];
+    if (!ids.length) return;
+    setPromptModal({ isOpen: true, title: '선택한 바코드 삭제', hideInput: true, danger: true,
+      description: `선택한 ${ids.length}개 바코드를 삭제합니다. 이 작업은 되돌릴 수 없습니다.`, confirmText: '삭제하기',
+      onConfirm: async () => {
+        const { error } = await supabase.from('barcodes').delete().in('id', ids);
+        if (error) throw new Error(error.message);
+        setBarcodes(prev => prev.filter(b => !ids.includes(b.id)));
+        setSelectedIds([]); setIsSelectionMode(false);
+        toast.success(`${ids.length}개가 삭제되었습니다.`);
+      },
+    });
   };
 
-  const handleDelete = async (id) => {
-    if (confirm('삭제하시겠습니까?')) {
-      const { error } = await supabase.from('barcodes').delete().eq('id', id);
-      if (error) toast.error(error.message);
-      else { setBarcodes(prev => prev.filter(b => b.id !== id)); setSelectedIds(prev => prev.filter(selected => selected !== id)); toast.success('삭제되었습니다.'); }
-    }
+  const handleDelete = (id: string) => {
+    setPromptModal({ isOpen: true, title: '바코드 삭제', hideInput: true, danger: true,
+      description: '이 바코드를 보관함에서 삭제합니다. 이 작업은 되돌릴 수 없습니다.', confirmText: '삭제하기',
+      onConfirm: async () => {
+        const { error } = await supabase.from('barcodes').delete().eq('id', id);
+        if (error) throw new Error(error.message);
+        setBarcodes(prev => prev.filter(b => b.id !== id));
+        setSelectedIds(prev => prev.filter(selected => selected !== id));
+        toast.success('삭제되었습니다.');
+      },
+    });
   };
 
-  const handleEditCode = async (id, currentCode) => {
-    const newCode = prompt('바코드 번호 수정:', currentCode);
-    if (newCode && newCode.trim() !== '' && newCode !== currentCode) {
-      const { error } = await supabase.from('barcodes').update({ code: newCode.trim() }).eq('id', id);
-      if (error) toast.error(error.message);
-      else { setBarcodes(prev => prev.map(b => b.id === id ? {...b, code: newCode.trim()} : b)); toast.success('수정되었습니다.'); }
-    }
+  const handleEditCode = (id: string, _currentCode?: string) => {
+    const row = barcodes.find(item => item.id === id);
+    if (row) setEntryItem(row);
   };
-
 
   const handleClone = async (item: any) => {
     try {
@@ -1109,6 +1133,7 @@ const handleEditMemo = (id, currentMemo) => {
     setPromptModal({
       isOpen: true,
       title: '메모 추가/수정',
+      label: '메모',
       description: '바코드에 대한 메모를 입력하세요. 비워두면 삭제됩니다.',
       placeholder: '예: 유통기한 2026-09-02',
       value: currentMemo || '',
@@ -1117,27 +1142,31 @@ const handleEditMemo = (id, currentMemo) => {
       onConfirm: async (newMemo) => {
         if (newMemo !== currentMemo) {
           const { error } = await supabase.from('barcodes').update({ memo: newMemo.trim() }).eq('id', id);
-          if (error) toast.error(error.message);
-          else { setBarcodes(prev => prev.map(b => b.id === id ? {...b, memo: newMemo.trim()} : b)); toast.success('메모가 저장되었습니다.'); }
+          if (error) throw new Error(error.message);
+          setBarcodes(prev => prev.map(b => b.id === id ? {...b, memo: newMemo.trim()} : b));
+          setSelectedIds(prev => prev.filter(selected => selected !== id));
+          toast.success('메모가 저장되었습니다.');
         }
       }
     });
   };
 
-  const handleAddFolder = () => {
-    const newFolder = prompt('새 폴더 이름을 입력하세요\n(팁: "창고/A구역" 처럼 슬래시(/)를 넣으면 트리 구조로 관리됩니다):');
-    if (newFolder && newFolder.trim() !== '') {
-      const folderName = newFolder.trim();
-      setCurrentFolder(folderName);
-      setLocalFolders(prev => {
-        const next = [...prev, folderName];
-        localStorage.setItem('folders', JSON.stringify(next));
-        return next;
-      });
-      toast.success(`'${folderName}' 폴더가 생성되었습니다.`);
-    }
+  const handleAddFolder = (parentPath = '') => {
+    setPromptModal({ isOpen: true, title: '새 폴더 만들기', label: '폴더 이름', required: true,
+      value: '', placeholder: '예: 창고/A구역', confirmText: '만들기',
+      description: parentPath ? `'${parentPath}' 안에 폴더를 만듭니다.` : '/로 나누면 하위 폴더도 함께 만들 수 있습니다.',
+      onConfirm: (raw) => {
+        const folderName = normalizeFolderPath(parentPath ? `${parentPath}/${raw}` : raw);
+        if (folders.includes(folderName)) throw new Error('같은 이름의 폴더가 이미 있습니다.');
+        const additions = collectFolderPaths([folderName]);
+        setLocalFolders(prev => [...new Set([...prev, ...additions])]);
+        setFolderOrder(prev => [...new Set([...prev, ...additions])]);
+        setCurrentFolder(folderName); setSelectedIds([]);
+        if (activeTab === 'folders') setExplorerPath(folderName);
+        toast.success(`'${folderName}' 폴더가 생성되었습니다.`);
+      },
+    });
   };
-
 
   const handleMoveOrder = (folder: string, direction: 'up' | 'down') => {
     setFolderOrder(prev => {
@@ -1159,76 +1188,75 @@ const handleEditMemo = (id, currentMemo) => {
     });
   };
 
-  const handleRenameFolder = async (oldName: string) => {
-    if (oldName === '기본폴더') return toast.error('기본 폴더는 이름 변경이 불가능합니다.');
-    const baseName = oldName.split('/').pop() || oldName;
-    const newBaseName = prompt(`'${baseName}' 폴더의 새 이름을 입력하세요:`, baseName);
-    if (!newBaseName || newBaseName === baseName) return;
-
-    // Construct new full path
-    const parts = oldName.split('/');
-    parts.pop();
-    parts.push(newBaseName.trim().replace(/\//g, ''));
-    const newName = parts.join('/');
-
-    if (newName === oldName) return;
-    if (!newName || newName === oldName) return;
-
-    try {
-      // 1. DB 바코드 업데이트
-      const barcodesToUpdate = barcodes.filter(b => (b.folder || '기본폴더') === oldName);
-      if (barcodesToUpdate.length > 0) {
-        const ids = barcodesToUpdate.map(b => b.id);
-        const { error } = await supabase.from('barcodes').update({ folder: newName }).in('id', ids);
-        if (error) throw error;
-      }
-
-      // 2. 폴더 목록 업데이트
-      setLocalFolders(prev => {
-        const next = prev.filter(f => f !== oldName && f !== newName);
-        next.push(newName);
-        localStorage.setItem('folders', JSON.stringify(next));
-        return next;
-      });
-
-      // 3. 현재 뷰 업데이트
-      setBarcodes(prev => prev.map(b => (b.folder || '기본폴더') === oldName ? { ...b, folder: newName } : b));
-      if (currentFolder === oldName) setCurrentFolder(newName);
-      toast.success('폴더 이름이 변경되었습니다.');
-    } catch(err) {
-      toast.error('폴더 이름 변경 중 오류가 발생했습니다.');
-    }
+  const handleRenameFolder = (oldName: string) => {
+    if (oldName === '기본폴더') return toast.error('기본 폴더는 이름을 변경할 수 없습니다.');
+    setPromptModal({ isOpen: true, title: '폴더 이름 변경', label: '새 폴더 이름', required: true,
+      value: oldName.split('/').pop() || '', confirmText: '변경하기',
+      description: `'${oldName}'과 하위 폴더의 경로가 함께 변경됩니다.`,
+      onConfirm: async (raw) => {
+        const { newPath, mapping } = planFolderRename(oldName, raw, folders);
+        if (newPath === oldName) return;
+        const completed: { oldPath: string; newPath: string; ids: string[] }[] = [];
+        try {
+          for (const [oldPath, target] of mapping) {
+            const ids = barcodes.filter(b => (b.folder || '기본폴더') === oldPath).map(b => b.id);
+            if (!ids.length) continue;
+            const { error } = await supabase.from('barcodes').update({ folder: target }).in('id', ids);
+            if (error) throw new Error(error.message);
+            completed.push({ oldPath, newPath: target, ids });
+          }
+        } catch (error) {
+          let rollbackFailed = false;
+          for (const update of completed.reverse()) {
+            try {
+              const { error: rollbackError } = await supabase.from('barcodes').update({ folder: update.oldPath })
+                .in('id', update.ids).eq('folder', update.newPath);
+              if (rollbackError) rollbackFailed = true;
+            } catch { rollbackFailed = true; }
+          }
+          await fetchBarcodes();
+          throw new Error(rollbackFailed
+            ? '일부 항목의 변경을 되돌리지 못했습니다. 보관함 목록을 확인한 뒤 다시 시도하세요.'
+            : `폴더 이름을 변경하지 못했습니다. ${error instanceof Error ? error.message : '다시 시도하세요.'}`);
+        }
+        const rename = (path: string) => renameFolderPath(path, oldName, newPath);
+        setLocalFolders(prev => [...new Set([...prev.map(rename), ...mapping.values()])]);
+        setFolderOrder(prev => [...new Set(prev.map(rename))]);
+        setBarcodes(prev => prev.map(b => ({ ...b, folder: rename(b.folder || '기본폴더') })));
+        setCurrentFolder(prev => rename(prev)); setExplorerPath(prev => rename(prev));
+        toast.success('폴더와 하위 경로의 이름을 변경했습니다.');
+      },
+    });
   };
 
-  const handleDeleteFolder = (folderName) => {
+  const handleDeleteFolder = (folderName: string) => {
     if (folderName === '기본폴더') return toast.error('기본 폴더는 삭제할 수 없습니다.');
-    const hasBarcodes = barcodes.some(b => (b.folder || '기본폴더') === folderName);
-    if (hasBarcodes) return toast.error('바코드가 들어있는 폴더는 삭제할 수 없습니다. 먼저 바코드를 지워주세요.');
-
-    if (confirm(`'${folderName}' 폴더를 삭제하시겠습니까?`)) {
-      setLocalFolders(prev => {
-        const next = prev.filter(f => f !== folderName);
-        localStorage.setItem('folders', JSON.stringify(next));
-        return next;
-      });
-      if (currentFolder === folderName) setCurrentFolder('기본폴더');
-      toast.success('폴더가 삭제되었습니다.');
-    }
+    if (folders.some(path => path.startsWith(folderName + '/'))) return toast.error('하위 폴더를 먼저 정리해주세요.');
+    if (barcodes.some(b => (b.folder || '기본폴더') === folderName)) return toast.error('바코드를 다른 폴더로 옮긴 후 삭제해주세요.');
+    setPromptModal({ isOpen: true, title: '폴더 삭제', hideInput: true, danger: true,
+      description: `'${folderName}' 폴더를 삭제합니다.`, confirmText: '삭제하기',
+      onConfirm: () => {
+        setLocalFolders(prev => prev.filter(f => f !== folderName));
+        setFolderOrder(prev => prev.filter(f => f !== folderName));
+        if (currentFolder === folderName) setCurrentFolder('기본폴더');
+        if (explorerPath === folderName) setExplorerPath('');
+        toast.success('폴더가 삭제되었습니다.');
+      },
+    });
   };
 
-  const handleDeleteAll = async () => {
-    const codeConfirm = prompt('정말로 모든 바코드 스캔 기록을 삭제하시겠습니까?\n삭제를 원하시면 "삭제합니다"를 입력해주세요.');
-    if (codeConfirm === '삭제합니다') {
-      const { error } = await supabase.from('barcodes').delete().not('code', 'is', null);
-      if (error) {
-        toast.error(error.message);
-      } else {
+  const handleDeleteAll = () => {
+    setPromptModal({ isOpen: true, title: '모든 바코드 삭제', label: '확인 문구', required: true, danger: true,
+      value: '', placeholder: '삭제합니다', confirmText: '모든 바코드 삭제',
+      description: '모든 스캔 기록을 영구 삭제합니다. 계속하려면 삭제합니다를 입력하세요.',
+      onConfirm: async (value) => {
+        if (value !== '삭제합니다') throw new Error('확인 문구가 일치하지 않습니다. 삭제합니다를 입력하세요.');
+        const { error } = await supabase.from('barcodes').delete().eq('user_id', session.user.id);
+        if (error) throw new Error(error.message);
+        setBarcodes([]); setSelectedIds([]);
         toast.success('모든 스캔 기록이 삭제되었습니다.');
-        setBarcodes([]);
-      }
-    } else if (codeConfirm !== null) {
-      toast.warning('입력한 문구가 일치하지 않아 취소되었습니다.');
-    }
+      },
+    });
   };
 
   const handleBackup = () => {
@@ -1306,15 +1334,28 @@ const handleEditMemo = (id, currentMemo) => {
     {setActiveActionMenu(null); setActiveGlobalMenu(null);}
   };
 
-  const visibleBarcodes = useMemo(() => {
+  const matchingBarcodes = useMemo(() => {
     const query = searchQuery.trim().toLocaleLowerCase();
     return barcodes.filter(b => (currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder) &&
-      (b.code.toLocaleLowerCase().includes(query) || (b.memo || '').toLocaleLowerCase().includes(query)))
-      .sort((a,b) => sortOrder === 'name' ? a.code.localeCompare(b.code, undefined, {numeric:true}) :
-        (sortOrder === 'oldest' ? 1 : -1) * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) || a.id.localeCompare(b.id));
-  }, [barcodes, currentFolder, searchQuery, sortOrder]);
+      (b.code.toLocaleLowerCase().includes(query) || (b.memo || '').toLocaleLowerCase().includes(query)));
+  }, [barcodes, currentFolder, searchQuery]);
+  const filterCounts = getQuickFilterCounts(matchingBarcodes, filterDate);
+  const visibleBarcodes = useMemo(() => applyQuickFilter(matchingBarcodes, smartFilter, filterDate)
+    .sort((a,b) => sortOrder === 'name' ? a.code.localeCompare(b.code, undefined, {numeric:true}) :
+      (sortOrder === 'oldest' ? 1 : -1) * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) || a.id.localeCompare(b.id)),
+    [matchingBarcodes, smartFilter, sortOrder, filterDate]);
+  const selectedIds = useMemo(() => {
+    const visibleIds = new Set(visibleBarcodes.map(row => row.id));
+    return selectionIds.filter(id => visibleIds.has(id));
+  }, [selectionIds, visibleBarcodes]);
+  const changeFolder = (folder: string) => { setCurrentFolder(folder); setSelectedIds([]); };
+  const changeQuery = (query: string) => { setSearchQuery(query); setSelectedIds([]); };
+  const changeQuickFilter = (filter: QuickFilter) => { setSmartFilter(filter); setSelectedIds([]); };
+  const resetFilters = () => { setSearchQuery(''); setCurrentFolder('전체'); setSmartFilter('all'); setSelectedIds([]); };
   const folderCounts = useMemo(() => barcodes.reduce<Record<string, number>>((counts, b) => {
-    const folder = b.folder || '기본폴더'; counts[folder] = (counts[folder] || 0) + 1; return counts;
+    const folder = b.folder || '기본폴더';
+    counts[folder] = (counts[folder] || 0) + 1;
+    return counts;
   }, {}), [barcodes]);
   const renderFormattedCode = (code: string) => <span className="font-mono break-all">{code}</span>;
   const copyBarcode = async (code: string) => {
@@ -1330,7 +1371,12 @@ const handleEditMemo = (id, currentMemo) => {
     if (isScannerModalOpen) await closeScanner();
     setActiveTab(tab); setSelectedIds([]); setIsSelectionMode(false);
   };
-  const openScanner = () => { setActiveTab('home'); setIsScannerModalOpen(true); void startScanner(); };
+  const openScanner = () => {
+    const destination = activeTab === 'folders' ? (explorerPath || '기본폴더') : currentFolder;
+    currentFolderRef.current = destination;
+    setCurrentFolder(destination); setSmartFilter('all'); setSearchQuery(''); setSelectedIds([]);
+    setActiveTab('home'); setIsScannerModalOpen(true); void startScanner();
+  };
   useEffect(() => {
     workspaceActionsRef.current = { navigate, scan: openScanner, addFolder: handleAddFolder };
   });
@@ -1346,6 +1392,7 @@ const handleEditMemo = (id, currentMemo) => {
       if(data?.length) setBarcodes(prev => [...data,...prev.filter(b => !data.some(row => row.id === b.id))]);
       else await fetchBarcodes();
     }
+    setSelectedIds([]);
     toast.success('바코드를 저장했습니다.');
   };
 
@@ -1419,7 +1466,7 @@ const handleEditMemo = (id, currentMemo) => {
 
 
       <AppShell tab={activeTab} onNavigate={navigate} onScan={openScanner} folders={folders} folder={currentFolder} counts={folderCounts}
-        onFolder={folder => { void navigate('home').then(() => setCurrentFolder(folder)); }} onAddFolder={handleAddFolder}
+        onFolder={folder => { void navigate('home').then(() => setCurrentFolder(folder)); }} onAddFolder={() => handleAddFolder()}
         email={session.user.email || '내 계정'} dark={darkMode} onTheme={() => setDarkMode(!darkMode)}
         onNotices={() => setIsNoticeHistoryOpen(true)} unread={unreadNoticeCount} onSignOut={async () => { await closeScanner(); await supabase.auth.signOut(); }}>
         {/* Main Content Area */}
@@ -1521,7 +1568,8 @@ const handleEditMemo = (id, currentMemo) => {
 
       <BarcodeLibrary all={barcodes} rows={visibleBarcodes} folders={folders} folder={currentFolder} query={searchQuery} sort={sortOrder}
         selected={selectedIds} loading={libraryLoading} error={libraryError} onRetry={fetchBarcodes}
-        onFolder={setCurrentFolder} onQuery={setSearchQuery} onSort={setSortOrder} onSelect={setSelectedIds}
+        onFolder={changeFolder} onQuery={changeQuery} onSort={setSortOrder} onSelect={setSelectedIds}
+        quickFilter={smartFilter} filterCounts={filterCounts} onQuickFilter={changeQuickFilter} onResetFilters={resetFilters}
         onScan={openScanner} onManual={() => setEntryItem('new')} onExport={exportExcel}
         onMove={() => setMoveModal({isOpen:true, ids:selectedIds, targetFolder:currentFolder === '전체'?'기본폴더':currentFolder, type:'barcode', sourceFolder:''})}
         onDelete={handleMultiDelete} onCopy={copyBarcode} onEdit={setEntryItem} onMore={setActiveGlobalMenu}/>
@@ -1594,29 +1642,7 @@ const handleEditMemo = (id, currentMemo) => {
                     </button>
                   )}
 
-                  <button onClick={() => {
-                    const newFolderName = prompt('현재 위치에 새 폴더 생성:');
-                    if (newFolderName && newFolderName.trim()) {
-                      const finalName = explorerPath ? `${explorerPath}/${newFolderName.trim()}` : newFolderName.trim();
-                      setLocalFolders(prev => {
-                        const next = Array.from(new Set([...prev, finalName]));
-                        localStorage.setItem('folders', JSON.stringify(next));
-                        return next;
-                      });
-
-                      setFolderOrder(prev => {
-                        if (!prev.includes(finalName)) {
-                          const next = [...prev, finalName];
-                          localStorage.setItem('folderOrder', JSON.stringify(next));
-                          return next;
-                        }
-                        return prev;
-                      });
-
-                      setExplorerPath(finalName);
-                      toast.success('폴더가 생성되었습니다.');
-                    }
-                  }} className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary/20 transition-colors flex items-center gap-1" title="새 폴더">
+                  <button onClick={() => handleAddFolder(explorerPath)} aria-label="현재 위치에 새 폴더 만들기" className="p-2 bg-primary/10 text-primary rounded-xl hover:bg-primary/20 transition-colors flex items-center gap-1" title="새 폴더">
                     <IconFolderPlus size={20} />
                   </button>
                 </div>
@@ -2023,7 +2049,7 @@ const handleEditMemo = (id, currentMemo) => {
                 {folderActionModal !== '기본폴더' && (
                   <button onClick={() => { handleRenameFolder(folderActionModal); setFolderActionModal(null); }} className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 fluid-spring">
                     <IconEdit size={28} />
-                    <span className="font-bold text-sm">계층/이름 변경</span>
+                    <span className="font-bold text-sm">이름 변경</span>
                   </button>
                 )}
               </div>
@@ -2047,34 +2073,8 @@ const handleEditMemo = (id, currentMemo) => {
             </div>
           </div>
         )}
-        {promptModal.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setPromptModal({ ...promptModal, isOpen: false })} id="prompt-dialog" tabIndex={-1} role="dialog" aria-modal="true" aria-label={promptModal.title}>
-            <div className="bg-white dark:bg-darkCard w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
-              <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{promptModal.title}</h3>
-              {promptModal.description && <p className="text-sm text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">{promptModal.description}</p>}
-              <input
-                aria-label={promptModal.title}
-                type={promptModal.type}
-                value={promptModal.value}
-                onChange={(e) => setPromptModal({ ...promptModal, value: e.target.value })}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    promptModal.onConfirm(promptModal.value);
-                    setPromptModal({ ...promptModal, isOpen: false });
-                  }
-                }}
-                className="w-full bg-slate-50 dark:bg-darkBg border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary outline-none mb-6"
-                placeholder={promptModal.placeholder}
-              />
-              <div className="flex gap-3">
-                <button onClick={() => setPromptModal({ ...promptModal, isOpen: false })} className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">취소</button>
-                <button onClick={() => { promptModal.onConfirm(promptModal.value); setPromptModal({ ...promptModal, isOpen: false }); }} className="flex-1 py-3 bg-primary hover:bg-primaryHover text-white font-semibold rounded-xl shadow-md transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">{promptModal.confirmText}</button>
-              </div>
-            </div>
-          </div>
-        )}
-
-
+        {promptModal.isOpen && <ActionDialog key={promptModal.title} {...promptModal}
+          onClose={() => setPromptModal(prev => ({ ...prev, isOpen: false }))} />}
 
         {shareConfig.isOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareConfig({ ...shareConfig, isOpen: false })} id="share-config-dialog" tabIndex={-1} role="dialog" aria-modal="true" aria-label={shareConfig.type === 'invite' ? '협업 방 초대' : '공유 링크 생성'}>

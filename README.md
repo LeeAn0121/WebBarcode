@@ -27,3 +27,16 @@ WebBarcode는 스마트폰 카메라를 이용해 언제 어디서나 바코드�
 npm install
 npm run dev
 \`\`\`
+
+## 개발 검증
+
+배포 워크플로는 Node.js 24에서 다음 검사를 실행합니다.
+
+```bash
+npm test
+npm run typecheck
+npm run lint
+npm run build
+```
+
+폴더 경로·하위 폴더 이름 변경·충돌 방지와 빠른 필터의 날짜·메모 판별은 자동 테스트로 검증합니다.

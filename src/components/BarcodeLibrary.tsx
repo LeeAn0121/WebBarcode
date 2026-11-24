@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import type { QuickFilter } from "../barcodeFilters";
 import {
   IconBarcode,
   IconCalendar,
@@ -28,6 +29,10 @@ interface Props {
   folder: string;
   query: string;
   sort: SortOrder;
+  quickFilter: QuickFilter;
+  filterCounts: Record<QuickFilter, number>;
+  onQuickFilter: (filter: QuickFilter) => void;
+  onResetFilters: () => void;
   selected: string[];
   loading: boolean;
   error: string;
@@ -180,6 +185,29 @@ export function BarcodeLibrary(p: Props) {
         </div>
       </div>
       <div className="library-panel">
+        <div
+          className="library-quick-filters"
+          role="group"
+          aria-label="빠른 필터"
+        >
+          {(
+            [
+              ["all", "전체"],
+              ["today", "오늘 등록"],
+              ["hasMemo", "메모 있음"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={p.quickFilter === value}
+              onClick={() => p.onQuickFilter(value)}
+            >
+              {label}
+              <span>{p.filterCounts[value]}</span>
+            </button>
+          ))}
+        </div>
         <div className="library-toolbar">
           <label className="library-search">
             <IconSearch size={20} />
@@ -221,19 +249,13 @@ export function BarcodeLibrary(p: Props) {
             <span>Excel 내보내기</span>
           </button>
         </div>
-        {(p.query.trim() || p.folder !== "전체") && p.rows.length > 0 && (
-          <div className="library-active-filters">
-            <span>필터가 적용된 {p.rows.length}개 항목</span>
-            <button
-              onClick={() => {
-                p.onQuery("");
-                p.onFolder("전체");
-              }}
-            >
-              필터 초기화
-            </button>
-          </div>
-        )}
+        {(p.query.trim() || p.folder !== "전체" || p.quickFilter !== "all") &&
+          p.rows.length > 0 && (
+            <div className="library-active-filters">
+              <span>필터가 적용된 {p.rows.length}개 항목</span>
+              <button onClick={p.onResetFilters}>필터 초기화</button>
+            </div>
+          )}
         {p.selected.length > 0 && (
           <div
             className="library-selection"
@@ -311,23 +333,17 @@ export function BarcodeLibrary(p: Props) {
               <IconBarcode size={36} />
             </div>
             <h2>
-              {p.query || p.folder !== "전체"
+              {p.query || p.folder !== "전체" || p.quickFilter !== "all"
                 ? "검색 결과가 없습니다"
                 : "첫 바코드를 등록해 보세요"}
             </h2>
             <p>
-              {p.query || p.folder !== "전체"
+              {p.query || p.folder !== "전체" || p.quickFilter !== "all"
                 ? "다른 검색어나 폴더로 다시 찾아보세요."
                 : "카메라로 스캔하거나 번호를 직접 입력해 시작하세요."}
             </p>
-            {p.query || p.folder !== "전체" ? (
-              <button
-                className="ws-button"
-                onClick={() => {
-                  p.onQuery("");
-                  p.onFolder("전체");
-                }}
-              >
+            {p.query || p.folder !== "전체" || p.quickFilter !== "all" ? (
+              <button className="ws-button" onClick={p.onResetFilters}>
                 필터 초기화
               </button>
             ) : (

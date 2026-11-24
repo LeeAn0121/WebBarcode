@@ -1096,3 +1096,49 @@ body {
     display: none;
   }
 }
+
+/* Quick actions share the library's existing indigo selection treatment. */
+.library-quick-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 16px;
+}
+.library-quick-filters button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid var(--ws-line);
+  border-radius: 8px;
+  color: var(--ws-muted);
+  background: var(--ws-surface);
+  font-size: 13px;
+}
+.library-quick-filters button:hover {
+  background: var(--ws-soft);
+}
+.library-quick-filters button[aria-pressed="true"] {
+  color: var(--ws-primary);
+  background: var(--ws-tint);
+  border-color: var(--ws-primary);
+  font-weight: 600;
+}
+.library-quick-filters button span {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 767px) {
+  .library-quick-filters {
+    padding: 16px 16px 0;
+    gap: 6px;
+  }
+  .library-quick-filters button {
+    flex: 1;
+    padding: 6px 8px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+}

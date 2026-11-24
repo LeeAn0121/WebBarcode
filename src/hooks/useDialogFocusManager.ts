@@ -120,6 +120,7 @@ export function useDialogFocusManager(
       if (event.key === "Escape") {
         event.preventDefault();
         event.stopImmediatePropagation();
+        if (entry.element.hasAttribute("data-dialog-pending")) return;
         callbacks.current
           .find((dialog) => dialog.id === current.current)
           ?.onClose();

@@ -32,6 +32,11 @@ jobs:
         run: npm ci
       - name: Build
         run: npm run build
+      - name: Validate
+        run: |
+          npm test
+          npm run typecheck
+          npm run lint
       - name: Setup Pages
         uses: actions/configure-pages@v4
       - name: Upload artifact
