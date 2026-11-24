@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ReactSortable } from 'react-sortablejs';
 import JsBarcode from 'jsbarcode';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { startPrecisionScanner } from './scanner/precisionScanner';
 import { Toaster, toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import packageJson from '../package.json';
@@ -239,7 +240,7 @@ function App() {
   const barcodesRef = useRef([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
-  const [cameras, setCameras] = useState([]);
+  const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
   const [selectedCamera, setSelectedCamera] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
@@ -383,9 +384,13 @@ function App() {
     catch { return []; }
   });
   
-  const scannerRef = useRef(null);
+  const scannerRef = useRef<Html5Qrcode | null>(null);
+  const scannerOperationRef = useRef<Promise<void>>(Promise.resolve());
+  const scannerGenerationRef = useRef(0);
+  const precisionStopRef = useRef<(() => void) | null>(null);
+  const scanCallbackRef = useRef<(text: string) => void>(() => {});
   const pendingInsertsRef = useRef(new Set());
-  const videoTrackRef = useRef(null);
+  const videoTrackRef = useRef<MediaStreamTrack | null>(null);
   const lastScanTimeRef = useRef(0);
   const fileInputRef = useRef(null);
   const currentFolderRef = useRef('전체');
@@ -486,7 +491,6 @@ function App() {
     return () => clearInterval(intervalId);
   }, []);
   // html5-qrcode가 이미 안정적으로 디코딩하므로 중복 디코딩을 유발하던
-  // native BarcodeDetector 병행 실행은 제거함 (에러 노이즈 + 중복 handleScan 원인)
 
 
   useEffect(() => {
@@ -576,8 +580,8 @@ function App() {
 
   const handleScanInner = async (decodedText) => {
     const cleanText = decodedText.trim();
+    if (!cleanText) return;
     const now = Date.now();
-    logDebug('info', '스캔 디코딩 성공', { code: cleanText });
 
     // 쿨다운(Debounce): 같은 바코드는 3초, 다른 바코드라도 1초 쿨다운을 적용해 연속 스캔 폭주 방지
     const isSameCode = lastScannedRef.current.code === cleanText;
@@ -588,6 +592,7 @@ function App() {
     }
     
     lastScannedRef.current = { code: cleanText, time: now };
+    logDebug('info', '스캔 디코딩 성공', { code: cleanText });
     
 
 
@@ -648,118 +653,127 @@ function App() {
 
   };
 
-  const startScanner = async (requestedFacingMode?: 'environment' | 'user', requestedDeviceId?: string) => {
-    try {
-      try {
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-          stream.getTracks().forEach(track => track.stop());
-        }
-      } catch (permErr: any) {
-        console.warn("명시적 권한 요청 실패:", permErr);
-        if (permErr.name === 'NotAllowedError') {
-           throw permErr;
-        }
-      }
+  // Both decoders share the same cooldown, duplicate protection and latest state.
+  useEffect(() => { scanCallbackRef.current = handleScan; });
 
+  const stopScanner = () => {
+    ++scannerGenerationRef.current;
+    precisionStopRef.current?.();
+    precisionStopRef.current = null;
+    videoTrackRef.current = null;
+    setIsScanning(false);
+    setMaxZoom(1);
+    setZoomLevel(1);
+    scannerOperationRef.current = scannerOperationRef.current.then(async () => {
+      if (scannerRef.current?.isScanning) await scannerRef.current.stop();
+    }).catch(console.error);
+    return scannerOperationRef.current;
+  };
+
+  useEffect(() => () => { void stopScanner(); }, []);
+
+  const startScanner = (requestedFacingMode?: 'environment' | 'user', requestedDeviceId?: string) => {
+    const generation = ++scannerGenerationRef.current;
+    const targetFacingMode = requestedFacingMode ?? facingMode;
+    // An explicit empty selection means automatic. A facing switch clears the old ID.
+    const targetDeviceId = requestedDeviceId ?? (requestedFacingMode ? '' : selectedCamera);
+    const isCurrent = () => generation === scannerGenerationRef.current;
+
+    scannerOperationRef.current = scannerOperationRef.current.then(async () => {
+      // Allow React to mount #reader before requesting the camera.
+      await new Promise<void>(resolve => requestAnimationFrame(() => resolve()));
+      if (!isCurrent() || !document.getElementById('reader')) return;
+      precisionStopRef.current?.();
+      precisionStopRef.current = null;
+      if (scannerRef.current?.isScanning) await scannerRef.current.stop();
+      if (!isCurrent()) return;
       if (!scannerRef.current) {
-        scannerRef.current = new Html5Qrcode("reader", { formatsToSupport });
+        scannerRef.current = new Html5Qrcode('reader', {
+          formatsToSupport,
+          useBarCodeDetectorIfSupported: true,
+          verbose: false,
+        });
       }
-      
-      const targetFacingMode = requestedFacingMode || facingMode;
-      let targetDeviceId = requestedDeviceId || selectedCamera;
-      
-      let currentDevices = cameras;
-      if (currentDevices.length === 0) {
-        try {
-          const devices = await Html5Qrcode.getCameras();
-          if (devices && devices.length > 0) {
-            setCameras(devices);
-            currentDevices = devices;
-          }
-        } catch(e) {}
-      }
-
-      if (!targetDeviceId && currentDevices.length > 0) {
-        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        if (!isMobile) {
-          const usbCam = currentDevices.find(d => d.label.toLowerCase().includes('usb'));
-          const btCam = currentDevices.find(d => d.label.toLowerCase().includes('bluetooth') || d.label.toLowerCase().includes('bt'));
-          if (usbCam) targetDeviceId = usbCam.id;
-          else if (btCam) targetDeviceId = btCam.id;
-        }
-      }
-
-      const cameraConfig = targetDeviceId 
+      const scanner = scannerRef.current;
+      const cameraConfig = targetDeviceId
         ? { deviceId: { exact: targetDeviceId } }
         : { facingMode: targetFacingMode };
-
+      const onDecoded = (text: string) => {
+        if (isCurrent()) scanCallbackRef.current(text);
+      };
       try {
-        await scannerRef.current.start(
-          cameraConfig,
-          {
-            fps: 30,
-            qrbox: (w, h) => {
-              const minDim = Math.min(w, h);
-              const size = Math.min(450, minDim * 0.9);
-              return { width: size, height: size };
-            },
-            aspectRatio: 1.0,
-            disableFlip: false,
+        await scanner.start(cameraConfig, {
+          fps: 12,
+          // Scan the full frame; a square crop clips long product barcodes.
+          disableFlip: targetFacingMode === 'environment',
+          videoConstraints: {
+            ...cameraConfig,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            frameRate: { ideal: 30 },
           },
-          handleScanInner,
-          () => {}
-        );
-        
-        setIsScanning(true);
-        if (!targetDeviceId) setFacingMode(targetFacingMode);
-        if (targetDeviceId) setSelectedCamera(targetDeviceId);
-        logDebug('info', '카메라 시작 성공', { cameraConfig });
-      } catch (err: any) {
-        console.warn(`${targetFacingMode} 카메라 시작 실패:`, err);
-        throw err;
-      }
-      
-      // Setup Zoom if available
-      setTimeout(() => {
-        const videoEl = document.querySelector('#reader video') as HTMLVideoElement;
-        if (videoEl && videoEl.srcObject) {
-          const stream = videoEl.srcObject as MediaStream;
-          const track = stream.getVideoTracks()[0];
-          if (track) {
-            videoTrackRef.current = track;
-            const capabilities = track.getCapabilities ? track.getCapabilities() : null;
-            if (capabilities && capabilities.zoom) {
-              setMaxZoom(capabilities.zoom.max);
-              setZoomLevel(track.getSettings().zoom || 1);
-            }
-          }
+        }, onDecoded, () => {});
+        if (!isCurrent()) {
+          await scanner.stop();
+          return;
         }
-      }, 500);
-
-    } catch (err: any) {
-      console.error(err);
-      const errName = err?.name || "UnknownError";
-      const errMsgTxt = err?.message || "";
-      let toastMsg = `카메라 시작 실패 (${errName})`;
-      
-      if (errName === 'NotAllowedError' || errMsgTxt.includes('Permission') || errName === 'NotSupportedError') {
-        toastMsg = "카메라 권한이 거부/차단 상태입니다. 브라우저 주소창 왼쪽의 🔒자물쇠(또는 ⓘ 아이콘)를 눌러 카메라 권한을 '허용'으로 변경 후 새로고침 해주세요!";
-      } else if (errName === 'NotReadableError' || errMsgTxt.includes('in use')) {
-        toastMsg = "카메라가 이미 다른 앱이나 탭에서 사용 중입니다. 백그라운드 앱을 종료해주세요.";
-      } else if (errName === 'TypeError') {
-        toastMsg = `지원하지 않는 브라우저이거나 시스템 오류입니다. (${errMsgTxt})`;
-      }
-      
-      toast.error(toastMsg);
-    }
-  };
-  const stopScanner = () => {
-    if (scannerRef.current && isScanning) {
-      scannerRef.current.stop().then(() => {
+        setIsScanning(true);
+        setFacingMode(targetFacingMode);
+        setSelectedCamera(targetDeviceId);
+        const video = document.querySelector<HTMLVideoElement>('#reader video');
+        const track = (video?.srcObject as MediaStream | null)?.getVideoTracks()[0];
+        if (video && track) {
+          videoTrackRef.current = track;
+          const capabilities = track.getCapabilities?.() as MediaTrackCapabilities & {
+            focusMode?: string[]; zoom?: { min: number; max: number };
+          };
+          if (capabilities?.focusMode?.includes('continuous')) {
+            // Unsupported focus controls must never prevent the camera from starting.
+            await track.applyConstraints({ advanced: [{ focusMode: 'continuous' } as MediaTrackConstraintSet] })
+              .catch(error => { logDebug('warn', '연속 자동 초점 설정 실패', { error: String(error) }); });
+          }
+          if (!isCurrent()) return;
+          if (capabilities?.zoom) {
+            setMaxZoom(capabilities.zoom.max);
+            setZoomLevel((track.getSettings() as MediaTrackSettings & { zoom?: number }).zoom ?? 1);
+          }
+          try {
+            precisionStopRef.current = startPrecisionScanner(video, onDecoded, error => {
+              logDebug('warn', '정밀 판독 중단 (기본 판독 유지)', { error });
+            });
+          } catch (error) {
+            logDebug('warn', '정밀 판독 초기화 실패 (기본 판독 유지)', { error: String(error) });
+          }
+          logDebug('info', '카메라 시작 성공', { settings: track.getSettings() });
+        }
+        // Enumerate after opening: labels are available, without a throwaway stream.
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        if (isCurrent()) setCameras(devices.filter(device => device.kind === 'videoinput')
+          .map(device => ({ id: device.deviceId, label: device.label })));
+      } catch (err: any) {
+        if (!isCurrent()) return;
+        if (scanner.isScanning) {
+          // Optional capability/enumeration failures do not invalidate a live camera.
+          logDebug('warn', '카메라 부가 설정 실패', { error: String(err) });
+          return;
+        }
         setIsScanning(false);
-      }).catch(console.error);
-    }
+        const errName = err?.name || 'UnknownError';
+        const message = String(err?.message || err);
+        let toastMsg = `카메라 시작 실패 (${errName})`;
+        if (errName === 'NotAllowedError' || /Permission|NotAllowedError/.test(message)) {
+          toastMsg = "카메라 권한이 거부/차단 상태입니다. 브라우저 주소창의 카메라 권한을 '허용'으로 변경 후 새로고침 해주세요!";
+        } else if (errName === 'NotReadableError' || /in use|NotReadableError/.test(message)) {
+          toastMsg = '카메라가 이미 다른 앱이나 탭에서 사용 중입니다. 백그라운드 앱을 종료해주세요.';
+        }
+        logDebug('error', '카메라 시작 실패', { error: message });
+        toast.error(toastMsg);
+      }
+    }).catch(error => {
+      if (isCurrent()) toast.error('카메라를 시작하지 못했습니다. 다시 시도해주세요.');
+      console.error(error);
+    });
+    return scannerOperationRef.current;
   };
 
   const handleZoomChange = (e) => {
@@ -767,7 +781,7 @@ function App() {
     setZoomLevel(newZoom);
     if (videoTrackRef.current) {
       videoTrackRef.current.applyConstraints({
-        advanced: [{ zoom: newZoom }]
+        advanced: [{ zoom: newZoom } as MediaTrackConstraintSet]
       }).catch(console.warn);
     }
   };
@@ -1498,8 +1512,7 @@ const handleEditMemo = (id, currentMemo) => {
                         setIsSwitching(true);
                         try {
                           setSelectedCamera(newDeviceId);
-                          if (scannerRef.current) { try { await scannerRef.current.stop(); } catch(e) {} }
-                          await new Promise(resolve => setTimeout(resolve, 300));
+                          await stopScanner();
                           await startScanner(undefined, newDeviceId);
                         } finally {
                           setIsSwitching(false);
@@ -1526,8 +1539,7 @@ const handleEditMemo = (id, currentMemo) => {
                     if (isSwitching) return;
                     setIsSwitching(true);
                     try {
-                      if (scannerRef.current) { try { await scannerRef.current.stop(); } catch(e) {} }
-                      await new Promise(resolve => setTimeout(resolve, 300));
+                      await stopScanner();
                       const nextMode = facingMode === 'environment' ? 'user' : 'environment';
                       await startScanner(nextMode);
                     } finally {
