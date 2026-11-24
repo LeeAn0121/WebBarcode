@@ -1,18 +1,18 @@
 # StyleSeed — Design Lock
 <!-- Selections persist here. This file cannot waive StyleSeed core invariants. -->
 - App domain: productivity
-- Surface: mobile-app
+- Surface: responsive-app
 - Surface adapter: product-ui
-- Page type: dashboard
+- Page type: barcode-workspace
 - Output grammar: technical-instrument
 - Grammar path: built-in:engine/RULESETS.md
 - Grammar fallback: technical-instrument
 - Reference confidence: n/a
 - Brand recipe: native-mobile
-- Palette recipe: cobalt-instrument
+- Palette recipe: indigo-workspace
 - Key color: #6366F1
 - Palette character: deep
-- Palette mode: dark
+- Palette mode: light with dark-mode support
 - Palette harmony: auto
 - Surface temperature: cool
 - Aesthetic profile: none
@@ -24,5 +24,5 @@
 - Density: comfortable
 - Motion: snap standard
 - Imagery/data role: technical data and precision focus
-- Signature move: full-screen modal camera with floating translucent controls
-- Locked: 2026-09-04
+- Signature move: desktop navigation rail, mobile bottom navigation, and a focused scan workspace
+- Locked: 2026-11-24 (clean work tool + friendly light app, user-selected)

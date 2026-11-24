@@ -1,29 +1,63 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { AppShell } from './components/AppShell';
+import { BarcodeLibrary, type BarcodeRecord, type SortOrder } from './components/BarcodeLibrary';
+import { EntryDialog, type EntryValues } from './components/EntryDialog';
+import AuthScreen from './components/AuthScreen';
+import './workspace.css';
+import { useDialogFocusManager } from './hooks/useDialogFocusManager';
 import { ReactSortable } from 'react-sortablejs';
-import JsBarcode from 'jsbarcode';
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { startPrecisionScanner } from './scanner/precisionScanner';
+import { waitForCameraPlayback } from './scanner/waitForCameraPlayback';
 import { Toaster, toast } from 'sonner';
 import * as XLSX from 'xlsx';
 import packageJson from '../package.json';
 import {
-  IconBarcode, IconMoon, IconSun, IconDownload, IconCamera, IconVolume, IconVolume3,
-  IconSearch, IconCopy, IconScissors, IconShare, IconMessagePlus, IconEdit, IconTrash, IconClock,
-  IconFolder, IconFolderPlus, IconCloudUpload, IconFileExport, IconFileImport, IconUpload, IconCloudDownload, IconSettings, IconX, IconAlertTriangle, IconMenu2, IconHome, IconDatabase, IconDotsVertical, IconRocket, IconRefresh, IconExternalLink, IconLink
-, IconArrowUp, IconBell, IconBellX, IconFolderOpen , IconLayoutGrid, IconList, IconFolderFilled, IconChevronRight} from '@tabler/icons-react';
+  IconAlertTriangle,
+  IconBarcode,
+  IconBell,
+  IconBellX,
+  IconChevronRight,
+  IconClock,
+  IconCloudDownload,
+  IconCloudUpload,
+  IconCopy,
+  IconDotsVertical,
+  IconDownload,
+  IconEdit,
+  IconExternalLink,
+  IconFileExport,
+  IconFolder,
+  IconFolderFilled,
+  IconFolderOpen,
+  IconFolderPlus,
+  IconHome,
+  IconMessagePlus,
+  IconMoon,
+  IconRefresh,
+  IconRocket,
+  IconSearch,
+  IconSettings,
+  IconShare,
+  IconSun,
+  IconTrash,
+  IconVolume,
+  IconVolume3,
+  IconX
+} from '@tabler/icons-react';
 import { format } from 'date-fns';
 import { supabase, logDebug, getDebugSessionId, isAdminEmail } from './supabaseClient';
 
 function playSound(type = 'success', isSoundEnabled) {
   if (!isSoundEnabled) return;
   try {
-      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const audioCtx = new (window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext)();
       const oscillator = audioCtx.createOscillator();
       const gainNode = audioCtx.createGain();
-      
+
       if (type === 'success') {
           oscillator.type = 'sine';
-          oscillator.frequency.setValueAtTime(800, audioCtx.currentTime); 
+          oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
           gainNode.gain.setValueAtTime(0, audioCtx.currentTime);
           gainNode.gain.linearRampToValueAtTime(1, audioCtx.currentTime + 0.01);
           gainNode.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.1);
@@ -39,7 +73,7 @@ function playSound(type = 'success', isSoundEnabled) {
           oscillator.start(audioCtx.currentTime);
           oscillator.stop(audioCtx.currentTime + 0.3);
       }
-      
+
       oscillator.connect(gainNode);
       gainNode.connect(audioCtx.destination);
   } catch(e) {
@@ -48,80 +82,7 @@ function playSound(type = 'success', isSoundEnabled) {
 }
 
 
-const Auth = ({ supabase }: { supabase: any }) => {
-  const [loading, setLoading] = useState(false);
-
-  const handleGoogleLogin = async () => {
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: window.location.origin + window.location.pathname
-        }
-      });
-      if (error) throw error;
-    } catch (error: any) {
-      toast.error(error.message || '구글 로그인에 실패했습니다.');
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-black px-4 animate-in fade-in zoom-in-95 duration-500 ease-out">
-      <div className="w-full max-w-sm bg-white dark:bg-[#111111] rounded-3xl shadow-xl p-8 border border-slate-100 dark:border-slate-700 text-center relative overflow-hidden">
-        {/* 장식용 배경 요소 */}
-        <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-primary/10 to-transparent pointer-events-none"></div>
-        
-        <div className="flex justify-center mb-6 relative z-10">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-md border border-slate-100 dark:border-slate-600 overflow-hidden">
-            <img src={`${import.meta.env.BASE_URL}icon.jpg`} alt="Logo" className="w-full h-full object-cover" />
-          </div>
-        </div>
-        
-        <h1 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-2 relative z-10 tracking-tight">
-          웹바코드 - WebBarcode
-        </h1>
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-8 relative z-10">
-          나만의 바코드 관리 공간에 접속하세요
-        </p>
-
-        <button
-          onClick={handleGoogleLogin}
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-3 py-3.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 hover:border-slate-300 dark:hover:border-slate-500 text-slate-700 dark:text-white font-bold tracking-wide rounded-xl shadow-sm transition-all relative z-10 group"
-        >
-          <svg className="w-5 h-5 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
-            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-          </svg>
-          {loading ? '연결 중...' : 'Google 계정으로 계속하기'}
-        </button>
-      </div>
-    </div>
-  );
-};
-
-
-
-const Splash = ({ fadingOut }: { fadingOut: boolean }) => {
-  return (
-    <div className={`fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#f2f4f6] dark:bg-black transition-opacity duration-300 ease-out overflow-hidden ${fadingOut ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-      <div className="relative z-10 flex flex-col items-center justify-center gap-6">
-        <div className="relative w-24 h-24 rounded-3xl shadow-[0_12px_40px_rgba(0,0,0,0.1)]">
-          <img src={`${import.meta.env.BASE_URL}icon.jpg`} alt="" className="w-full h-full object-cover rounded-3xl relative z-10" />
-          <div className="absolute inset-0 rounded-3xl bg-primary z-0 animate-ping opacity-50"></div>
-        </div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-black dark:text-white">웹바코드 - WebBarcode</h1>
-        <div className="w-12 h-1.5 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden relative">
-          <div className="absolute top-0 left-0 h-full w-[40%] bg-primary rounded-full animate-[loadBar_1.2s_ease-in-out_infinite]"></div>
-        </div>
-      </div>
-    </div>
-  );
-};
+const Splash = ({ fadingOut }: { fadingOut: boolean }) => <div className={`workspace-splash ${fadingOut?'is-fading':''}`} role="status"><IconBarcode size={40}/><strong>WebBarcode</strong><span>작업 공간을 준비하고 있어요</span></div>;
 
 const formatsToSupport = [
   Html5QrcodeSupportedFormats.QR_CODE,
@@ -143,7 +104,7 @@ function App() {
     }
   };
 
-  
+
   const [autoRules, setAutoRules] = useState<{startsWith: string, targetFolder: string}[]>(() => {
     try { return JSON.parse(localStorage.getItem('autoRules') || '[]'); } catch { return []; }
   });
@@ -179,31 +140,28 @@ function App() {
   }, []);
 
   const [smartFilter, setSmartFilter] = useState<'all' | 'today' | 'yesterday' | 'hasMemo'>('all');
-  
+
+  const workspaceActionsRef = useRef({
+    navigate: async (_tab: 'home' | 'folders' | 'settings') => {},
+    scan: () => {},
+    addFolder: () => {},
+  });
+
   // PC 단축키
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 입력창에 포커스가 있을 때는 단축키 무시
-      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
-        if (e.key === 'Escape') (document.activeElement as HTMLElement).blur();
-        return;
-      }
-      
+      const target = e.target instanceof Element ? e.target : document.activeElement;
+      if (e.defaultPrevented || e.isComposing || target?.closest('button, a, input, textarea, select, [contenteditable]') || document.querySelector('[role="dialog"]')) return;
+
       if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
         e.preventDefault();
-        setActiveTab('home');
-        setTimeout(() => document.getElementById('barcode-search')?.focus(), 100);
+        void workspaceActionsRef.current.navigate('home').then(() => document.getElementById('barcode-search')?.focus());
       } else if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
         e.preventDefault();
-        setActiveTab('folders');
-        setTimeout(() => {
-           // prompt is blocking, so just call the function if it was accessible, but since handleAddFolder is in scope, we can't easily trigger it unless we dispatch an event or bind it.
-           // Actually, we can just dispatch a custom event.
-           window.dispatchEvent(new CustomEvent('cmd-n-trigger'));
-        }, 100);
-      } else if (e.code === 'Space') {
+        void workspaceActionsRef.current.navigate('folders').then(() => workspaceActionsRef.current.addFolder());
+      } else if (e.code === 'Space' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey && !e.repeat) {
         e.preventDefault();
-        window.dispatchEvent(new CustomEvent('cmd-space-trigger'));
+        workspaceActionsRef.current.scan();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -214,9 +172,9 @@ function App() {
     try { return JSON.parse(localStorage.getItem('enableSound') || 'true'); } catch { return true; }
   });
   useEffect(() => { localStorage.setItem('enableSound', JSON.stringify(enableSound)); }, [enableSound]);
-  
+
   const [genModal, setGenModal] = useState({ isOpen: false, text: '' });
-  
+
   const playBeep = () => {
     if (!enableSound) return;
     try {
@@ -234,10 +192,14 @@ function App() {
       osc.stop(ctx.currentTime + 0.1);
     } catch(e) {}
   };
-  
+
   const [darkMode, setDarkMode] = useState(() => localStorage.getItem('theme') === 'dark');
-  const [barcodes, setBarcodes] = useState([]);
-  const barcodesRef = useRef([]);
+  const [barcodes, setBarcodes] = useState<BarcodeRecord[]>([]);
+  const [libraryLoading, setLibraryLoading] = useState(true);
+  const [libraryError, setLibraryError] = useState('');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('newest');
+  const [entryItem, setEntryItem] = useState<BarcodeRecord | 'new' | null>(null);
+  const barcodesRef = useRef<BarcodeRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSoundEnabled, setIsSoundEnabled] = useState(true);
   const [cameras, setCameras] = useState<{ id: string; label: string }[]>([]);
@@ -253,12 +215,18 @@ function App() {
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      // 바코드 스캐너는 마지막에 Enter 키를 전송함
+      const target = e.target instanceof Element ? e.target : document.activeElement;
+      if (e.isComposing || target?.closest('button, a, input, textarea, select, [contenteditable]') || document.querySelector('[role="dialog"]')) {
+        usbBufferRef.current = '';
+        if (usbTimeoutRef.current) clearTimeout(usbTimeoutRef.current);
+        return;
+      }
+      // Keyboard wedge scanners finish their payload with Enter.
       if (e.key === 'Enter') {
         if (usbBufferRef.current.length >= 3) {
           const scannedCode = usbBufferRef.current;
           usbBufferRef.current = '';
-          handleScanInner(scannedCode);
+          void scanCallbackRef.current(scannedCode);
           e.preventDefault();
         }
         return;
@@ -268,13 +236,13 @@ function App() {
       if (e.key.length !== 1 || e.ctrlKey || e.metaKey || e.altKey) return;
 
       usbBufferRef.current += e.key;
-      
+
       if (usbTimeoutRef.current) clearTimeout(usbTimeoutRef.current);
       usbTimeoutRef.current = setTimeout(() => {
         usbBufferRef.current = ''; // 사람이 치는 속도(>50ms)면 버퍼 초기화
       }, 50);
     };
-    
+
     window.addEventListener('keydown', handleGlobalKeyDown, true);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown, true);
   }, []);
@@ -283,15 +251,13 @@ function App() {
   const [maxZoom, setMaxZoom] = useState(1);
   const [facingMode, setFacingMode] = useState<'environment'|'user'>('environment');
   const [isSwitching, setIsSwitching] = useState(false);
+  const [scannerError, setScannerError] = useState('');
   const [currentFolder, setCurrentFolder] = useState('전체');
   const [activeTab, setActiveTab] = useState('home');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeActionMenu, setActiveActionMenu] = useState<any>(null);
   const [activeGlobalMenu, setActiveGlobalMenu] = useState<any>(null);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const pressTimerRef = useRef<any>(null);
   const folderPressTimer = useRef<any>(null);
   const folderStartY = useRef(0);
   const folderLongPressTime = useRef(0);
@@ -312,8 +278,8 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(false);
 
 
-  
-  
+
+
   // 공지사항 & 브로드캐스트 채널 리스너
   useEffect(() => {
     // 알림 권한 요청
@@ -328,7 +294,7 @@ function App() {
         // setSystemNotice({ isOpen: true, message }); // Removed modal popup
         setNoticeHistory(prev => [{id: noticeId || Math.random().toString(36).substring(2, 9), message, date: noticeDate || new Date().toISOString(), read: false}, ...prev].slice(0, 50));
         playSound('success', true);
-        
+
         // 백그라운드이거나 최소화 상태일 때 시스템 알림 띄우기
         if ('Notification' in window && Notification.permission === 'granted') {
           if (document.hidden) {
@@ -376,14 +342,14 @@ function App() {
     const hideTimer = setTimeout(() => setSplashVisible(false), 700);
     return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
   }, [authChecked]);
-  const [updateInfo, setUpdateInfo] = useState(null);
+  const [updateInfo, setUpdateInfo] = useState<{ version: string; notes: string; url: string } | null>(null);
   const [latestVersion, setLatestVersion] = useState(packageJson.version);
-  
-  const [localFolders, setLocalFolders] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('folders')) || []; }
+
+  const [localFolders, setLocalFolders] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('folders') || '[]'); }
     catch { return []; }
   });
-  
+
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerOperationRef = useRef<Promise<void>>(Promise.resolve());
   const scannerGenerationRef = useRef(0);
@@ -392,11 +358,11 @@ function App() {
   const pendingInsertsRef = useRef(new Set());
   const videoTrackRef = useRef<MediaStreamTrack | null>(null);
   const lastScanTimeRef = useRef(0);
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const currentFolderRef = useRef('전체');
 
   // Derived unique folders from barcodes and local
-  const folders = Array.from(new Set(['기본폴더', ...localFolders, ...barcodes.map(b => b.folder).filter(Boolean)]));
+  const folders = Array.from(new Set(['기본폴더', ...localFolders, ...barcodes.map(b => b.folder).filter((folder): folder is string => Boolean(folder))]));
   folders.sort((a, b) => {
     const idxA = folderOrder.indexOf(a);
     const idxB = folderOrder.indexOf(b);
@@ -423,20 +389,16 @@ function App() {
     }
   }, [darkMode]);
 
-  // ESC 키로 열려있는 모달/시트/선택모드 닫기 (키보드 접근성)
+  // Dialogs own Escape. With no overlay, Escape only clears selection.
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      if (promptModal.isOpen) setPromptModal(prev => ({ ...prev, isOpen: false }));
-      else if (shareConfig.isOpen) setShareConfig(prev => ({ ...prev, isOpen: false }));
-      else if (shareModal.isOpen) setShareModal({ isOpen: false, url: '', title: '', description: '', shareText: '' });
-      else if (moveModal.isOpen) setMoveModal(prev => ({ ...prev, isOpen: false }));
-      else if (activeActionMenu !== null) {setActiveActionMenu(null); setActiveGlobalMenu(null);}
-      else if (isSelectionMode) { setIsSelectionMode(false); setSelectedIds([]); }
+      if (e.key !== 'Escape' || e.defaultPrevented || document.querySelector('[role="dialog"]')) return;
+      setIsSelectionMode(false);
+      setSelectedIds([]);
     };
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, [promptModal.isOpen, shareConfig.isOpen, shareModal.isOpen, moveModal.isOpen, activeActionMenu, isSelectionMode]);
+  }, []);
 
   // Supabase Realtime & Fetch
   useEffect(() => {
@@ -450,7 +412,7 @@ function App() {
         if (data.version) {
           setLatestVersion(data.version);
         }
-        
+
         const isNewer = (oldV: string, newV: string) => {
           const a = oldV.split('.').map(Number);
           const b = newV.split('.').map(Number);
@@ -460,19 +422,19 @@ function App() {
           }
           return false;
         };
-        
+
         if (data.version && isNewer(currentVersion, data.version)) {
           const firstSeenKey = `update_seen_v${data.version}`;
           let firstSeen = localStorage.getItem(firstSeenKey);
-          
+
           if (!firstSeen) {
             firstSeen = new Date().getTime().toString();
             localStorage.setItem(firstSeenKey, firstSeen);
           }
-          
+
           const now = new Date().getTime();
           const isReady = (now - parseInt(firstSeen)) > 90000; // Wait 1.5 minutes after first detection for GH Pages deploy
-          
+
           if (isReady) {
             setUpdateInfo({
               version: `v${data.version}`,
@@ -485,7 +447,7 @@ function App() {
         // silent
       }
     };
-    
+
     checkUpdate();
     const intervalId = setInterval(checkUpdate, 300000); // Check every 5 minutes
     return () => clearInterval(intervalId);
@@ -511,11 +473,11 @@ function App() {
       .subscribe();
     const subscription = supabase
       .channel('public:barcodes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'barcodes' }, payload => {
+      .on<BarcodeRecord>('postgres_changes', { event: '*', schema: 'public', table: 'barcodes' }, payload => {
         // filter incoming payloads if needed, though RLS handles it.
         // If no RLS, we only accept if user_id matches session
-        if (payload.new && payload.new.user_id && payload.new.user_id !== session?.user?.id) return;
-        
+        if (payload.eventType !== 'DELETE' && payload.new.user_id && payload.new.user_id !== session?.user?.id) return;
+
         if (payload.eventType === 'INSERT') {
           if (!pendingInsertsRef.current.has(payload.new.code) && 'Notification' in window && Notification.permission === 'granted') {
             new Notification('새 바코드 공유됨', { body: `[${payload.new.folder}] ${payload.new.code}`, icon: `${import.meta.env.BASE_URL}icon.jpg` });
@@ -565,8 +527,15 @@ function App() {
   };
 
   const fetchBarcodes = async () => {
-    const { data, error } = await supabase.from('barcodes').select('*').eq('user_id', session?.user?.id).order('created_at', { ascending: false });
-    if (!error && data) setBarcodes(data);
+    setLibraryLoading(true);
+    setLibraryError('');
+    try {
+      const { data, error } = await supabase.from('barcodes').select('*').eq('user_id', session?.user?.id).order('created_at', { ascending: false });
+      if (error) throw error;
+      setBarcodes(data || []);
+    } catch (error) {
+      setLibraryError(error instanceof Error ? error.message : '잠시 후 다시 시도해주세요.');
+    } finally { setLibraryLoading(false); }
   };
 
   const handleScan = async (decodedText) => {
@@ -579,6 +548,7 @@ function App() {
   };
 
   const handleScanInner = async (decodedText) => {
+    if (!session?.user?.id) return;
     const cleanText = decodedText.trim();
     if (!cleanText) return;
     const now = Date.now();
@@ -586,27 +556,27 @@ function App() {
     // 쿨다운(Debounce): 같은 바코드는 3초, 다른 바코드라도 1초 쿨다운을 적용해 연속 스캔 폭주 방지
     const isSameCode = lastScannedRef.current.code === cleanText;
     const cooldownPeriod = isSameCode ? 3000 : 1000;
-    
+
     if (now - lastScannedRef.current.time < cooldownPeriod) {
       return; // 쿨다운 중 무시 (멈춤 없이 스무스하게 넘어감)
     }
-    
+
     lastScannedRef.current = { code: cleanText, time: now };
     logDebug('info', '스캔 디코딩 성공', { code: cleanText });
-    
+
 
 
     // Custom visual flash effect
     const readerEl = document.getElementById('reader-overlay');
-    
+
     // Check duplicates per folder using ref to avoid stale closure
     const targetFolder = currentFolderRef.current === '전체' ? '기본폴더' : currentFolderRef.current;
     const isDuplicate = barcodesRef.current.some(b => b.code === cleanText && (b.folder || '기본폴더') === targetFolder) || pendingInsertsRef.current.has(cleanText);
-    
+
     if (isDuplicate) {
       playSound('duplicate', isSoundEnabled);
       toast.error(`이미 등록된 바코드입니다: ${cleanText}`);
-      
+
       if (readerEl) {
         readerEl.classList.remove('ring-primary/50');
         readerEl.classList.add('ring-red-500', 'bg-red-500/10');
@@ -615,7 +585,7 @@ function App() {
           readerEl.classList.add('ring-primary/50');
         }, 300);
       }
-      
+
 
       return;
     }
@@ -623,7 +593,7 @@ function App() {
     pendingInsertsRef.current.add(cleanText);
     playSound('success', isSoundEnabled);
     if (navigator.vibrate) navigator.vibrate(50);
-    
+
     if (readerEl) {
       readerEl.classList.remove('ring-primary/50');
       readerEl.classList.add('ring-green-500', 'bg-green-500/10');
@@ -646,6 +616,7 @@ function App() {
       pendingInsertsRef.current.delete(cleanText);
     } else {
       logDebug('info', '바코드 저장 성공', { code: cleanText });
+      await fetchBarcodes();
       toast.success(`바코드 인식 성공: ${cleanText}`);
       setTimeout(() => pendingInsertsRef.current.delete(cleanText), 3000);
     }
@@ -672,7 +643,9 @@ function App() {
 
   useEffect(() => () => { void stopScanner(); }, []);
 
+
   const startScanner = (requestedFacingMode?: 'environment' | 'user', requestedDeviceId?: string) => {
+    setScannerError('');
     const generation = ++scannerGenerationRef.current;
     const targetFacingMode = requestedFacingMode ?? facingMode;
     // An explicit empty selection means automatic. A facing switch clears the old ID.
@@ -701,6 +674,7 @@ function App() {
       const onDecoded = (text: string) => {
         if (isCurrent()) scanCallbackRef.current(text);
       };
+      let playbackReady = false;
       try {
         await scanner.start(cameraConfig, {
           fps: 12,
@@ -713,6 +687,10 @@ function App() {
             frameRate: { ideal: 30 },
           },
         }, onDecoded, () => {});
+        const video = document.querySelector<HTMLVideoElement>('#reader video');
+        if (!video) throw new Error('카메라 영상을 찾을 수 없습니다.');
+        await waitForCameraPlayback(video);
+        playbackReady = true;
         if (!isCurrent()) {
           await scanner.stop();
           return;
@@ -720,7 +698,6 @@ function App() {
         setIsScanning(true);
         setFacingMode(targetFacingMode);
         setSelectedCamera(targetDeviceId);
-        const video = document.querySelector<HTMLVideoElement>('#reader video');
         const track = (video?.srcObject as MediaStream | null)?.getVideoTracks()[0];
         if (video && track) {
           videoTrackRef.current = track;
@@ -751,12 +728,16 @@ function App() {
         if (isCurrent()) setCameras(devices.filter(device => device.kind === 'videoinput')
           .map(device => ({ id: device.deviceId, label: device.label })));
       } catch (err: any) {
-        if (!isCurrent()) return;
-        if (scanner.isScanning) {
+        if (!isCurrent()) {
+          try { await scanner.stop(); } catch { /* Already stopped or never started. */ }
+          return;
+        }
+        if (scanner.isScanning && playbackReady) {
           // Optional capability/enumeration failures do not invalidate a live camera.
           logDebug('warn', '카메라 부가 설정 실패', { error: String(err) });
           return;
         }
+        try { await scanner.stop(); } catch { /* Release a stream that failed to render. */ }
         setIsScanning(false);
         const errName = err?.name || 'UnknownError';
         const message = String(err?.message || err);
@@ -767,10 +748,11 @@ function App() {
           toastMsg = '카메라가 이미 다른 앱이나 탭에서 사용 중입니다. 백그라운드 앱을 종료해주세요.';
         }
         logDebug('error', '카메라 시작 실패', { error: message });
+        setScannerError(toastMsg);
         toast.error(toastMsg);
       }
     }).catch(error => {
-      if (isCurrent()) toast.error('카메라를 시작하지 못했습니다. 다시 시도해주세요.');
+      if (isCurrent()) { setScannerError('카메라를 시작하지 못했습니다. 다시 시도해주세요.'); toast.error('카메라를 시작하지 못했습니다. 다시 시도해주세요.'); }
       console.error(error);
     });
     return scannerOperationRef.current;
@@ -786,8 +768,8 @@ function App() {
     }
   };
 
-  const exportExcel = () => {
-    const listToExport = currentFolder === '전체' ? barcodes : barcodes.filter(b => (b.folder || '기본폴더') === currentFolder);
+  const exportExcel = (onlySelected: boolean | React.MouseEvent = false) => {
+    const listToExport = onlySelected === true ? barcodes.filter(b => selectedIds.includes(b.id)) : visibleBarcodes;
     if (listToExport.length === 0) return toast.warning('내보낼 데이터가 없습니다.');
     const data = listToExport.map(item => ({
       '바코드': item.code,
@@ -809,6 +791,7 @@ function App() {
       if (error) {
         toast.error('삭제 실패: ' + error.message);
       } else {
+        setBarcodes(prev => prev.filter(b => !selectedIds.includes(b.id)));
         toast.success(`${selectedIds.length}개가 삭제되었습니다.`);
         setIsSelectionMode(false);
         setSelectedIds([]);
@@ -816,33 +799,11 @@ function App() {
     }
   };
 
-  const handlePointerDown = (id: string) => {
-    if (isSelectionMode) return;
-    pressTimerRef.current = setTimeout(() => {
-      setIsSelectionMode(true); setSelectedIds([id]); triggerHaptic('medium');
-      if (navigator.vibrate) navigator.vibrate(50);
-    }, 500); // 500ms long press
-  };
-
-  const handlePointerUp = () => {
-    if (pressTimerRef.current) clearTimeout(pressTimerRef.current);
-  };
-
-  const handleItemClick = (id: string, originalUrl: string, e: React.MouseEvent) => {
-    if (isSelectionMode || e.ctrlKey || e.metaKey || e.shiftKey) {
-      e.preventDefault();
-      e.stopPropagation();
-      setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]); triggerHaptic('light');
-    } else {
-      // Normal click behavior (if any) - originally they could click to open links if memo has link
-    }
-  };
-
   const handleDelete = async (id) => {
     if (confirm('삭제하시겠습니까?')) {
       const { error } = await supabase.from('barcodes').delete().eq('id', id);
       if (error) toast.error(error.message);
-      else toast.success('삭제되었습니다.');
+      else { setBarcodes(prev => prev.filter(b => b.id !== id)); setSelectedIds(prev => prev.filter(selected => selected !== id)); toast.success('삭제되었습니다.'); }
     }
   };
 
@@ -851,11 +812,11 @@ function App() {
     if (newCode && newCode.trim() !== '' && newCode !== currentCode) {
       const { error } = await supabase.from('barcodes').update({ code: newCode.trim() }).eq('id', id);
       if (error) toast.error(error.message);
-      else toast.success('수정되었습니다.');
+      else { setBarcodes(prev => prev.map(b => b.id === id ? {...b, code: newCode.trim()} : b)); toast.success('수정되었습니다.'); }
     }
   };
 
-  
+
   const handleClone = async (item: any) => {
     try {
       const newItem = {
@@ -879,14 +840,14 @@ function App() {
   };
 
 
-  
+
   const handleReceiveInvite = async (inviteId: string) => {
     setLoadingShare(true);
     try {
       const { data: invite, error } = await supabase.from('folder_invites').select('*').eq('id', inviteId).single();
       if (error || !invite) throw new Error('유효하지 않거나 만료된 초대입니다.');
       if (invite.expires_at && new Date(invite.expires_at) < new Date()) throw new Error('기간이 만료된 초대 링크입니다.');
-      
+
       if (invite.owner_id === session?.user?.id) {
         throw new Error('내 자신의 폴더에는 이미 권한이 있습니다.');
       }
@@ -899,18 +860,18 @@ function App() {
         folder_name: invite.folder_name,
         guest_id: session?.user?.id
       });
-      
+
       // Ignore unique constraint error if already joined
       if (joinErr && !joinErr.message.includes('unique constraint')) throw joinErr;
 
       toast.success('협업 폴더에 성공적으로 참여했습니다!');
-      
+
       if (!folders.includes(invite.folder_name)) {
         const updated = [...folders, invite.folder_name];
         setLocalFolders(updated);
         localStorage.setItem('folders', JSON.stringify(updated));
       }
-      
+
       fetchCollabFolders();
       fetchBarcodes();
     } catch(e: any) {
@@ -926,11 +887,11 @@ function App() {
     setShareConfig({ isOpen: true, type: 'invite', folderName, item: null, expireHours: 1 });
   };
 
-  
+
   const processShareConfig = async () => {
     setLoadingShare(true);
     const expires_at = new Date(Date.now() + shareConfig.expireHours * 60 * 60 * 1000).toISOString();
-    
+
     try {
       if (shareConfig.type === 'invite') {
         const { data, error } = await supabase.from('folder_invites').insert({
@@ -942,7 +903,7 @@ function App() {
 
         const inviteUrl = `${window.location.origin}${window.location.pathname}#invite=${data.id}`;
         const shareText = `📦 [WebBarcode] 실시간 협업 초대 도착!\n\n📂 대상 폴더: '${shareConfig.folderName}'\n⏳ 만료: ${shareConfig.expireHours}시간 후\n\n아래 링크나 첨부된 QR을 열어 실시간으로 함께 작업하세요!\n👉 ${inviteUrl}`;
-        
+
         setShareModal({
           isOpen: true,
           url: inviteUrl,
@@ -952,10 +913,10 @@ function App() {
         });
       } else {
         const isFolder = shareConfig.type === 'share_folder';
-        const items = isFolder 
+        const items = isFolder
           ? barcodes.filter(b => (b.folder || '기본폴더') === shareConfig.folderName)
           : [shareConfig.item];
-        
+
         const payload = items.map(item => ({ code: item.code, memo: item.memo }));
         const { data, error } = await supabase.from('shared_links').insert([{
           owner_id: session.user.id,
@@ -966,7 +927,7 @@ function App() {
         if (error) throw error;
 
         const shareUrl = `${window.location.origin}${window.location.pathname}#share=${data.id}`;
-        
+
         let shareText = `📦 [WebBarcode] 공유 데이터 도착!\n`;
         if (!isFolder && shareConfig.item) {
            const item = shareConfig.item;
@@ -979,10 +940,10 @@ function App() {
         }
         shareText += `\n⏳ 만료: ${shareConfig.expireHours}시간 후\n\n👉 확인 링크: ${shareUrl}`;
 
-        setShareModal({ 
-          isOpen: true, 
-          url: shareUrl, 
-          title: isFolder ? `'${shareConfig.folderName}' 폴더 공유` : '바코드 공유하기', 
+        setShareModal({
+          isOpen: true,
+          url: shareUrl,
+          title: isFolder ? `'${shareConfig.folderName}' 폴더 공유` : '바코드 공유하기',
           description: `만료시간: ${shareConfig.expireHours}시간 후\n데이터를 복사하여 전달합니다.`,
           shareText
         });
@@ -1002,7 +963,7 @@ function App() {
       const { data, error } = await supabase.from('shared_links').select('*').eq('id', shareId).single();
       if (error || !data) throw new Error('유효하지 않거나 만료된 링크입니다.');
       if (data.expires_at && new Date(data.expires_at) < new Date()) throw new Error('기간이 만료된 공유 링크입니다.');
-      
+
       const confirm = window.confirm(`'${data.folder_name}' 폴더와 ${data.barcodes_data.length}개의 바코드를 내 계정으로 가져오시겠습니까?\n(이미 등록된 동일한 바코드는 제외됩니다)`);
       if (!confirm) {
         window.location.hash = '';
@@ -1025,15 +986,15 @@ function App() {
       } else {
         const { error: insertErr } = await supabase.from('barcodes').insert(inserts);
         if (insertErr) throw insertErr;
-        
+
         toast.success(`${inserts.length}개의 바코드를 성공적으로 가져왔습니다!`);
-        
+
         if (!folders.includes(data.folder_name)) {
            const updatedFolders = [...folders, data.folder_name];
            setLocalFolders(updatedFolders);
            localStorage.setItem('folders', JSON.stringify(updatedFolders));
         }
-        
+
         fetchBarcodes();
       }
     } catch(e: any) {
@@ -1073,7 +1034,7 @@ function App() {
       } else if (moveModal.type === 'folder') {
         const oldName = moveModal.sourceFolder;
         const newName = moveModal.targetFolder === '기본폴더' ? oldName.split('/').pop()! : `${moveModal.targetFolder}/${oldName.split('/').pop()}`;
-        
+
         if (oldName === newName) {
           setMoveModal(prev => ({ ...prev, isOpen: false }));
           return;
@@ -1081,13 +1042,13 @@ function App() {
 
         const oldPrefix = oldName + '/';
         const newPrefix = newName + '/';
-        
+
         // 1. DB 업데이트
         const barcodesToUpdate = barcodes.filter(b => {
           const f = b.folder || '기본폴더';
           return f === oldName || f.startsWith(oldPrefix);
         });
-        
+
         if (barcodesToUpdate.length > 0) {
           const uniqueFolders = Array.from(new Set(barcodesToUpdate.map(b => b.folder || '기본폴더')));
           for (const f of uniqueFolders) {
@@ -1097,7 +1058,7 @@ function App() {
             if (error) throw error;
           }
         }
-        
+
         // 2. 상태 업데이트
         setLocalFolders(prev => {
           const next = prev.map(f => {
@@ -1110,14 +1071,14 @@ function App() {
           localStorage.setItem('folders', JSON.stringify(uniqueNext));
           return uniqueNext;
         });
-        
+
         setBarcodes(prev => prev.map(b => {
           const f = b.folder || '기본폴더';
           if (f === oldName) return { ...b, folder: newName };
           if (f.startsWith(oldPrefix)) return { ...b, folder: f.replace(oldPrefix, newPrefix) };
           return b;
         }));
-        
+
         setFolderOrder(prev => {
           const next = prev.map(f => {
             if (f === oldName) return newName;
@@ -1131,10 +1092,10 @@ function App() {
         if (currentFolder === oldName) setCurrentFolder(newName);
         if (explorerPath === oldName) setExplorerPath(newName);
         else if (explorerPath.startsWith(oldPrefix)) setExplorerPath(explorerPath.replace(oldPrefix, newPrefix));
-        
+
         toast.success('폴더 위치가 이동되었습니다.');
       }
-      
+
       setMoveModal(prev => ({ ...prev, isOpen: false }));
       {setActiveActionMenu(null); setActiveGlobalMenu(null);}
       setIsSelectionMode(false);
@@ -1157,7 +1118,7 @@ const handleEditMemo = (id, currentMemo) => {
         if (newMemo !== currentMemo) {
           const { error } = await supabase.from('barcodes').update({ memo: newMemo.trim() }).eq('id', id);
           if (error) toast.error(error.message);
-          else toast.success('메모가 저장되었습니다.');
+          else { setBarcodes(prev => prev.map(b => b.id === id ? {...b, memo: newMemo.trim()} : b)); toast.success('메모가 저장되었습니다.'); }
         }
       }
     });
@@ -1177,22 +1138,22 @@ const handleEditMemo = (id, currentMemo) => {
     }
   };
 
-  
+
   const handleMoveOrder = (folder: string, direction: 'up' | 'down') => {
     setFolderOrder(prev => {
       // Initialize if empty
       let currentOrder = [...prev];
       if (currentOrder.length === 0) currentOrder = [...folders];
-      
+
       const idx = currentOrder.indexOf(folder);
       if (idx === -1) return currentOrder;
-      
+
       if (direction === 'up' && idx > 0) {
         [currentOrder[idx - 1], currentOrder[idx]] = [currentOrder[idx], currentOrder[idx - 1]];
       } else if (direction === 'down' && idx < currentOrder.length - 1) {
         [currentOrder[idx + 1], currentOrder[idx]] = [currentOrder[idx], currentOrder[idx + 1]];
       }
-      
+
       localStorage.setItem('folderOrder', JSON.stringify(currentOrder));
       return currentOrder;
     });
@@ -1203,16 +1164,16 @@ const handleEditMemo = (id, currentMemo) => {
     const baseName = oldName.split('/').pop() || oldName;
     const newBaseName = prompt(`'${baseName}' 폴더의 새 이름을 입력하세요:`, baseName);
     if (!newBaseName || newBaseName === baseName) return;
-    
+
     // Construct new full path
     const parts = oldName.split('/');
     parts.pop();
     parts.push(newBaseName.trim().replace(/\//g, ''));
     const newName = parts.join('/');
-    
+
     if (newName === oldName) return;
     if (!newName || newName === oldName) return;
-    
+
     try {
       // 1. DB 바코드 업데이트
       const barcodesToUpdate = barcodes.filter(b => (b.folder || '기본폴더') === oldName);
@@ -1221,7 +1182,7 @@ const handleEditMemo = (id, currentMemo) => {
         const { error } = await supabase.from('barcodes').update({ folder: newName }).in('id', ids);
         if (error) throw error;
       }
-      
+
       // 2. 폴더 목록 업데이트
       setLocalFolders(prev => {
         const next = prev.filter(f => f !== oldName && f !== newName);
@@ -1229,7 +1190,7 @@ const handleEditMemo = (id, currentMemo) => {
         localStorage.setItem('folders', JSON.stringify(next));
         return next;
       });
-      
+
       // 3. 현재 뷰 업데이트
       setBarcodes(prev => prev.map(b => (b.folder || '기본폴더') === oldName ? { ...b, folder: newName } : b));
       if (currentFolder === oldName) setCurrentFolder(newName);
@@ -1243,7 +1204,7 @@ const handleEditMemo = (id, currentMemo) => {
     if (folderName === '기본폴더') return toast.error('기본 폴더는 삭제할 수 없습니다.');
     const hasBarcodes = barcodes.some(b => (b.folder || '기본폴더') === folderName);
     if (hasBarcodes) return toast.error('바코드가 들어있는 폴더는 삭제할 수 없습니다. 먼저 바코드를 지워주세요.');
-    
+
     if (confirm(`'${folderName}' 폴더를 삭제하시겠습니까?`)) {
       setLocalFolders(prev => {
         const next = prev.filter(f => f !== folderName);
@@ -1288,16 +1249,18 @@ const handleEditMemo = (id, currentMemo) => {
     toast.success('백업 파일이 다운로드 되었습니다.');
   };
 
-  const handleRestore = async (e) => {
-    const file = e.target.files[0];
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (!file) return;
-    
+
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
-        const parsed = JSON.parse(event.target.result);
-        let importedBarcodes = [];
-        let importedFolders = [];
+        const result = event.target?.result;
+        if (typeof result !== 'string') throw new Error('Invalid backup file');
+        const parsed = JSON.parse(result);
+        let importedBarcodes: (Pick<BarcodeRecord, 'code'> & Partial<Omit<BarcodeRecord, 'code'>>)[] = [];
+        let importedFolders: string[] = [];
 
         if (Array.isArray(parsed)) {
           importedBarcodes = parsed;
@@ -1307,7 +1270,7 @@ const handleEditMemo = (id, currentMemo) => {
         } else {
           throw new Error('Invalid format');
         }
-        
+
         const cleanData = importedBarcodes.map(item => ({
           code: item.code,
           memo: item.memo,
@@ -1319,7 +1282,7 @@ const handleEditMemo = (id, currentMemo) => {
           const { error } = await supabase.from('barcodes').insert(cleanData);
           if (error) throw error;
         }
-        
+
         if (importedFolders.length > 0) {
           const mergedFolders = Array.from(new Set([...localFolders, ...importedFolders]));
           setLocalFolders(mergedFolders);
@@ -1334,7 +1297,7 @@ const handleEditMemo = (id, currentMemo) => {
       }
     };
     reader.readAsText(file);
-    e.target.value = null;
+    e.target.value = '';
   };
 
   const handleShare = (item) => {
@@ -1343,34 +1306,67 @@ const handleEditMemo = (id, currentMemo) => {
     {setActiveActionMenu(null); setActiveGlobalMenu(null);}
   };
 
-  const filteredBarcodes = barcodes.filter(b => 
-    b.code.toLowerCase().includes(searchQuery.toLowerCase()) || 
-    (b.memo && b.memo.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
-
-  const renderFormattedCode = (c) => {
-    if (!c) return '';
-    if (c.length >= 8 && /^[a-zA-Z0-9]+$/.test(c)) {
-      const prefix = c.substring(0, c.length - 6);
-      const suffix = c.substring(c.length - 6);
-      return (
-        <span className="font-mono tracking-tight">
-          <span className="text-slate-400 dark:text-slate-500 font-medium">{prefix}</span>
-          {prefix && <span className="text-slate-300 dark:text-slate-600 mx-1">-</span>}
-          <span className="text-primary dark:text-[#3182f6] font-extrabold">{suffix}</span>
-        </span>
-      );
+  const visibleBarcodes = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase();
+    return barcodes.filter(b => (currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder) &&
+      (b.code.toLocaleLowerCase().includes(query) || (b.memo || '').toLocaleLowerCase().includes(query)))
+      .sort((a,b) => sortOrder === 'name' ? a.code.localeCompare(b.code, undefined, {numeric:true}) :
+        (sortOrder === 'oldest' ? 1 : -1) * (new Date(a.created_at).getTime() - new Date(b.created_at).getTime()) || a.id.localeCompare(b.id));
+  }, [barcodes, currentFolder, searchQuery, sortOrder]);
+  const folderCounts = useMemo(() => barcodes.reduce<Record<string, number>>((counts, b) => {
+    const folder = b.folder || '기본폴더'; counts[folder] = (counts[folder] || 0) + 1; return counts;
+  }, {}), [barcodes]);
+  const renderFormattedCode = (code: string) => <span className="font-mono break-all">{code}</span>;
+  const copyBarcode = async (code: string) => {
+    try { await navigator.clipboard.writeText(code); toast.success('전체 바코드를 복사했습니다.'); }
+    catch { toast.error('복사하지 못했습니다. 클립보드 권한을 확인해주세요.'); }
+  };
+  const closeScanner = async () => {
+    // html5-qrcode must keep its reader/video host until an in-flight start settles.
+    await stopScanner();
+    setIsScannerModalOpen(false);
+  };
+  const navigate = async (tab: 'home' | 'folders' | 'settings') => {
+    if (isScannerModalOpen) await closeScanner();
+    setActiveTab(tab); setSelectedIds([]); setIsSelectionMode(false);
+  };
+  const openScanner = () => { setActiveTab('home'); setIsScannerModalOpen(true); void startScanner(); };
+  useEffect(() => {
+    workspaceActionsRef.current = { navigate, scan: openScanner, addFolder: handleAddFolder };
+  });
+  const saveEntry = async (values: EntryValues) => {
+    if (barcodes.some(b => b.code === values.code && (b.folder || '기본폴더') === values.folder && b.id !== (entryItem !== 'new' ? entryItem?.id : undefined))) throw new Error('이 폴더에 같은 바코드가 이미 있습니다.');
+    if (entryItem && entryItem !== 'new') {
+      const {error} = await supabase.from('barcodes').update(values).eq('id', entryItem.id);
+      if (error) throw new Error(error.message);
+      setBarcodes(prev => prev.map(b => b.id === entryItem.id ? {...b,...values} : b));
+    } else {
+      const {data,error} = await supabase.from('barcodes').insert([{...values,user_id:session.user.id}]).select();
+      if(error) throw new Error(error.message);
+      if(data?.length) setBarcodes(prev => [...data,...prev.filter(b => !data.some(row => row.id === b.id))]);
+      else await fetchBarcodes();
     }
-    return <span className="font-mono font-bold">{c}</span>;
+    toast.success('바코드를 저장했습니다.');
   };
 
-  
+  useDialogFocusManager([
+    { id: 'update-dialog', open: Boolean(updateInfo), onClose: () => setUpdateInfo(null) },
+    { id: 'notice-dialog', open: isNoticeHistoryOpen, onClose: () => setIsNoticeHistoryOpen(false) },
+    { id: 'folder-dialog', open: Boolean(folderActionModal), onClose: () => setFolderActionModal(null) },
+    { id: 'prompt-dialog', open: promptModal.isOpen, onClose: () => setPromptModal(prev => ({ ...prev, isOpen: false })) },
+    { id: 'share-config-dialog', open: shareConfig.isOpen, onClose: () => setShareConfig(prev => ({ ...prev, isOpen: false })) },
+    { id: 'generate-dialog', open: genModal.isOpen, onClose: () => setGenModal(prev => ({ ...prev, isOpen: false })) },
+    { id: 'share-dialog', open: shareModal.isOpen, onClose: () => setShareModal(prev => ({ ...prev, isOpen: false })) },
+    { id: 'action-dialog', open: Boolean(activeGlobalMenu), onClose: () => setActiveGlobalMenu(null) },
+    { id: 'move-dialog', open: moveModal.isOpen, onClose: () => setMoveModal(prev => ({ ...prev, isOpen: false })) },
+  ], Boolean(entryItem) || !session);
+
   if (!session) {
     return (
       <>
         <Toaster position="top-center" richColors />
         {splashVisible && <Splash fadingOut={splashFadingOut} />}
-        <Auth supabase={supabase} />
+        <AuthScreen supabase={supabase} />
       </>
     );
   }
@@ -1378,28 +1374,28 @@ const handleEditMemo = (id, currentMemo) => {
   return (
     <>
       <Toaster position="top-center" richColors theme={darkMode ? 'dark' : 'light'} style={{ zIndex: 99999 }} />
-      <div className="flex h-[100svh] bg-slate-100 dark:bg-[#050505] overflow-hidden text-slate-800 dark:text-slate-100 justify-center md:p-6 lg:p-8">
+      <div className="workspace-root">
       {splashVisible && <Splash fadingOut={splashFadingOut} />}
 
-      
+
       {/* Update Available Modal */}
       {updateInfo && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-label="업데이트 알림">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" id="update-dialog" tabIndex={-1} role="dialog" aria-modal="true" aria-label="업데이트 알림">
           <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 ease-out"></div>
-          <div className="relative bg-white dark:bg-[#111111] rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 p-6 sm:p-8 max-w-sm w-full animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out overflow-hidden">
+          <div className="relative bg-white dark:bg-darkCard rounded-3xl shadow-2xl border border-slate-100 dark:border-slate-700 p-6 sm:p-8 max-w-sm w-full animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 ease-out overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-primary via-purple-500 to-pink-500"></div>
-            
+
             <div className="flex flex-col items-center text-center gap-4">
               <div className="bg-indigo-50 dark:bg-indigo-900/30 p-4 rounded-full text-primary">
                 <IconRocket size={40} className="animate-bounce" />
               </div>
-              
+
               <div>
                 <h3 className="text-2xl font-bold tracking-wide text-slate-800 dark:text-slate-100 mb-1">업데이트 가능</h3>
                 <p className="text-sm text-slate-500 dark:text-slate-400">새로운 기능이 추가된 최신 버전이 출시되었습니다!</p>
               </div>
-              
-              <div className="flex items-center gap-3 bg-slate-50 dark:bg-black/50 py-2.5 px-5 rounded-xl border border-slate-100 dark:border-slate-700 w-full justify-center">
+
+              <div className="flex items-center gap-3 bg-slate-50 dark:bg-darkBg/50 py-2.5 px-5 rounded-xl border border-slate-100 dark:border-slate-700 w-full justify-center">
                 <span className="font-mono text-slate-400 line-through text-sm">v{packageJson.version}</span>
                 <span className="text-slate-300">→</span>
                 <span className="font-mono font-bold tracking-wide text-primary text-base">{updateInfo.version}</span>
@@ -1409,7 +1405,7 @@ const handleEditMemo = (id, currentMemo) => {
                 <button onClick={() => { window.location.href = window.location.pathname + '?v=' + updateInfo.version; }} className="w-full bg-primary hover:bg-primaryHover text-white font-semibold py-3 rounded-lg text-sm transition-all shadow-md shadow-primary/20 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
                   <IconRefresh size={18} aria-hidden="true" /> 지금 새로고침
                 </button>
-                <a href={updateInfo.url} target="_blank" rel="noopener noreferrer" className="w-full bg-slate-100 dark:bg-[#111111] hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                <a href={updateInfo.url} target="_blank" rel="noopener noreferrer" className="w-full bg-slate-100 dark:bg-darkCard hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-semibold py-3 rounded-lg text-sm transition-colors flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
                   <IconExternalLink size={18} aria-hidden="true" /> 릴리즈 노트 보기
                 </a>
                 <button onClick={() => setUpdateInfo(null)} className="w-full bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 font-medium py-2 rounded-lg text-sm transition-colors mt-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary">
@@ -1420,78 +1416,32 @@ const handleEditMemo = (id, currentMemo) => {
           </div>
         </div>
       )}
-      
 
-      {/* Mobile Layout Wrapper - Glassmorphism */}
-      <div className="w-full md:max-w-6xl max-w-md flex flex-col h-full overflow-hidden relative bg-[#f2f4f6] dark:bg-black md:shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] md:border border-white/5 md:rounded-[3rem] transition-all z-10">
-        
-        {/* Mobile Header (Top) - Toss/Wallet Style */}
-        <header className="bg-[#f2f4f6] dark:bg-black z-40 shrink-0 px-6 pt-12 pb-4 flex justify-between items-center gap-2 border-none transition-all">
-          
-          <button onClick={() => setIsSidebarOpen(true)} className="p-2 mr-2 -ml-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 rounded-full transition-colors focus-visible:outline-none">
-            <IconMenu2 size={24} />
-          </button>
-          <div className="flex-1 min-w-0">
-            {activeTab !== 'home' && (
-              <h1 className="font-bold text-[28px] tracking-tight text-black dark:text-white">
-                {activeTab === 'folders' && '폴더 관리'}
-                {activeTab === 'settings' && '설정'}
-              </h1>
-            )}
-            {activeTab === 'home' && (
-              <div className="flex items-center gap-2 w-full">
-                <div className="relative shrink-0">
-                  <select 
-                    value={currentFolder} 
-                    onChange={(e) => setCurrentFolder(e.target.value)}
-                    className="bg-white dark:bg-[#1c1c1e] border-0 rounded-xl pl-3 pr-8 py-2.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-primary appearance-none cursor-pointer text-slate-700 dark:text-slate-200"
-                  >
-                    <option value="전체">전체 폴더</option>
-                    {folders.map(f => <option key={f} value={f}>{f}</option>)}
-                  </select>
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-                  </div>
-                </div>
-                <div className="relative flex-1 min-w-0">
-                  <IconSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} aria-hidden="true" />
-                  <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} placeholder="검색..." className="w-full bg-white dark:bg-[#1c1c1e] border-0 rounded-xl pl-9 pr-3 py-2.5 text-sm font-medium focus:ring-2 focus:ring-primary outline-none transition-shadow shadow-sm truncate" />
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            
-            
-            
-            
-            <button onClick={() => { setIsNoticeHistoryOpen(true); }} className="relative w-10 h-10 bg-white dark:bg-[#1c1c1e] text-slate-500 hover:text-primary flex items-center justify-center rounded-full shadow-sm transition-all border border-transparent dark:border-white/5" title="공지사항">
-              <IconBell size={18} />
-              {unreadNoticeCount > 0 && <span className="absolute top-0 right-0 w-3 h-3 bg-red-500 border-2 border-[#f2f2f7] dark:border-black rounded-full"></span>}
-            </button>
-            
-          </div>
-        </header>
 
+      <AppShell tab={activeTab} onNavigate={navigate} onScan={openScanner} folders={folders} folder={currentFolder} counts={folderCounts}
+        onFolder={folder => { void navigate('home').then(() => setCurrentFolder(folder)); }} onAddFolder={handleAddFolder}
+        email={session.user.email || '내 계정'} dark={darkMode} onTheme={() => setDarkMode(!darkMode)}
+        onNotices={() => setIsNoticeHistoryOpen(true)} unread={unreadNoticeCount} onSignOut={async () => { await closeScanner(); await supabase.auth.signOut(); }}>
         {/* Main Content Area */}
-        <main className="flex-1 overflow-y-auto custom-scrollbar relative">
+        <main className="workspace-main custom-scrollbar">
+          {activeTab !== 'home' && <div className="ws-page-heading"><div><h1>{activeTab === 'folders' ? '폴더 관리' : '설정'}</h1><p>{activeTab === 'folders' ? '폴더로 정리하고 필요한 바코드를 빠르게 찾아보세요.' : '나에게 맞는 작업 공간을 관리하세요.'}</p></div></div>}
           <div className="w-full min-h-full flex flex-col relative">
             {/* Tab: Home (List) */}
         {activeTab === 'home' && (
-          <div className="flex flex-col md:flex-row w-full flex-1 h-full animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
-            
+          <div className="workspace-library-layout">
+
       {/* Inline Scanner Area */}
       {isScannerModalOpen && (
-        <div className="w-full h-[60vh] md:h-full md:w-[45%] shrink-0 bg-black relative z-40 shadow-2xl flex flex-col animate-in md:slide-in-from-left-4 slide-in-from-top-4 duration-500 overflow-hidden rounded-b-3xl md:rounded-none md:rounded-br-3xl">
+        <div className="workspace-scanner">
            <div className="absolute top-4 left-4 right-4 flex justify-between items-center z-50">
-             <button onClick={() => { stopScanner(); setIsScannerModalOpen(false); }} aria-label="스캐너 닫기" className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
+             <button onClick={() => void closeScanner()} aria-label="스캐너 닫기" className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
                <IconX size={24} />
              </button>
              <button onClick={() => setIsSoundEnabled(!isSoundEnabled)} aria-label={isSoundEnabled ? '스캔 효과음 끄기' : '스캔 효과음 켜기'} aria-pressed={isSoundEnabled} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md flex items-center justify-center text-white shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
                {isSoundEnabled ? <IconVolume size={20} /> : <IconVolume3 size={20} />}
              </button>
            </div>
-           
+
            <div className="flex-1 relative overflow-hidden">
               <div id="reader" className="w-full h-full [&_video]:w-full [&_video]:h-full [&_video]:object-cover"></div>
               {isScanning && (
@@ -1500,12 +1450,17 @@ const handleEditMemo = (id, currentMemo) => {
                 </div>
               )}
            </div>
-           
+
            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black via-black/80 to-transparent flex flex-col items-center gap-4 z-50">
+                <div className="text-center text-white text-xs" role="status">
+                  <strong className="font-semibold">{scannerError ? '카메라 연결을 확인해주세요' : isScanning ? '바코드를 카메라에 비춰주세요' : '카메라 준비 중…'}</strong>
+                  <p className="mt-1 text-white/80">저장 위치: {currentFolder === '전체' ? '기본폴더' : currentFolder}</p>
+                  {scannerError && <><p className="mt-2 max-w-md">{scannerError}</p><button className="mt-2 underline" onClick={() => void startScanner()}>카메라 다시 연결</button></>}
+                </div>
                 {cameras.length > 0 && (
                   <div className="w-full max-w-[280px] bg-black/40 backdrop-blur-md rounded-2xl shadow-lg border border-white/10 p-2 z-50">
-                    <select 
-                      value={selectedCamera} 
+                    <select
+                      aria-label="카메라 선택" value={selectedCamera}
                       onChange={async (e) => {
                         const newDeviceId = e.target.value;
                         if (isSwitching) return;
@@ -1532,7 +1487,7 @@ const handleEditMemo = (id, currentMemo) => {
                   </div>
                 )}
                 {isScanning && (
-                  <button 
+                  <button
                     disabled={isSwitching}
                     onClick={async () => {
                       setSelectedCamera(''); // 전환 시 자동 모드로 복귀
@@ -1563,191 +1518,48 @@ const handleEditMemo = (id, currentMemo) => {
            </div>
         </div>
       )}
-      
-      <section className={`w-full md:flex-1 md:w-[55%] flex flex-col flex-1 overflow-y-auto relative custom-scrollbar ${isScannerModalOpen ? 'pb-4' : 'pb-24'}`}>
 
-              <div className="flex flex-col h-full">
-                <div className="px-6 py-4 flex flex-col gap-4">
-                  <div className="flex items-center justify-between">
-                    
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-xl font-bold text-black dark:text-white tracking-tight">
-                        {currentFolder === '전체' ? '모든 바코드' : currentFolder}
-                      </h2>
-                      <span className="bg-primary text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">
-                        {barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length}
-                      </span>
-                    </div>
-                    {isSelectionMode ? (
-                       <div className="flex gap-2">
-      {selectedIds.length > 0 && (
-        <button onClick={async () => {
-          if (!window.confirm(`선택한 ${selectedIds.length}개의 바코드를 삭제하시겠습니까?`)) return;
-          try {
-            const { error } = await supabase.from('barcodes').delete().in('id', selectedIds);
-            if (error) throw error;
-            setBarcodes(prev => prev.filter(b => !selectedIds.includes(b.id)));
-            setSelectedIds([]);
-            setIsSelectionMode(false);
-            toast.success('삭제 완료');
-          } catch(e) { toast.error('삭제 실패'); }
-        }} className="text-sm font-bold text-white bg-red-500 px-3 py-1.5 rounded-full transition-colors">삭제 ({selectedIds.length})</button>
-      )}
-      <button onClick={() => { setIsSelectionMode(false); setSelectedIds([]); }} className="text-sm font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-full transition-colors">취소</button>
-   </div>
-                    ) : (
-                       <button onClick={() => setIsSelectionMode(true)} className="text-sm font-bold text-slate-500 bg-slate-100 dark:bg-white/10 px-3 py-1.5 rounded-full transition-colors">다중 선택</button>
-                    )}
-                  </div>
-                  
-</div>
-<div className="flex-1 px-6 pb-6 overflow-y-auto custom-scrollbar">
-                  <div className="space-y-4">
-                    {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).map((item, idx) => (
-                      <div
-                      key={item.id}
-                      onPointerDown={(e) => {
-                         // Only trigger long press if left click or touch
-                         if (e.pointerType === 'mouse' && e.button !== 0) return;
-                         handlePointerDown(item.id);
-                      }}
-                      onPointerUp={handlePointerUp}
-                      onPointerLeave={handlePointerUp}
-                      onClick={(e) => {
-                        if (isSelectionMode || e.ctrlKey || e.metaKey || e.shiftKey) {
-                          handleItemClick(item.id, '', e);
-                        } else {
-                          setActiveActionMenu(activeActionMenu === item.id ? null : item.id);
-                        }
-                      }}
-                      style={idx < 8 ? { animationDelay: `${idx * 30}ms`, animationFillMode: 'backwards' } : undefined}
-                      className={`relative p-5 rounded-[1.5rem] transition-all duration-300 flex items-center justify-between gap-4 group cursor-pointer overflow-hidden ${idx < 8 ? 'motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2 duration-300 ease-out' : ''} ${
-    selectedIds.includes(item.id)
-      ? 'bg-primary/5 ring-2 ring-primary dark:bg-primary/20'
-      : 'bg-white dark:bg-[#1c1c1e] shadow-[0_2px_12px_rgba(0,0,0,0.03)] hover:scale-[0.98] border border-transparent dark:border-white/5'
-  }`}
-                    >
-                        <div className="flex items-center gap-3 overflow-hidden flex-1">
-                          <div className="h-12 w-12 shrink-0 rounded-2xl bg-[#f2f4f6] dark:bg-[#2c2c2e] text-black dark:text-white flex items-center justify-center transition-transform group-hover:scale-110">
-                            <IconBarcode size={20} />
-                          </div>
-                          <div className="flex flex-col flex-1 overflow-hidden gap-0.5 py-1">
-                            {item.memo ? (
-                              <>
-                                <div className="font-bold text-base text-slate-900 dark:text-white truncate">
-                                  {item.memo}
-                                </div>
-                                <div className="truncate text-[13px]">
-                                  {renderFormattedCode(item.code)}
-                                </div>
-                              </>
-                            ) : (
-                              <div className="truncate text-base mt-1">
-                                {renderFormattedCode(item.code)}
-                              </div>
-                            )}
-                            
-                            {/* Meta Info */}
-                            <div className="flex items-center gap-2 text-[10px] mt-1.5 flex-wrap">
-                              <span className="text-slate-400 flex items-center gap-1 shrink-0"><IconClock size={12} aria-hidden="true"/> {format(new Date(item.created_at), 'MM.dd HH:mm')}</span>
-                              {currentFolder === '전체' && (
-                                <span className="flex items-center gap-1 shrink-0 text-slate-500 bg-slate-100 dark:bg-white/10 px-1.5 py-0.5 rounded-md font-medium">
-                                  <IconFolder size={12} aria-hidden="true"/> {item.folder || '기본폴더'}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                        
-                        <div className="shrink-0 relative z-20 mr-2">
-                          {isSelectionMode && (
-                            <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors ${selectedIds.includes(item.id) ? 'bg-primary border-primary text-white' : 'border-slate-300 dark:border-slate-600'}`}>
-                              {selectedIds.includes(item.id) && <svg className="w-4 h-4 fill-current" viewBox="0 0 20 20"><path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/></svg>}
-                            </div>
-                          )}
-                        </div>
-
-                        {!isSelectionMode && activeActionMenu === item.id && (
-                          <div className="absolute inset-y-0 right-0 max-w-full overflow-x-auto custom-scrollbar bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2 px-3 sm:px-5 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200 rounded-[24px] sm:rounded-l-none sm:rounded-r-[24px]">
-                            <button onClick={(e) => { e.stopPropagation(); const serial = item.code.length > 6 ? item.code.substring(0, item.code.length - 6) : item.code; navigator.clipboard.writeText(serial); toast.success('복사됨'); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl transition-all active:scale-95" aria-label="복사">
-                              <IconCopy size={22} />
-                              <span className="text-[10px] font-bold">복사</span>
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); handleEditMemo(item.id, item.memo); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl transition-all active:scale-95" aria-label="메모">
-                              <IconMessagePlus size={22} />
-                              <span className="text-[10px] font-bold">메모</span>
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [item.id], targetFolder: item.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all active:scale-95" aria-label="이동">
-                              <IconFolder size={22} />
-                              <span className="text-[10px] font-bold">이동</span>
-                            </button>
-                            <button onClick={(e) => { e.stopPropagation(); handleDelete(item.id); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all active:scale-95" aria-label="삭제">
-                              <IconTrash size={22} />
-                              <span className="text-[10px] font-bold">삭제</span>
-                                </button>
-                            <button onClick={(e) => { e.stopPropagation(); setActiveGlobalMenu(item.id); setActiveActionMenu(null); }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-white/10 rounded-xl transition-all active:scale-95" aria-label="더보기">
-                              <IconDotsVertical size={22} />
-                              <span className="text-[10px] font-bold">더보기</span>
-                            </button>
-                              </div>
-                        )}
-                      </div>
-                    ))}
-                    
-                    {filteredBarcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length === 0 && (
-                      <div className="h-56 flex flex-col items-center justify-center text-slate-400 gap-2 text-center px-6">
-                        <div className="relative w-20 h-20 mb-2 flex items-center justify-center animate-float">
-                          <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full"></div>
-                          <IconBarcode size={48} className="text-primary/70 relative z-10" aria-hidden="true" />
-                        </div>
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                          {searchQuery ? '검색 결과가 없습니다.' : '기록이 없습니다.'}
-                        </p>
-                        {!searchQuery && (
-                          <p className="text-xs text-slate-400">우측 하단 카메라 버튼으로 첫 바코드를 스캔해보세요</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </section>
-            
+      <BarcodeLibrary all={barcodes} rows={visibleBarcodes} folders={folders} folder={currentFolder} query={searchQuery} sort={sortOrder}
+        selected={selectedIds} loading={libraryLoading} error={libraryError} onRetry={fetchBarcodes}
+        onFolder={setCurrentFolder} onQuery={setSearchQuery} onSort={setSortOrder} onSelect={setSelectedIds}
+        onScan={openScanner} onManual={() => setEntryItem('new')} onExport={exportExcel}
+        onMove={() => setMoveModal({isOpen:true, ids:selectedIds, targetFolder:currentFolder === '전체'?'기본폴더':currentFolder, type:'barcode', sourceFolder:''})}
+        onDelete={handleMultiDelete} onCopy={copyBarcode} onEdit={setEntryItem} onMore={setActiveGlobalMenu}/>
             {/* Floating Action Button for Scanner */}
-            
+
           </div>
         )}
-        
+
         {/* Tab: Folders */}
         {activeTab === 'folders' && (
-          <div className="flex-1 flex flex-row min-h-0 bg-[#f2f4f6] dark:bg-black animate-in fade-in slide-in-from-bottom-2 duration-300">
-            
+          <div className="workspace-folders flex flex-row min-h-0">
+
             {/* Desktop Sidebar Tree View */}
-            <div className="hidden md:flex w-72 shrink-0 border-r border-slate-200/50 dark:border-white/10 flex-col bg-white/40 dark:bg-black/40 backdrop-blur-xl">
+            <div className="hidden md:flex w-72 shrink-0 border-r border-slate-200/50 dark:border-white/10 flex-col bg-white/40 dark:bg-darkBg/40 backdrop-blur-xl">
               <div className="p-5 pb-2 font-bold text-lg text-slate-800 dark:text-slate-200 border-b border-transparent">
                 탐색기
               </div>
               <div className="flex-1 overflow-y-auto custom-scrollbar p-3 flex flex-col gap-1">
-                <button 
+                <button
                   onClick={() => setExplorerPath('')}
-                  className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-[14px] transition-all text-sm ${explorerPath === '' ? 'bg-[#3182f6]/10 text-[#3182f6] font-bold shadow-sm' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10 font-medium'}`}
+                  className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-[14px] transition-all text-sm ${explorerPath === '' ? 'bg-primary/10 text-primary font-bold shadow-sm' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10 font-medium'}`}
                 >
-                  <IconHome size={18} /> Home
+                  <IconHome size={18} /> 전체 폴더
                 </button>
-                
+
                 {folders.filter(f => f !== '기본폴더').map(f => {
                   const depth = f.split('/').length - 1;
                   const name = f.split('/').pop();
                   const isExact = explorerPath === f;
-                  
+
                   return (
-                    <button 
+                    <button
                       key={f}
                       onClick={() => setExplorerPath(f)}
                       style={{ paddingLeft: `${(depth * 1.2) + 0.75}rem` }}
-                      className={`w-full flex items-center gap-2 pr-3 py-2 rounded-[14px] transition-all text-sm ${isExact ? 'bg-[#3182f6]/10 text-[#3182f6] font-bold shadow-sm' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10 font-medium'}`}
+                      className={`w-full flex items-center gap-2 pr-3 py-2 rounded-[14px] transition-all text-sm ${isExact ? 'bg-primary/10 text-primary font-bold shadow-sm' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/10 font-medium'}`}
                     >
-                      {isExact ? <IconFolderOpen size={18} /> : <IconFolderFilled size={18} className="text-[#3182f6]" />}
+                      {isExact ? <IconFolderOpen size={18} /> : <IconFolderFilled size={18} className="text-primary" />}
                       <span className="truncate">{name}</span>
                     </button>
                   );
@@ -1757,12 +1569,12 @@ const handleEditMemo = (id, currentMemo) => {
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col min-w-0 relative">
-              
+
             {/* Breadcrumb Header */}
-            <div className="flex-none p-4 pb-2 bg-white/80 dark:bg-[#1c1c1e]/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/10 z-10 sticky top-0 flex flex-col gap-3">
+            <div className="flex-none p-4 pb-2 bg-white/80 dark:bg-darkCard/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/10 z-10 sticky top-0 flex flex-col gap-3">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar whitespace-nowrap text-lg font-bold text-slate-800 dark:text-white">
-                  <button onClick={() => setExplorerPath('')} className="hover:text-primary transition-colors">Home</button>
+                  <button onClick={() => setExplorerPath('')} className="hover:text-primary transition-colors">전체 폴더</button>
                   {explorerPath.split('/').filter(Boolean).map((part, idx, arr) => {
                     const path = arr.slice(0, idx + 1).join('/');
                     return (
@@ -1777,11 +1589,11 @@ const handleEditMemo = (id, currentMemo) => {
                 </div>
                 <div className="flex items-center gap-2">
                   {explorerPath !== '' && explorerPath !== '기본폴더' && (
-                    <button onClick={() => setFolderActionModal(explorerPath)} className="p-2 bg-slate-100 dark:bg-white/10 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/20 transition-colors">
+                    <button aria-label="현재 폴더 관리" onClick={() => setFolderActionModal(explorerPath)} className="p-2 bg-slate-100 dark:bg-white/10 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/20 transition-colors">
                       <IconEdit size={20} />
                     </button>
                   )}
-                  
+
                   <button onClick={() => {
                     const newFolderName = prompt('현재 위치에 새 폴더 생성:');
                     if (newFolderName && newFolderName.trim()) {
@@ -1791,7 +1603,7 @@ const handleEditMemo = (id, currentMemo) => {
                         localStorage.setItem('folders', JSON.stringify(next));
                         return next;
                       });
-                      
+
                       setFolderOrder(prev => {
                         if (!prev.includes(finalName)) {
                           const next = [...prev, finalName];
@@ -1800,7 +1612,7 @@ const handleEditMemo = (id, currentMemo) => {
                         }
                         return prev;
                       });
-                      
+
                       setExplorerPath(finalName);
                       toast.success('폴더가 생성되었습니다.');
                     }
@@ -1816,7 +1628,7 @@ const handleEditMemo = (id, currentMemo) => {
               {(() => {
                 // Compute current directory contents
                 const currentPrefix = explorerPath ? explorerPath + '/' : '';
-                
+
                 // 1. Subfolders
                 const subfolderNames = new Set<string>();
                 folders.forEach(f => {
@@ -1829,7 +1641,7 @@ const handleEditMemo = (id, currentMemo) => {
                 });
                 // Ensure '기본폴더' is always at root
                 if (explorerPath === '') subfolderNames.add('기본폴더');
-                
+
                 const subfoldersList = Array.from(subfolderNames).map(name => ({ id: name, name, fullPath: explorerPath ? `${explorerPath}/${name}` : name })).sort((a, b) => {
                   const idxA = folderOrder.indexOf(a.fullPath);
                   const idxB = folderOrder.indexOf(b.fullPath);
@@ -1854,8 +1666,8 @@ const handleEditMemo = (id, currentMemo) => {
 
                 return (
                   <div className="pb-8">
-                    <div className="bg-white dark:bg-[#1c1c1e] rounded-[24px] shadow-sm border border-slate-100 dark:border-white/5 overflow-hidden flex flex-col">
-                      
+                    <div className="bg-white dark:bg-darkCard rounded-[24px] shadow-sm border border-slate-100 dark:border-white/5 overflow-hidden flex flex-col">
+
                       {/* Render Subfolders */}
                       <ReactSortable
                         list={subfoldersList}
@@ -1870,7 +1682,6 @@ const handleEditMemo = (id, currentMemo) => {
                         }}
                         className="flex flex-col"
                         animation={200}
-                        animation={200}
                         delayOnTouchOnly={true}
                         delay={150}
                         ghostClass="opacity-40 bg-slate-50 dark:bg-white/5"
@@ -1882,11 +1693,11 @@ const handleEditMemo = (id, currentMemo) => {
                           const bFolder = b.folder || '기본폴더';
                           return bFolder === fullPath || bFolder.startsWith(fullPath + '/');
                         }).length;
-                        
+
                         const isLastFolder = idx === subfoldersList.length - 1 && files.length === 0;
 
                         return (
-                          <div 
+                          <div
                             key={fullPath}
                             onClick={(e) => {
                               if (Date.now() - folderLongPressTime.current < 500) { e.preventDefault(); e.stopPropagation(); return; }
@@ -1925,14 +1736,15 @@ const handleEditMemo = (id, currentMemo) => {
                             }}
                             className={`p-4 flex items-center gap-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 transition-colors active:bg-slate-100 dark:active:bg-white/10 ${!isLastFolder ? 'border-b border-slate-100 dark:border-white/5' : ''}`}
                           >
-                            <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/20 text-[#3182f6] rounded-[14px] flex items-center justify-center shrink-0">
-                              <IconFolderFilled size={22} className="text-[#3182f6]" />
+                            <div className="w-10 h-10 bg-indigo-50 dark:bg-indigo-900/20 text-primary rounded-[14px] flex items-center justify-center shrink-0">
+                              <IconFolderFilled size={22} className="text-primary" />
                             </div>
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-bold text-[15px] text-slate-800 dark:text-slate-100 truncate">{name}</h3>
+                              <button className="font-bold text-[15px] text-slate-800 dark:text-slate-100 text-left break-words" onClick={e => { e.stopPropagation(); setExplorerPath(fullPath); }} aria-label={name + ' 폴더 열기'}>{name}</button>
                             </div>
                             <div className="flex items-center gap-1">
                               <span className="text-[12px] text-slate-400 font-medium whitespace-nowrap">{count}개</span>
+                              <button className="ws-icon-button" aria-label={name + ' 폴더 관리'} onClick={e => { e.stopPropagation(); setFolderActionModal(fullPath); }}><IconDotsVertical size={20}/></button>
                               <IconChevronRight size={16} className="text-slate-300 dark:text-slate-600" />
                             </div>
                           </div>
@@ -1940,60 +1752,21 @@ const handleEditMemo = (id, currentMemo) => {
                       })}
                       </ReactSortable>
 
-                      {/* Render Files (Barcodes) */}
-                      {files.map((b, idx) => {
-                        const isLast = idx === files.length - 1;
-                        return (
-                          <div 
-                            key={b.id}
-                            onClick={() => setActiveActionMenu(activeActionMenu === b.id ? null : b.id)}
-                            className={`p-4 flex items-center gap-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 transition-colors relative group overflow-hidden ${!isLast ? 'border-b border-slate-100 dark:border-white/5' : ''}`}
-                          >
-                            <div className="w-10 h-10 bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-400 rounded-[14px] flex items-center justify-center shrink-0">
-                              <IconBarcode size={22} />
-                            </div>
-                            
-                            <div className="flex flex-col flex-1 min-w-0 gap-0.5 justify-center">
-                              {b.memo ? (
-                                <>
-                                  <div className="font-bold text-[15px] text-slate-900 dark:text-white truncate">
-                                    {b.memo}
-                                  </div>
-                                  <div className="truncate text-[12px] text-slate-500">
-                                    {renderFormattedCode(b.code)}
-                                  </div>
-                                </>
-                              ) : (
-                                <div className="truncate text-[15px] text-slate-900 dark:text-white">
-                                  {renderFormattedCode(b.code)}
-                                </div>
-                              )}
-                            </div>
-                            
-                            {/* Action Overlay */}
-                            {activeActionMenu === b.id && (
-                              <div className="absolute inset-y-0 right-0 max-w-full overflow-x-auto custom-scrollbar bg-white/95 dark:bg-[#1c1c1e]/95 backdrop-blur-md flex items-center gap-2 px-3 sm:px-5 shadow-[-10px_0_15px_-3px_rgba(0,0,0,0.1)] dark:shadow-none border-l border-slate-100 dark:border-white/5 animate-in slide-in-from-right-4 duration-200">
-                                <button onClick={(e) => { e.stopPropagation(); const serial = b.code.length > 6 ? b.code.substring(0, b.code.length - 6) : b.code; navigator.clipboard.writeText(serial); toast.success('복사됨'); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-[#3182f6] hover:bg-blue-50 dark:hover:bg-[#3182f6]/20 rounded-xl transition-all active:scale-95" aria-label="복사">
-                                  <IconCopy size={22} />
-                                  <span className="text-[10px] font-bold">복사</span>
-                                </button>
-                                <button onClick={(e) => { e.stopPropagation(); handleEditMemo(b.id, b.memo); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 rounded-xl transition-all active:scale-95" aria-label="메모">
-                                  <IconMessagePlus size={22} />
-                                  <span className="text-[10px] font-bold">메모</span>
-                                </button>
-                                <button onClick={(e) => { e.stopPropagation(); setMoveModal({ isOpen: true, ids: [b.id], targetFolder: b.folder || '기본폴더', type: 'barcode', sourceFolder: '' }); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-slate-600 dark:text-slate-300 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 rounded-xl transition-all active:scale-95" aria-label="이동">
-                                  <IconFolder size={22} />
-                                  <span className="text-[10px] font-bold">이동</span>
-                                </button>
-                                <button onClick={(e) => { e.stopPropagation(); handleDelete(b.id); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center gap-1 p-2 min-w-[48px] text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all active:scale-95" aria-label="삭제">
-                                  <IconTrash size={22} />
-                                  <span className="text-[10px] font-bold">삭제</span>
-                                </button>
-                              </div>
-                            )}
+                      {/* Folder contents reuse the library's visible copy/edit/more controls. */}
+                      {files.map(b => (
+                        <div key={b.id} className="folder-barcode-row">
+                          <IconBarcode size={24} className="text-primary shrink-0" aria-hidden="true"/>
+                          <div className="folder-barcode-content">
+                            {b.memo && <strong>{b.memo}</strong>}
+                            {renderFormattedCode(b.code)}
                           </div>
-                        );
-                      })}
+                          <div className="folder-barcode-actions">
+                            <button className="ws-icon-button" aria-label={b.code + ' 바코드 복사'} onClick={() => void copyBarcode(b.code)}><IconCopy size={19}/></button>
+                            <button className="ws-icon-button" aria-label={b.code + ' 수정'} onClick={() => setEntryItem(b)}><IconEdit size={19}/></button>
+                            <button className="ws-icon-button" aria-label={b.code + ' 더보기'} onClick={() => setActiveGlobalMenu(b.id)}><IconDotsVertical size={19}/></button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 );
@@ -2003,20 +1776,20 @@ const handleEditMemo = (id, currentMemo) => {
 
           </div>
         )}
-        
+
         {activeTab === 'settings' && (
-          <div className="flex-1 overflow-y-auto custom-scrollbar pt-4 pb-28 px-5 animate-in fade-in slide-in-from-bottom-4 duration-300 ease-out">
+          <div className="workspace-settings">
           <div className="bg-white dark:bg-darkCard rounded-[24px] shadow-sm border border-slate-100/50 dark:border-white/5 border border-slate-100/50 dark:border-white/5 overflow-hidden min-h-[500px]">
-            <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-black/30">
-              <h2 className="font-bold flex items-center gap-2 text-xl"><IconSettings className="text-primary" size={24} aria-hidden="true" /> 설정</h2>
+            <div className="p-6 border-b border-slate-50 dark:border-slate-700/50 bg-slate-50/50 dark:bg-darkBg/30">
+              <h2 className="font-bold flex items-center gap-2 text-xl"><IconSettings className="text-primary" size={24} aria-hidden="true" /> 환경설정</h2>
             </div>
-            
-            <div className="p-4 sm:p-6 max-w-3xl mx-auto w-full flex flex-col gap-10">
+
+            <div className="p-4 sm:p-6 w-full flex flex-col gap-8">
                 {/* 기본 설정 */}
                 <section className="space-y-4">
                   <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-300 font-bold uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">기본 설정</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm hover:shadow-lg transition-all">
+                    <div className="bg-white dark:bg-darkCard p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm hover:shadow-lg transition-all">
                       <div className="flex items-center gap-3 text-pink-500">
                         <div className="bg-pink-100 dark:bg-pink-900/30 p-2 rounded-lg">
                           <IconBell size={24} aria-hidden="true" />
@@ -2036,7 +1809,7 @@ const handleEditMemo = (id, currentMemo) => {
                       </button>
                     </div>
 
-                    <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm hover:shadow-lg transition-all">
+                    <div className="bg-white dark:bg-darkCard p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm hover:shadow-lg transition-all">
                       <div className="flex items-center gap-3 text-amber-500">
                         <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-lg">
                           {darkMode ? <IconMoon size={24} aria-hidden="true" /> : <IconSun size={24} aria-hidden="true" />}
@@ -2049,7 +1822,7 @@ const handleEditMemo = (id, currentMemo) => {
                       </button>
                     </div>
 
-                    <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm hover:shadow-lg transition-all">
+                    <div className="bg-white dark:bg-darkCard p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm hover:shadow-lg transition-all">
                       <div className="flex items-center gap-3 text-emerald-500">
                         <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-lg">
                           <IconRocket size={24} aria-hidden="true" />
@@ -2057,7 +1830,7 @@ const handleEditMemo = (id, currentMemo) => {
                         <h4 className="font-bold text-lg text-slate-800 dark:text-slate-100">앱 버전 정보</h4>
                       </div>
                       <p className="text-sm text-slate-500 dark:text-slate-400 flex-1 leading-relaxed">현재 설치된 웹바코드 버전을 확인합니다.</p>
-                      <div className="w-full bg-slate-50 dark:bg-black/50 border border-slate-100 dark:border-white/5 py-2.5 rounded-lg flex justify-center items-center gap-2">
+                      <div className="w-full bg-slate-50 dark:bg-darkBg/50 border border-slate-100 dark:border-white/5 py-2.5 rounded-lg flex justify-center items-center gap-2">
                         <span className="font-mono text-slate-500 font-bold tracking-wider">v{packageJson.version}</span>
                         {latestVersion && latestVersion !== packageJson.version && (
                           <a href={`https://github.com/LeeAn0121/WebBarcode/releases/tag/v${latestVersion}`} target="_blank" rel="noopener noreferrer" className="ml-2 bg-primary/10 text-primary px-3 py-1 rounded-full text-xs font-bold transition-colors hover:bg-primary/20">
@@ -2069,23 +1842,23 @@ const handleEditMemo = (id, currentMemo) => {
                   </div>
                 </section>
 
-              
+
               {/* 내보내기 영역 */}
               <section className="space-y-4">
                 <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-300 font-bold uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">데이터 백업 및 복원</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm border border-slate-100/50 dark:border-white/5 hover:shadow-lg transition-all">
-                    <div className="flex items-center gap-3 text-blue-500">
-                      <div className="bg-blue-100 dark:bg-blue-900/30 p-2 rounded-lg">
+                  <div className="bg-white dark:bg-darkCard p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm border border-slate-100/50 dark:border-white/5 hover:shadow-lg transition-all">
+                    <div className="flex items-center gap-3 text-primary">
+                      <div className="bg-blue-100 dark:bg-indigo-900/30 p-2 rounded-lg">
                         <IconCloudDownload size={24} aria-hidden="true" />
                       </div>
                       <h4 className="font-bold text-lg text-slate-800 dark:text-slate-100">JSON 백업</h4>
                     </div>
                     <p className="text-sm text-slate-500 dark:text-slate-400 flex-1 leading-relaxed">현재 앱에 저장된 모든 바코드 데이터를 JSON 파일로 안전하게 다운로드합니다.</p>
-                    <button onClick={handleBackup} className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">백업 파일 다운로드</button>
+                    <button onClick={handleBackup} className="w-full bg-indigo-500 hover:bg-blue-600 text-white font-semibold py-2.5 rounded-lg text-sm transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2">백업 파일 다운로드</button>
                   </div>
 
-                  <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm border border-slate-100/50 dark:border-white/5 hover:shadow-lg transition-all">
+                  <div className="bg-white dark:bg-darkCard p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col gap-4 shadow-sm border border-slate-100/50 dark:border-white/5 hover:shadow-lg transition-all">
                     <div className="flex items-center gap-3 text-indigo-500">
                       <div className="bg-indigo-100 dark:bg-indigo-900/30 p-2 rounded-lg">
                         <IconCloudUpload size={24} aria-hidden="true" />
@@ -2102,7 +1875,7 @@ const handleEditMemo = (id, currentMemo) => {
               {/* 엑셀 영역 */}
               <section className="space-y-4">
                 <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-300 font-bold uppercase tracking-widest border-b border-slate-100 dark:border-slate-800 pb-2">엑셀 출력</h3>
-                <div className="bg-white dark:bg-[#1c1c1e] p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm border border-slate-100/50 dark:border-white/5">
+                <div className="bg-white dark:bg-darkCard p-5 rounded-[24px] border border-slate-100/50 dark:border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 shadow-sm border border-slate-100/50 dark:border-white/5">
                   <div className="flex items-start gap-4">
                     <div className="bg-green-100 dark:bg-green-900/30 p-2.5 rounded-lg text-sm text-green-600 dark:text-green-400 shrink-0">
                       <IconDownload size={24} aria-hidden="true"/>
@@ -2144,7 +1917,7 @@ const handleEditMemo = (id, currentMemo) => {
                     <h4 className="font-bold text-red-600 dark:text-red-400 text-lg">모든 데이터 삭제</h4>
                     <p className="text-sm text-red-500/80 dark:text-red-400/80 mt-1 leading-relaxed">이 작업은 되돌릴 수 없습니다. 서버의 모든 데이터가 영구 삭제됩니다.</p>
                   </div>
-                  <button onClick={handleDeleteAll} className="w-full sm:w-auto shrink-0 bg-white dark:bg-[#111111] border-2 border-red-500 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white font-semibold py-3 px-6 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2">
+                  <button onClick={handleDeleteAll} className="w-full sm:w-auto shrink-0 bg-white dark:bg-darkCard border-2 border-red-500 text-red-600 dark:text-red-400 hover:bg-red-500 hover:text-white font-semibold py-3 px-6 rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2">
                     영구 삭제 진행
                   </button>
                 </div>
@@ -2155,26 +1928,6 @@ const handleEditMemo = (id, currentMemo) => {
           </div>
         )}
           </div>
-        
-      {/* 다중 선택 모드 플로팅 바 */}
-      {isSelectionMode && (
-        <div role="toolbar" aria-label="다중 선택 도구" className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-slate-900/95 backdrop-blur-xl text-white rounded-[24px] p-4 shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 flex items-center justify-between border border-white/10 animate-in slide-in-from-bottom-8 duration-300">
-          <span className="font-bold text-sm" aria-live="polite">
-            <span className="text-primary">{selectedIds.length}개</span> 선택됨
-          </span>
-          <div className="flex gap-2">
-            <button onClick={() => { setIsSelectionMode(false); setSelectedIds([]); }} className="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-xl text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-              취소
-            </button>
-            <button onClick={() => setMoveModal({ isOpen: true, ids: selectedIds, targetFolder: currentFolder === '전체' ? '기본폴더' : currentFolder })} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-              이동
-            </button>
-            <button onClick={handleMultiDelete} className="px-4 py-2 bg-red-500 hover:bg-red-600 rounded-xl text-sm font-semibold shadow-glow-red transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white">
-              선택 삭제
-            </button>
-          </div>
-        </div>
-      )}
 
       </main>
 
@@ -2182,9 +1935,9 @@ const handleEditMemo = (id, currentMemo) => {
 
         {/* Notice History Popup */}
         {isNoticeHistoryOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setIsNoticeHistoryOpen(false)}>
-            <div className="bg-[#f2f4f6] dark:bg-black w-full max-w-sm max-h-[80vh] rounded-[2rem] shadow-2xl flex flex-col animate-in zoom-in-95 slide-in-from-bottom-10 duration-300 overflow-hidden border border-slate-100 dark:border-white/5" onClick={e => e.stopPropagation()}>
-              <div className="p-5 bg-white dark:bg-[#1c1c1e] border-b border-slate-100 dark:border-white/5 flex justify-between items-center shrink-0">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setIsNoticeHistoryOpen(false)} id="notice-dialog" tabIndex={-1} role="dialog" aria-modal="true" aria-label="공지사항">
+            <div className="bg-[#f7f8fc] dark:bg-darkBg w-full max-w-sm max-h-[80vh] rounded-[2rem] shadow-2xl flex flex-col animate-in zoom-in-95 slide-in-from-bottom-10 duration-300 overflow-hidden border border-slate-100 dark:border-white/5" onClick={e => e.stopPropagation()}>
+              <div className="p-5 bg-white dark:bg-darkCard border-b border-slate-100 dark:border-white/5 flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-2">
                   <h3 className="text-xl font-bold text-black dark:text-white flex items-center gap-2">
                     <IconBell size={24} className="text-primary" /> 공지사항
@@ -2199,7 +1952,7 @@ const handleEditMemo = (id, currentMemo) => {
                       모두 읽음
                     </button>
                   )}
-                  <button onClick={() => setIsNoticeHistoryOpen(false)} className="p-1 -m-1 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
+                  <button aria-label="공지사항 닫기" onClick={() => setIsNoticeHistoryOpen(false)} className="p-1 -m-1 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors">
                     <IconX size={24} />
                   </button>
                 </div>
@@ -2212,14 +1965,14 @@ const handleEditMemo = (id, currentMemo) => {
                   </div>
                 ) : (
                   noticeHistory.map((notice) => (
-                    <div 
-                      key={notice.id} 
+                    <div
+                      key={notice.id}
                       onClick={() => {
                         if (!notice.read) {
                           setNoticeHistory(prev => prev.map(n => n.id === notice.id ? {...n, read: true} : n));
                         }
                       }}
-                      className={`p-4 rounded-2xl shadow-sm transition-colors cursor-pointer border ${notice.read ? 'bg-white dark:bg-[#1c1c1e] border-transparent dark:border-white/5 opacity-70' : 'bg-white dark:bg-[#1c1c1e] border-primary/30 dark:border-primary/50'}`}
+                      className={`p-4 rounded-2xl shadow-sm transition-colors cursor-pointer border ${notice.read ? 'bg-white dark:bg-darkCard border-transparent dark:border-white/5 opacity-70' : 'bg-white dark:bg-darkCard border-primary/30 dark:border-primary/50'}`}
                     >
                       <div className="flex justify-between items-start mb-2">
                         <div className="text-xs text-slate-400 font-medium">{format(new Date(notice.date), 'yyyy년 MM월 dd일 HH:mm')}</div>
@@ -2236,11 +1989,11 @@ const handleEditMemo = (id, currentMemo) => {
 
 
         {folderActionModal && (
-          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setFolderActionModal(null)}>
-            <div className="bg-white/80 dark:bg-[#111111]/80 backdrop-blur-2xl border border-white/50 dark:border-white/10 w-full max-w-sm rounded-[2.5rem] shadow-2xl p-6 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setFolderActionModal(null)} id="folder-dialog" tabIndex={-1} role="dialog" aria-modal="true" aria-label="폴더 관리 작업">
+            <div className="bg-white/80 dark:bg-darkCard/80 backdrop-blur-2xl border border-white/50 dark:border-white/10 w-full max-w-sm rounded-[2.5rem] shadow-2xl p-6 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-300" onClick={e => e.stopPropagation()}>
               <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
               <h3 className="text-xl font-bold text-center text-black dark:text-white mb-6">'{folderActionModal.split('/').pop()}' 관리</h3>
-              
+
               <div className="grid grid-cols-2 gap-3 mb-4">
                 <button onClick={() => {
                   const listToExport = barcodes.filter(b => (b.folder || '기본폴더') === folderActionModal);
@@ -2257,7 +2010,7 @@ const handleEditMemo = (id, currentMemo) => {
                   <span className="font-bold text-sm">엑셀 추출</span>
                 </button>
 
-                <button onClick={() => { handleShareFolder(folderActionModal); setFolderActionModal(null); }} className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 text-slate-600 hover:text-blue-600 dark:text-slate-400 fluid-spring">
+                <button onClick={() => { handleShareFolder(folderActionModal); setFolderActionModal(null); }} className="bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 text-slate-600 hover:text-primary dark:text-slate-400 fluid-spring">
                   <IconCopy size={28} />
                   <span className="font-bold text-sm">공유 링크</span>
                 </button>
@@ -2285,7 +2038,7 @@ const handleEditMemo = (id, currentMemo) => {
                   </button>
                 </div>
               )}
-              
+
               {folderActionModal !== '기본폴더' && (
                 <button onClick={() => { handleDeleteFolder(folderActionModal); setFolderActionModal(null); }} className="w-full bg-red-50 dark:bg-red-900/20 text-red-500 font-bold py-4 rounded-2xl flex items-center justify-center gap-2 hover:bg-red-100 transition-colors">
                   <IconTrash size={20} /> 폴더 삭제
@@ -2295,13 +2048,13 @@ const handleEditMemo = (id, currentMemo) => {
           </div>
         )}
         {promptModal.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setPromptModal({ ...promptModal, isOpen: false })} role="dialog" aria-modal="true" aria-label={promptModal.title}>
-            <div className="bg-white dark:bg-[#111111] w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setPromptModal({ ...promptModal, isOpen: false })} id="prompt-dialog" tabIndex={-1} role="dialog" aria-modal="true" aria-label={promptModal.title}>
+            <div className="bg-white dark:bg-darkCard w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
               <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">{promptModal.title}</h3>
               {promptModal.description && <p className="text-sm text-slate-500 dark:text-slate-400 mb-5 leading-relaxed">{promptModal.description}</p>}
-              <input 
-                type={promptModal.type} 
-                autoFocus
+              <input
+                aria-label={promptModal.title}
+                type={promptModal.type}
                 value={promptModal.value}
                 onChange={(e) => setPromptModal({ ...promptModal, value: e.target.value })}
                 onKeyDown={(e) => {
@@ -2310,7 +2063,7 @@ const handleEditMemo = (id, currentMemo) => {
                     setPromptModal({ ...promptModal, isOpen: false });
                   }
                 }}
-                className="w-full bg-slate-50 dark:bg-black border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary outline-none mb-6"
+                className="w-full bg-slate-50 dark:bg-darkBg border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-primary outline-none mb-6"
                 placeholder={promptModal.placeholder}
               />
               <div className="flex gap-3">
@@ -2321,11 +2074,11 @@ const handleEditMemo = (id, currentMemo) => {
           </div>
         )}
 
-        
-        
+
+
         {shareConfig.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareConfig({ ...shareConfig, isOpen: false })} role="dialog" aria-modal="true" aria-label={shareConfig.type === 'invite' ? '협업 방 초대' : '공유 링크 생성'}>
-            <div className="bg-white dark:bg-[#111111] w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareConfig({ ...shareConfig, isOpen: false })} id="share-config-dialog" tabIndex={-1} role="dialog" aria-modal="true" aria-label={shareConfig.type === 'invite' ? '협업 방 초대' : '공유 링크 생성'}>
+            <div className="bg-white dark:bg-darkCard w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
               <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">
                 {shareConfig.type === 'invite' ? '협업 방 초대' : '공유 링크 생성'}
               </h3>
@@ -2337,7 +2090,7 @@ const handleEditMemo = (id, currentMemo) => {
                   id="share-expire"
                   value={shareConfig.expireHours}
                   onChange={(e) => setShareConfig({ ...shareConfig, expireHours: Number(e.target.value) })}
-                  className="w-full appearance-none bg-slate-50 dark:bg-black border border-slate-200 dark:border-slate-700 rounded-xl p-3 pr-10 text-sm font-medium focus:ring-2 focus:ring-primary outline-none text-slate-700 dark:text-slate-200"
+                  className="w-full appearance-none bg-slate-50 dark:bg-darkBg border border-slate-200 dark:border-slate-700 rounded-xl p-3 pr-10 text-sm font-medium focus:ring-2 focus:ring-primary outline-none text-slate-700 dark:text-slate-200"
                 >
                   <option value={1}>1시간 후 만료</option>
                   <option value={4}>4시간 후 만료</option>
@@ -2362,52 +2115,52 @@ const handleEditMemo = (id, currentMemo) => {
         )}
 
         {genModal.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setGenModal({ ...genModal, isOpen: false })}>
-            <div className="bg-white/60 dark:bg-black/40 backdrop-blur-md border border-white/40 dark:border-white/5 w-full max-w-sm rounded-[2rem] shadow-2xl p-6 animate-in zoom-in-95 duration-200 text-center" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setGenModal({ ...genModal, isOpen: false })} id="generate-dialog" tabIndex={-1} role="dialog" aria-modal="true" aria-label="QR 및 바코드 생성">
+            <div className="bg-white/60 dark:bg-darkBg/40 backdrop-blur-md border border-white/40 dark:border-white/5 w-full max-w-sm rounded-[2rem] shadow-2xl p-6 animate-in zoom-in-95 duration-200 text-center" onClick={e => e.stopPropagation()}>
               <h3 className="text-xl font-bold text-black dark:text-white mb-4">QR/바코드 생성</h3>
-              <input type="text" value={genModal.text} onChange={e => setGenModal({...genModal, text: e.target.value})} placeholder="텍스트나 URL을 입력하세요" className="w-full bg-white dark:bg-[#1c1c1e] border-none rounded-2xl p-4 text-base font-medium focus:ring-2 focus:ring-primary outline-none mb-6 shadow-sm" />
-              
+              <input aria-label="생성할 텍스트 또는 URL" type="text" value={genModal.text} onChange={e => setGenModal({...genModal, text: e.target.value})} placeholder="텍스트나 URL을 입력하세요" className="w-full bg-white dark:bg-darkCard border-none rounded-2xl p-4 text-base font-medium focus:ring-2 focus:ring-primary outline-none mb-6 shadow-sm" />
+
               {genModal.text && (
                 <div className="bg-white p-4 rounded-3xl mx-auto w-fit mb-6 shadow-sm">
                   <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(genModal.text)}`} alt="Generated QR" className="w-48 h-48 mx-auto rounded-xl" />
                 </div>
               )}
-              
-              <button onClick={() => setGenModal({ ...genModal, isOpen: false })} className="w-full py-4 bg-slate-200 dark:bg-[#1c1c1e] hover:bg-slate-300 text-black dark:text-white font-bold rounded-2xl transition-colors">닫기</button>
+
+              <button onClick={() => setGenModal({ ...genModal, isOpen: false })} className="w-full py-4 bg-slate-200 dark:bg-darkCard hover:bg-slate-300 text-black dark:text-white font-bold rounded-2xl transition-colors">닫기</button>
             </div>
           </div>
         )}
         {shareModal.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareModal({ isOpen: false, url: '', title: '', description: '', shareText: '' })} role="dialog" aria-modal="true" aria-label={shareModal.title}>
-            <div className="bg-white dark:bg-[#111111] w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 text-center" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShareModal({ isOpen: false, url: '', title: '', description: '', shareText: '' })} id="share-dialog" tabIndex={-1} role="dialog" aria-modal="true" aria-label={shareModal.title}>
+            <div className="bg-white dark:bg-darkCard w-full max-w-sm rounded-3xl shadow-2xl p-6 animate-in zoom-in-95 duration-200 text-center" onClick={e => e.stopPropagation()}>
               <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-1">{shareModal.title}</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">{shareModal.description}</p>
-              
+
               <div className="bg-white p-3 rounded-2xl mx-auto w-fit mb-5 shadow-inner border border-slate-100">
                 <img src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(shareModal.url)}`} alt="Share QR" className="w-40 h-40 mx-auto" />
               </div>
               <p className="text-xs text-slate-400 mb-4">위 QR코드를 WebBarcode 앱의 카메라로 스캔하거나,<br/>아래 링크를 복사하여 공유하세요.</p>
-              
+
               <div className="flex gap-2 mb-6">
                 <label htmlFor="share-url" className="sr-only">공유 링크</label>
-                <input id="share-url" type="text" readOnly value={shareModal.url} className="w-full bg-slate-50 dark:bg-black border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-600 dark:text-slate-300 outline-none" />
+                <input id="share-url" type="text" readOnly value={shareModal.url} className="w-full bg-slate-50 dark:bg-darkBg border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-xs text-slate-600 dark:text-slate-300 outline-none" />
                 <button onClick={() => { navigator.clipboard.writeText(shareModal.url); toast.success('링크 복사됨!'); }} className="bg-primary hover:bg-primaryHover text-white p-3 rounded-xl transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" aria-label="링크 복사" title="링크 복사">
                   <IconCopy size={18} />
                 </button>
                 <button onClick={async () => {
                   try {
                     const text = shareModal.shareText || `📦 [WebBarcode] 공유 데이터 도착!\n\n항목: ${shareModal.title}\n${shareModal.description}\n\n👉 ${shareModal.url}`;
-                    
+
                     // 유저의 명시적 요청: 내용 전체는 클립보드에 복사하고, 이미지는 시스템 공유 앱으로.
                     navigator.clipboard.writeText(text).catch(() => {});
-                    
+
                     if (navigator.share) {
                       try {
                         const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(shareModal.url)}`;
                         const response = await fetch(qrUrl);
                         const blob = await response.blob();
                         const file = new File([blob], 'qrcode.png', { type: 'image/png' });
-                        
+
                         if (navigator.canShare && navigator.canShare({ files: [file] })) {
                           // 시스템 네이티브 공유 호출 (이미지 첨부 및 텍스트 동시 전송)
                           await navigator.share({ title: shareModal.title, text: text, files: [file] });
@@ -2435,13 +2188,13 @@ const handleEditMemo = (id, currentMemo) => {
           </div>
         )}
 
-        
+
         {/* Global Action Menu Popup */}
         {activeGlobalMenu && barcodes.find(b => b.id === activeGlobalMenu) && (() => {
           const item = barcodes.find(b => b.id === activeGlobalMenu)!;
           return (
-            <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 transition-all" onClick={() => {setActiveActionMenu(null); setActiveGlobalMenu(null);}} role="dialog" aria-modal="true" aria-label={`${item.code} 작업 메뉴`}>
-              <div className="bg-white dark:bg-[#1c1c1e] w-full sm:max-w-sm rounded-t-[32px] sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="fixed inset-0 z-[150] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 transition-all" onClick={() => {setActiveActionMenu(null); setActiveGlobalMenu(null);}} id="action-dialog" tabIndex={-1} role="dialog" aria-modal="true" aria-label={`${item.code} 작업 메뉴`}>
+              <div className="bg-white dark:bg-darkCard w-full sm:max-w-sm rounded-t-[32px] sm:rounded-3xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
                 <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto my-3 sm:hidden"></div>
                 <div className="px-6 pb-4 pt-2 flex flex-col">
                   <span className="font-mono font-bold text-xl text-black dark:text-white truncate">{item.code}</span>
@@ -2450,7 +2203,7 @@ const handleEditMemo = (id, currentMemo) => {
                 <div className="px-5 pb-8 sm:pb-5">
                   {/* Primary Actions Grid */}
                   <div className="grid grid-cols-4 gap-3 mb-4" role="menu">
-                    <button role="menuitem" onClick={() => { const serial = item.code.length > 6 ? item.code.substring(0, item.code.length - 6) : item.code; navigator.clipboard.writeText(serial); toast.success('복사됨'); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-[18px] transition-all active:scale-95 text-slate-700 dark:text-slate-200">
+                    <button role="menuitem" onClick={() => { void copyBarcode(item.code); triggerHaptic('success'); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex flex-col items-center justify-center gap-2 p-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 rounded-[18px] transition-all active:scale-95 text-slate-700 dark:text-slate-200">
                       <IconCopy size={26} />
                       <span className="text-[11px] font-bold">복사</span>
                     </button>
@@ -2470,15 +2223,15 @@ const handleEditMemo = (id, currentMemo) => {
 
                   {/* Secondary Actions List */}
                   <div className="flex flex-col gap-1" role="menu">
-                    <button role="menuitem" onClick={() => { handleEditMemo(item.id, item.memo); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
-                      <div className="flex items-center gap-3"><IconMessagePlus size={20} className="text-blue-500" /> 메모 추가 및 수정</div>
+                    <button role="menuitem" onClick={() => { handleEditMemo(item.id, item.memo); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-darkBg/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
+                      <div className="flex items-center gap-3"><IconMessagePlus size={20} className="text-primary" /> 메모 추가 및 수정</div>
                       <IconChevronRight size={18} className="text-slate-400" />
                     </button>
-                    <button role="menuitem" onClick={() => { handleEditCode(item.id, item.code); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
+                    <button role="menuitem" onClick={() => { handleEditCode(item.id, item.code); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-darkBg/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
                       <div className="flex items-center gap-3"><IconEdit size={20} className="text-amber-500" /> 바코드 번호 직접 수정</div>
                       <IconChevronRight size={18} className="text-slate-400" />
                     </button>
-                    <button role="menuitem" onClick={() => { handleClone(item); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-black/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
+                    <button role="menuitem" onClick={() => { handleClone(item); {setActiveActionMenu(null); setActiveGlobalMenu(null);} }} className="flex items-center justify-between p-4 bg-slate-50 dark:bg-darkBg/20 hover:bg-slate-100 dark:hover:bg-white/5 rounded-2xl transition-colors text-slate-700 dark:text-slate-200 font-bold">
                       <div className="flex items-center gap-3"><IconCopy size={20} className="text-slate-500" /> 이 바코드 그대로 복제</div>
                       <IconChevronRight size={18} className="text-slate-400" />
                     </button>
@@ -2489,38 +2242,38 @@ const handleEditMemo = (id, currentMemo) => {
           );
         })()}
 {moveModal.isOpen && (
-          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 animate-in fade-in duration-200" onClick={() => setMoveModal(prev => ({ ...prev, isOpen: false }))} role="dialog" aria-modal="true" aria-label="이동 위치 선택">
-            <div className="bg-white dark:bg-[#1c1c1e] w-full sm:max-w-sm rounded-t-[32px] sm:rounded-[24px] shadow-2xl p-6 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200 flex flex-col max-h-[80svh]" onClick={e => e.stopPropagation()}>
+          <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-slate-900/40 backdrop-blur-sm sm:p-4 animate-in fade-in duration-200" onClick={() => setMoveModal(prev => ({ ...prev, isOpen: false }))} id="move-dialog" tabIndex={-1} role="dialog" aria-modal="true" aria-label="이동 위치 선택">
+            <div className="bg-white dark:bg-darkCard w-full sm:max-w-sm rounded-t-[32px] sm:rounded-[24px] shadow-2xl p-6 animate-in slide-in-from-bottom-10 sm:zoom-in-95 duration-200 flex flex-col max-h-[80svh]" onClick={e => e.stopPropagation()}>
               <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden"></div>
               <h3 className="text-xl font-bold text-slate-800 dark:text-slate-100 mb-2">이동할 위치 선택</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
                 {moveModal.type === 'barcode' ? `선택한 바코드 ${moveModal.ids.length}개를 이동합니다.` : `'${moveModal.sourceFolder.split('/').pop()}' 폴더를 이동합니다.`}
               </p>
 
-              <div className="flex-1 overflow-y-auto custom-scrollbar mb-6 border border-slate-100/50 dark:border-white/5 rounded-[24px] p-2 bg-slate-50 dark:bg-black/20 flex flex-col gap-1">
-                <button 
+              <div className="flex-1 overflow-y-auto custom-scrollbar mb-6 border border-slate-100/50 dark:border-white/5 rounded-[24px] p-2 bg-slate-50 dark:bg-darkBg/20 flex flex-col gap-1">
+                <button
                   onClick={() => setMoveModal(prev => ({ ...prev, targetFolder: '기본폴더' }))}
                   className={`w-full flex items-center gap-3 px-4 py-3 rounded-[16px] transition-colors ${moveModal.targetFolder === '기본폴더' ? 'bg-primary/10 text-primary font-bold' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'}`}
                 >
                   <IconHome size={20} /> <span className="text-left flex-1">최상위 폴더 (Home)</span>
                   {moveModal.targetFolder === '기본폴더' && <div className="w-2 h-2 rounded-full bg-primary"></div>}
                 </button>
-                
+
                 {folders.filter(f => f !== '기본폴더').map(f => {
                   const depth = f.split('/').length - 1;
                   const name = f.split('/').pop();
-                  
+
                   // 폴더 본인이거나 자신의 하위 폴더로는 이동 불가
                   if (moveModal.type === 'folder' && (f === moveModal.sourceFolder || f.startsWith(moveModal.sourceFolder + '/'))) return null;
 
                   return (
-                    <button 
+                    <button
                       key={f}
                       onClick={() => setMoveModal(prev => ({ ...prev, targetFolder: f }))}
                       style={{ paddingLeft: `${(depth * 1.5) + 1}rem` }}
                       className={`w-full flex items-center gap-3 pr-4 py-3 rounded-[16px] transition-colors ${moveModal.targetFolder === f ? 'bg-primary/10 text-primary font-bold' : 'text-slate-700 dark:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'}`}
                     >
-                      <IconFolderFilled size={24} className={moveModal.targetFolder === f ? "text-primary" : "text-slate-300 dark:text-slate-600"} /> 
+                      <IconFolderFilled size={24} className={moveModal.targetFolder === f ? "text-primary" : "text-slate-300 dark:text-slate-600"} />
                       <span className="text-left flex-1 truncate">{name}</span>
                       {moveModal.targetFolder === f && <div className="w-2 h-2 rounded-full bg-primary"></div>}
                     </button>
@@ -2535,57 +2288,13 @@ const handleEditMemo = (id, currentMemo) => {
             </div>
           </div>
         )}
-        
-        
-        {/* Toss Style Floating Camera Button */}
-        {!isScannerModalOpen && activeTab === 'home' && (
-          <div className="absolute bottom-8 right-6 z-50">
-            <button
-              onClick={() => { setIsScannerModalOpen(true); startScanner(); triggerHaptic('medium'); }}
-              aria-label="바코드 스캐너 열기"
-              className="w-14 h-14 bg-[#3182f6] dark:bg-[#3182f6] rounded-full shadow-[0_8px_24px_rgba(49,130,246,0.4)] flex items-center justify-center text-white active:scale-95 transition-transform"
-            >
-              <IconCamera size={26} stroke={2.5} />
-              {barcodes.filter(b => currentFolder === '전체' || (b.folder || '기본폴더') === currentFolder).length === 0 && (
-                  <span className="absolute inset-0 rounded-full bg-[#3182f6] animate-ping opacity-60 pointer-events-none" aria-hidden="true"></span>
-              )}
-            </button>
-          </div>
-        )}
-        {/* Sidebar Drawer */}
-        {isSidebarOpen && (
-          <div className="fixed inset-0 z-[100] flex">
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity animate-in fade-in" onClick={() => setIsSidebarOpen(false)}></div>
-            <div className="relative w-64 max-w-[80vw] h-full bg-white dark:bg-[#1c1c1e] shadow-2xl flex flex-col animate-in slide-in-from-left duration-300">
-              <div className="p-6 pb-2 border-b border-slate-100 dark:border-white/10 flex items-center justify-between">
-                <h2 className="text-2xl font-black tracking-tight text-[#3182f6]">웹바코드 - WebBarcode</h2>
-                <button onClick={() => setIsSidebarOpen(false)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500">
-                  <IconX size={20} />
-                </button>
-              </div>
-              <div className="flex flex-col p-4 gap-2 overflow-y-auto">
-                <button onClick={() => { setActiveTab('home'); setIsSidebarOpen(false); triggerHaptic('light'); }} className={`flex items-center gap-4 px-4 py-3 rounded-2xl font-bold transition-all ${activeTab === 'home' ? 'bg-blue-50 dark:bg-blue-900/20 text-[#3182f6]' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'}`}>
-                  <IconHome size={22} stroke={activeTab === 'home' ? 2.5 : 1.5} />
-                  <span>홈</span>
-                </button>
-                <button onClick={() => { setActiveTab('folders'); setIsSidebarOpen(false); triggerHaptic('light'); }} className={`flex items-center gap-4 px-4 py-3 rounded-2xl font-bold transition-all ${activeTab === 'folders' ? 'bg-blue-50 dark:bg-blue-900/20 text-[#3182f6]' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'}`}>
-                  <IconFolder size={22} stroke={activeTab === 'folders' ? 2.5 : 1.5} />
-                  <span>폴더 관리</span>
-                </button>
-                <button onClick={() => { setActiveTab('settings'); setIsSidebarOpen(false); triggerHaptic('light'); }} className={`flex items-center gap-4 px-4 py-3 rounded-2xl font-bold transition-all ${activeTab === 'settings' ? 'bg-blue-50 dark:bg-blue-900/20 text-[#3182f6]' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5'}`}>
-                  <IconSettings size={22} stroke={activeTab === 'settings' ? 2.5 : 1.5} />
-                  <span>설정</span>
-                </button>
-              </div>
-              
-            </div>
-          </div>
-        )}
 
 
-        
-        
-      </div>
+      {entryItem && <EntryDialog folders={folders} editing={entryItem !== 'new'}
+        initial={entryItem === 'new' ? {code:'',memo:'',folder:currentFolder==='전체'?'기본폴더':currentFolder} : {code:entryItem.code,memo:entryItem.memo||'',folder:entryItem.folder||'기본폴더'}}
+        onClose={() => setEntryItem(null)} onSave={saveEntry}/>}
+
+      </AppShell>
     </div>
     </>
   );

@@ -14,17 +14,17 @@ export default {
         mono: ['"Fira Code"', 'monospace'],
       },
       colors: {
-        primary: '#3182f6', // Toss Blue
-        primaryHover: '#1b64da',
+        primary: '#6366f1',
+        primaryHover: '#4f46e5',
         secondary: '#00c853',
-        darkBg: '#000000', // Apple Pure Black
-        darkCard: '#1c1c1e', // Apple Dark Card
-        tossBg: '#f2f4f6', // Apple Light Gray Background
+        darkBg: '#141824',
+        darkCard: '#1e2435',
+        tossBg: '#f7f8fc',
       },
       boxShadow: {
         'soft': '0 4px 24px rgba(0, 0, 0, 0.04)',
         'apple': '0 2px 12px rgba(0, 0, 0, 0.06)',
-        'glow': '0 0 20px rgba(49, 130, 246, 0.5)',
+        'glow': '0 0 20px rgba(99, 102, 241, 0.35)',
       }
     },
   },

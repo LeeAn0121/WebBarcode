@@ -1,11 +1,11 @@
 {
   "name": "WebBarcode",
   "short_name": "WebBarcode",
-  "description": "A smart, fast, and secure personal barcode scanner app.",
+  "description": "스캔부터 정리까지, 나만의 바코드 작업 공간.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#4f46e5",
+  "background_color": "#f7f8fc",
+  "theme_color": "#6366f1",
   "icons": [
     {
       "src": "./icon.jpg",
